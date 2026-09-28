@@ -27,8 +27,9 @@ const WHISTLE_CD := 10.0
 const WRECK_AUTOCLEAR := 12.0
 const GRIDLOCK_BLOCK_TIME := 8.0
 const YELLOW_TIME := 1.5
-const PATIENCE_MIN := 8.0
-const PATIENCE_MAX := 12.0
+const PATIENCE_RINGS := 3     # ring 1 full: honk, ring 2: honk, ring 3: run the red
+const PATIENCE_MIN := 12.0   # total across all rings
+const PATIENCE_MAX := 15.0
 const WARN_TIME := 2.0      # seconds of flashing before a driver runs the Stop
 
 enum Pen { RUN, COMBO, ANGER }
@@ -52,6 +53,7 @@ class Car:
 	var color: Color
 	var wait := 0.0
 	var patience := 10.0
+	var honks := 0
 	var running := false
 	var boosted := false
 	var passed_line := false
@@ -475,6 +477,10 @@ func _update_cars(dt: float) -> void:
 			c.wait += dt
 		elif c.speed > 40.0:
 			c.wait = maxf(0.0, c.wait - dt * 2.0)
+		var ring_i := int(c.wait / (c.patience / PATIENCE_RINGS))
+		if ring_i > c.honks and ring_i < PATIENCE_RINGS:
+			_float("HONK!" if ring_i == 1 else "HONK HONK!", c.pos + Vector2(0, -24), Color.YELLOW)
+		c.honks = mini(ring_i, PATIENCE_RINGS - 1)
 		if c.wait >= c.patience * 0.5:
 			if penalty == Pen.ANGER:
 				anger += dt * 6.0
@@ -510,7 +516,7 @@ func _check_crashes() -> void:
 		var ra := _rect(a).grow(-2.0)
 		for j in range(i + 1, n):
 			var b: Car = cars[j]
-			if a.wreck and b.wreck:
+			if (a.wreck and b.wreck) or a.towed or b.towed:  # a towed wreck is a ghost
 				continue
 			if ra.intersects(_rect(b).grow(-2.0)):
 				_crash(a, b)
@@ -634,11 +640,19 @@ func _draw() -> void:
 			draw_line(Vector2(-CAR_L / 2 - 10, 5), Vector2(-CAR_L / 2 - 2, 5), Color.WHITE, 2.0)
 		draw_set_transform(Vector2.ZERO, 0.0)
 		if not c.wreck and not c.running and c.wait > 0.6:
-			# Patience ring: fills green -> red; last WARN_TIME seconds flash with "!!".
-			var k := clampf(c.wait / c.patience, 0.0, 1.0)
-			var ring := Color(minf(1.0, k * 2.0), minf(1.0, 2.0 - k * 2.0), 0)
+			# Patience rings: each fills in turn (yellow, orange, red), pips count the
+			# ones used up; last WARN_TIME seconds flash with "!!".
+			var per := c.patience / PATIENCE_RINGS
+			var ring_i := mini(int(c.wait / per), PATIENCE_RINGS - 1)
+			var k := clampf((c.wait - ring_i * per) / per, 0.0, 1.0)
+			var ring: Color = [Color.YELLOW, Color.ORANGE, Color.RED][ring_i]
 			draw_arc(c.pos, 17.0, 0.0, TAU, 24, Color(0, 0, 0, 0.5), 5.0)
 			draw_arc(c.pos, 17.0, -PI / 2, -PI / 2 + TAU * k, 24, ring, 4.0)
+			for p in PATIENCE_RINGS:
+				var pip := c.pos + Vector2(-10 + p * 10, 24)
+				draw_circle(pip, 3.5, Color(0, 0, 0, 0.6))
+				if p < ring_i:
+					draw_circle(pip, 2.5, [Color.YELLOW, Color.ORANGE, Color.RED][p])
 			var left := c.patience - c.wait
 			if left <= WARN_TIME:
 				if fmod(elapsed * 6.0, 1.0) < 0.5:
@@ -646,8 +660,6 @@ func _draw() -> void:
 					draw_rect(Rect2(-CAR_L / 2 - 3, -CAR_W / 2 - 3, CAR_L + 6, CAR_W + 6), Color.RED, false, 3.0)
 					draw_set_transform(Vector2.ZERO, 0.0)
 				_text("!!", c.pos + Vector2(-6, -26), 18, Color.RED)
-			elif k >= 0.5:
-				_text("HONK", c.pos + Vector2(-16, -26), 12, Color.YELLOW)
 		if c.wreck and not tow_enabled and not c.towed:
 			var left := 1.0 - c.wreck_t / WRECK_AUTOCLEAR
 			draw_arc(c.pos, 8.0, -PI / 2, -PI / 2 + TAU * left, 16, Color.WHITE, 2.0)
