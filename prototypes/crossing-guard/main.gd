@@ -457,11 +457,12 @@ func _update_cars(dt: float) -> void:
 
 		# The raccoon in the lane ahead: brake for it. Braking is capped (see below),
 		# so a fast car that's already close can't stop in time and still bonks.
-		if yield_raccoon and r_stun <= 0.0:
+		# A slow car won't pull into a raccoon touching its nose; keeps yielding after a bonk.
+		if yield_raccoon:
 			var rr := Rect2(r_pos - Vector2.ONE * RACCOON_R, Vector2.ONE * RACCOON_R * 2.0)
 			if strip.grow(RACCOON_R - 6.0).intersects(rr):
 				var g := _gap(front, c.dir, rr)
-				if g >= -CAR_L / 2.0:
+				if g >= -CAR_L / 2.0 or (g >= -CAR_L and c.speed < 40.0):
 					target = minf(target, sqrt(2.0 * DECEL * maxf(g - 6.0, 0.0)))
 
 		if freeze_t > 0.0:
