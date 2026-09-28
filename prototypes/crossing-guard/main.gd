@@ -63,6 +63,7 @@ var tow_enabled := true
 var whistle_enabled := true
 var penalty: int = Pen.RUN
 var start_go := false
+var yield_raccoon := true
 
 var aps: Array = []
 var cars: Array = []
@@ -150,6 +151,7 @@ func _setup_input() -> void:
 	_bind("t_whistle", [KEY_2], [])
 	_bind("t_penalty", [KEY_3], [JOY_BUTTON_BACK])
 	_bind("t_start", [KEY_4], [])
+	_bind("t_yield", [KEY_5], [])
 
 
 func _restart() -> void:
@@ -267,6 +269,8 @@ func _handle_toggles() -> void:
 	if Input.is_action_just_pressed("t_penalty"):
 		penalty = (penalty + 1) % 3
 		anger = 0.0
+	if Input.is_action_just_pressed("t_yield"):
+		yield_raccoon = not yield_raccoon
 	if Input.is_action_just_pressed("t_start"):
 		start_go = not start_go
 		_restart()
@@ -429,6 +433,15 @@ func _update_cars(dt: float) -> void:
 			if g < -CAR_L:
 				continue
 			target = minf(target, sqrt(2.0 * DECEL * maxf(g - 8.0, 0.0)))
+
+		# The raccoon in the lane ahead: brake for it. Braking is capped (see below),
+		# so a fast car that's already close can't stop in time and still bonks.
+		if yield_raccoon and r_stun <= 0.0:
+			var rr := Rect2(r_pos - Vector2.ONE * RACCOON_R, Vector2.ONE * RACCOON_R * 2.0)
+			if strip.grow(RACCOON_R - 6.0).intersects(rr):
+				var g := _gap(front, c.dir, rr)
+				if g >= -CAR_L / 2.0:
+					target = minf(target, sqrt(2.0 * DECEL * maxf(g - 6.0, 0.0)))
 
 		if freeze_t > 0.0:
 			c.speed = maxf(0.0, c.speed - 900.0 * dt)
@@ -670,11 +683,12 @@ func _draw_hud() -> void:
 
 	var help := [
 		"Move WASD/arrows/stick   Stop J/Z (B)   Go K/X (A)   Dash L/C/Shift (X)   Tow U/V (Y)   Whistle I/B (RB)   R restart",
-		"Toggles: [1] Tow %s   [2] Whistle %s   [3] Wait penalty: %s   [4] Lanes start %s (restarts)" % [
+		"Toggles: [1] Tow %s   [2] Whistle %s   [3] Wait penalty: %s   [4] Lanes start %s (restarts)   [5] Cars %s" % [
 			"ON" if tow_enabled else "OFF (wreckage auto-clears in %ds)" % int(WRECK_AUTOCLEAR),
 			"ON" if whistle_enabled else "OFF",
 			PEN_NAMES[penalty],
-			"GO" if start_go else "STOP"],
+			"GO" if start_go else "STOP",
+			"YIELD to raccoon" if yield_raccoon else "IGNORE raccoon"],
 	]
 	draw_rect(Rect2(0, H - 46, W, 46), Color(0, 0, 0, 0.55))
 	_text(help[0], Vector2(10, H - 27), 14, Color.WHITE)
