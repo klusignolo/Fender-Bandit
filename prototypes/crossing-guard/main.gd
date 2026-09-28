@@ -25,7 +25,10 @@ const TOW_RANGE := 30.0
 const WHISTLE_FREEZE := 2.0
 const WHISTLE_CD := 10.0
 const WRECK_AUTOCLEAR := 12.0
-const GRIDLOCK_BLOCK_TIME := 4.0
+const GRIDLOCK_BLOCK_TIME := 8.0
+const PATIENCE_MIN := 8.0
+const PATIENCE_MAX := 12.0
+const WARN_TIME := 2.0      # seconds of flashing before a driver runs the Stop
 
 enum Pen { RUN, COMBO, ANGER }
 const PEN_NAMES := ["impatient drivers RUN the Stop", "honks BREAK the Combo", "honks fill an ANGER meter"]
@@ -46,7 +49,7 @@ class Car:
 	var speed := 0.0
 	var color: Color
 	var wait := 0.0
-	var patience := 5.0
+	var patience := 10.0
 	var running := false
 	var boosted := false
 	var passed_line := false
@@ -356,7 +359,7 @@ func _drop_tow() -> void:
 
 
 func _update_spawns(dt: float) -> void:
-	var interval := maxf(0.55, 3.2 - elapsed * 0.025)
+	var interval := maxf(1.0, 3.2 - elapsed * 0.008)  # peaks at ~4.5 min
 	for i in aps.size():
 		var a: Approach = aps[i]
 		a.spawn_t -= dt
@@ -379,12 +382,12 @@ func _update_spawns(dt: float) -> void:
 		c.dir = a.dir
 		c.speed = BASE_SPEED * 0.8
 		c.color = Color.from_hsv(randf(), 0.65, 0.95)
-		c.patience = randf_range(4.0, 7.0)
+		c.patience = randf_range(PATIENCE_MIN, PATIENCE_MAX)
 		cars.append(c)
 
 
 func _update_cars(dt: float) -> void:
-	var rush := minf(1.4, 1.0 + elapsed * 0.002)
+	var rush := minf(1.4, 1.0 + elapsed * 0.0015)
 	var keep: Array = []
 	for c: Car in cars:
 		if c.wreck:
@@ -454,7 +457,7 @@ func _update_cars(dt: float) -> void:
 						_float("COMBO LOST", c.pos + Vector2(0, -24), Color.ORANGE)
 					combo = 0
 					c.wait = 0.0
-					c.patience = randf_range(4.0, 7.0)
+					c.patience = randf_range(PATIENCE_MIN, PATIENCE_MAX)
 
 		# Left the screen safely.
 		if c.pos.x < -60 or c.pos.x > W + 60 or c.pos.y < -60 or c.pos.y > H + 60:
@@ -598,13 +601,21 @@ func _draw() -> void:
 			draw_line(Vector2(-CAR_L / 2 - 8, -5), Vector2(-CAR_L / 2 - 2, -5), Color.WHITE, 2.0)
 			draw_line(Vector2(-CAR_L / 2 - 10, 5), Vector2(-CAR_L / 2 - 2, 5), Color.WHITE, 2.0)
 		draw_set_transform(Vector2.ZERO, 0.0)
-		if not c.wreck and c.wait > 0.6:
+		if not c.wreck and not c.running and c.wait > 0.6:
+			# Patience ring: fills green -> red; last WARN_TIME seconds flash with "!!".
 			var k := clampf(c.wait / c.patience, 0.0, 1.0)
-			var bp := c.pos + Vector2(-16, -24)
-			draw_rect(Rect2(bp, Vector2(32, 4)), Color(0, 0, 0, 0.6))
-			draw_rect(Rect2(bp, Vector2(32 * k, 4)), Color(1, 1 - k, 0))
-			if k >= 0.5 and fmod(elapsed * 3.0, 1.0) < 0.6:
-				_text("HONK", c.pos + Vector2(-16, -30), 12, Color.YELLOW)
+			var ring := Color(minf(1.0, k * 2.0), minf(1.0, 2.0 - k * 2.0), 0)
+			draw_arc(c.pos, 17.0, 0.0, TAU, 24, Color(0, 0, 0, 0.5), 5.0)
+			draw_arc(c.pos, 17.0, -PI / 2, -PI / 2 + TAU * k, 24, ring, 4.0)
+			var left := c.patience - c.wait
+			if left <= WARN_TIME:
+				if fmod(elapsed * 6.0, 1.0) < 0.5:
+					draw_set_transform(c.pos, c.dir.angle())
+					draw_rect(Rect2(-CAR_L / 2 - 3, -CAR_W / 2 - 3, CAR_L + 6, CAR_W + 6), Color.RED, false, 3.0)
+					draw_set_transform(Vector2.ZERO, 0.0)
+				_text("!!", c.pos + Vector2(-6, -26), 18, Color.RED)
+			elif k >= 0.5:
+				_text("HONK", c.pos + Vector2(-16, -26), 12, Color.YELLOW)
 		if c.wreck and not tow_enabled and not c.towed:
 			var left := 1.0 - c.wreck_t / WRECK_AUTOCLEAR
 			draw_arc(c.pos, 8.0, -PI / 2, -PI / 2 + TAU * left, 16, Color.WHITE, 2.0)
