@@ -17,6 +17,13 @@ All art, audio, and code are produced with AI tooling, directed by the developer
 Details (mechanics, repo layout) are intentionally unsettled. Refine them in
 future sessions.
 
+## Godot development
+
+Both MCP servers are configured in `.mcp.json`.
+
+- **Docs: Context7.** Look up Godot 4.7 / GDScript APIs through the Context7 MCP (`resolve-library-id`, then `get-library-docs`) before writing engine code. Don't rely on memory: Godot 3 and 4 APIs differ a lot.
+- **Run and debug: godot-mcp** (Coding-Solo, `@coding-solo/godot-mcp`). Use it to launch the editor, run a project and read its debug output. It needs Node.js. `GODOT_PATH` defaults to the winget install of Godot 4.7.2; set the env var to override it.
+
 ## Agent skills
 
 ### Issue tracker
