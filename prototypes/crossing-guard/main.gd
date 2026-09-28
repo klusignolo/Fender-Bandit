@@ -26,6 +26,7 @@ const WHISTLE_FREEZE := 2.0
 const WHISTLE_CD := 10.0
 const WRECK_AUTOCLEAR := 12.0
 const GRIDLOCK_BLOCK_TIME := 8.0
+const YELLOW_TIME := 1.5
 const PATIENCE_MIN := 8.0
 const PATIENCE_MAX := 12.0
 const WARN_TIME := 2.0      # seconds of flashing before a driver runs the Stop
@@ -39,6 +40,7 @@ class Approach:
 	var spawn: Vector2
 	var stop_point: Vector2
 	var go := false
+	var yellow_t := 0.0     # >0: amber, counting down to red
 	var spawn_t := 0.0
 	var blocked_t := 0.0
 
@@ -60,7 +62,7 @@ class Car:
 
 # Dev toggles (keys 1-4)
 var tow_enabled := true
-var whistle_enabled := true
+var whistle_enabled := false  # playtest: never reached for it
 var penalty: int = Pen.RUN
 var start_go := false
 var yield_raccoon := true
@@ -97,6 +99,7 @@ var font: Font
 
 var shot_path := ""
 var shot_frame := 0
+var shot_yellow := false  # agent check: --yellow flips every green light to yellow just before the shot
 
 
 func _ready() -> void:
@@ -106,6 +109,8 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--shot="):
 			shot_path = a.substr(7)
+		if a == "--yellow":
+			shot_yellow = true
 		if a == "--go":
 			start_go = true
 	_restart()
@@ -141,8 +146,7 @@ func _setup_input() -> void:
 	_axis("mv_right", JOY_AXIS_LEFT_X, 1.0)
 	_axis("mv_up", JOY_AXIS_LEFT_Y, -1.0)
 	_axis("mv_down", JOY_AXIS_LEFT_Y, 1.0)
-	_bind("stop", [KEY_J, KEY_Z], [JOY_BUTTON_B])
-	_bind("go", [KEY_K, KEY_X], [JOY_BUTTON_A])
+	_bind("switch", [KEY_J, KEY_K, KEY_Z, KEY_X], [JOY_BUTTON_A])
 	_bind("dash", [KEY_L, KEY_C, KEY_SHIFT], [JOY_BUTTON_X])
 	_bind("tow", [KEY_U, KEY_V], [JOY_BUTTON_Y])
 	_bind("whistle", [KEY_I, KEY_B], [JOY_BUTTON_RIGHT_SHOULDER])
@@ -253,6 +257,10 @@ func _process(dt: float) -> void:
 	queue_redraw()
 	if shot_path != "":
 		shot_frame += 1
+		if shot_yellow and shot_frame == 870:
+			for ap: Approach in aps:
+				if ap.go:
+					ap.yellow_t = YELLOW_TIME
 		if shot_frame == 900:
 			get_viewport().get_texture().get_image().save_png(shot_path)
 			get_tree().quit()
@@ -312,17 +320,27 @@ func _update_raccoon(dt: float) -> void:
 			best = s
 			r_target = i
 
-	if r_stun <= 0.0 and r_target >= 0:
+	# Yellow lights count down to red on their own.
+	for a: Approach in aps:
+		if a.yellow_t > 0.0:
+			a.yellow_t -= dt
+			if a.yellow_t <= 0.0:
+				a.go = false
+
+	# One button tampers with the light: red -> green, green -> yellow (-> red).
+	if r_stun <= 0.0 and r_target >= 0 and Input.is_action_just_pressed("switch"):
 		var a: Approach = aps[r_target]
-		if Input.is_action_just_pressed("stop"):
-			a.go = false
-			_float("STOP", a.stop_point - a.dir * 30.0, Color.RED)
-		if Input.is_action_just_pressed("go"):
+		if a.yellow_t > 0.0:
+			pass  # already on its way to red
+		elif a.go:
+			a.yellow_t = YELLOW_TIME
+			_float("YELLOW", a.stop_point - a.dir * 30.0, Color.ORANGE)
+		else:
 			a.go = true
 			for c: Car in cars:
 				if c.ap == r_target and not c.passed_line and not c.wreck:
 					c.boosted = true
-			_float("GO!", a.stop_point - a.dir * 30.0, Color.GREEN)
+			_float("GREEN!", a.stop_point - a.dir * 30.0, Color.GREEN)
 
 	if tow_enabled and Input.is_action_just_pressed("tow") and r_stun <= 0.0:
 		if towing:
@@ -412,8 +430,9 @@ func _update_cars(dt: float) -> void:
 				c.passed_line = true
 				if a.go:
 					c.boosted = true
-			elif not a.go and not c.running:
-				var need := c.speed * c.speed / (4.0 * DECEL)
+			elif (not a.go or a.yellow_t > 0.0) and not c.running:
+				# On yellow, drivers who'd have to brake hard push through instead.
+				var need := c.speed * c.speed / (4.0 * DECEL) * (2.0 if a.yellow_t > 0.0 else 1.0)
 				if dist < need - 1.0 and c.speed > 40.0:
 					c.passed_line = true  # too close to stop: commits
 				else:
@@ -590,7 +609,7 @@ func _draw() -> void:
 		var p1 := a.stop_point - perp * (LANE - 2)
 		draw_line(p0, p1, Color.WHITE, 3.0)
 		var lamp := a.stop_point - a.dir * 8.0 - perp * (LANE + 22.0)
-		draw_circle(lamp, 9.0, Color.GREEN if a.go else Color.RED)
+		draw_circle(lamp, 9.0, Color.ORANGE if a.yellow_t > 0.0 else (Color.GREEN if a.go else Color.RED))
 		if i == r_target:
 			draw_arc(lamp, 14.0, 0, TAU, 24, Color.YELLOW, 3.0)
 			var box := Rect2(a.stop_point, Vector2.ZERO).expand(a.stop_point - a.dir * 90.0)
@@ -682,7 +701,7 @@ func _draw_hud() -> void:
 		_text("anger", Vector2(216, 164), 12, Color.WHITE)
 
 	var help := [
-		"Move WASD/arrows/stick   Stop J/Z (B)   Go K/X (A)   Dash L/C/Shift (X)   Tow U/V (Y)   Whistle I/B (RB)   R restart",
+		"Move WASD/arrows/stick   Switch light J/K/Z/X (A)   Dash L/C/Shift (X)   Tow U/V (Y)   Whistle I/B (RB)   R restart",
 		"Toggles: [1] Tow %s   [2] Whistle %s   [3] Wait penalty: %s   [4] Lanes start %s (restarts)   [5] Cars %s" % [
 			"ON" if tow_enabled else "OFF (wreckage auto-clears in %ds)" % int(WRECK_AUTOCLEAR),
 			"ON" if whistle_enabled else "OFF",
