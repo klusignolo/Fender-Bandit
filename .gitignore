@@ -1,0 +1,5 @@
+# Godot import cache
+.godot/
+
+# Agent worktrees
+.claude/worktrees/
