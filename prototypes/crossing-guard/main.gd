@@ -1,13 +1,16 @@
-# PROTOTYPE, throw away: greybox for "Does crossing-guard traffic direction feel fun?" (issue #5).
+# PROTOTYPE, throw away: greybox for "Does crossing-guard traffic direction feel fun?" (issue #5),
+# extended for "How should turn lanes work?" (issue #9).
 # Everything lives in this one script and is drawn with _draw(). No polish, no tests.
 extends Node2D
 
 const W := 1280.0
 const H := 720.0
 const C := Vector2(640, 360)
-const LANE := 22.0          # lane centre offset from road centre
-const ROAD := 88.0          # road width (two lanes)
-const STOP_D := 58.0        # stop line distance from the centre
+const LW := 30.0            # lane width; each road is 4 lanes: out, out | turn, through
+const ROAD := 120.0         # road width (four lanes)
+const STOP_D := 72.0        # stop line distance from the centre
+const TURN_SHARE := 0.45    # turn lanes spawn this fraction as often as through lanes
+const TURN_SPEED := 0.7     # turning cars slow to this fraction of base speed in the arc
 const CAR_L := 38.0
 const CAR_W := 20.0
 const LOOK := 220.0         # how far drivers look ahead in their own lane
@@ -35,11 +38,23 @@ const WARN_TIME := 2.0      # seconds of flashing before a driver runs the Stop
 enum Pen { RUN, COMBO, ANGER }
 const PEN_NAMES := ["impatient drivers RUN the Stop", "honks BREAK the Combo", "honks fill an ANGER meter"]
 
+# Turn-lane models under test (key 6).
+enum Turn { OFF, SHARED_YIELD, SHARED_BLIND, OWN_ARROW }
+const TURN_NAMES := ["OFF (plain 4-way)", "SHARED light, turners yield to oncoming", "SHARED light, turners don't look", "OWN arrow light (protected)"]
+# How the Raccoon reaches an arrow light (key 7, OWN_ARROW only).
+enum Aim { NEAREST, BUTTON }
+const AIM_NAMES := ["nearest lamp (one Switch)", "Switch = straight, RB = its arrow"]
+
+# One lane approaching the intersection. Lanes come in pairs: index 2k is the
+# through lane, 2k+1 its left-turn lane (twin).
 class Approach:
 	var label: String
 	var dir: Vector2
 	var spawn: Vector2
 	var stop_point: Vector2
+	var lamp: Vector2
+	var turn := false
+	var twin := -1
 	var go := false
 	var yellow_t := 0.0     # >0: amber, counting down to red
 	var spawn_t := 0.0
@@ -61,8 +76,15 @@ class Car:
 	var wreck_t := 0.0
 	var wreck_rot := 0.0
 	var towed := false
+	var turn := false
+	var arc_s := -1.0       # distance travelled along the turn arc; <0 before it starts
+	var turned := false
+	var brave := 1.8        # smallest oncoming gap (seconds) this driver will turn into
+	var gunned := false     # out of patience: turns regardless
 
-# Dev toggles (keys 1-4)
+# Dev toggles (keys 1-7)
+var turn_mode: int = Turn.SHARED_YIELD
+var aim_mode: int = Aim.NEAREST
 var tow_enabled := true
 var whistle_enabled := false  # playtest: never reached for it
 var penalty: int = Pen.RUN
@@ -115,6 +137,8 @@ func _ready() -> void:
 			shot_yellow = true
 		if a == "--go":
 			start_go = true
+		if a.begins_with("--turn="):
+			turn_mode = int(a.substr(7))
 	_restart()
 
 
@@ -151,21 +175,34 @@ func _setup_input() -> void:
 	_bind("switch", [KEY_J, KEY_K, KEY_Z, KEY_X], [JOY_BUTTON_A])
 	_bind("dash", [KEY_L, KEY_C, KEY_SHIFT], [JOY_BUTTON_X])
 	_bind("tow", [KEY_U, KEY_V], [JOY_BUTTON_Y])
-	_bind("whistle", [KEY_I, KEY_B], [JOY_BUTTON_RIGHT_SHOULDER])
+	_bind("whistle", [], [])  # cut in #5
+	_bind("arrow", [KEY_I, KEY_B], [JOY_BUTTON_RIGHT_SHOULDER])
 	_bind("restart", [KEY_R], [JOY_BUTTON_START])
 	_bind("t_tow", [KEY_1], [])
 	_bind("t_whistle", [KEY_2], [])
 	_bind("t_penalty", [KEY_3], [JOY_BUTTON_BACK])
 	_bind("t_start", [KEY_4], [])
 	_bind("t_yield", [KEY_5], [])
+	_bind("t_turn", [KEY_6], [JOY_BUTTON_LEFT_SHOULDER])
+	_bind("t_aim", [KEY_7], [])
 
 
 func _restart() -> void:
 	aps.clear()
-	_add_ap("N", Vector2.DOWN, Vector2(C.x - LANE, -24), Vector2(C.x - LANE, C.y - STOP_D))
-	_add_ap("S", Vector2.UP, Vector2(C.x + LANE, H + 24), Vector2(C.x + LANE, C.y + STOP_D))
-	_add_ap("W", Vector2.RIGHT, Vector2(-24, C.y + LANE), Vector2(C.x - STOP_D, C.y + LANE))
-	_add_ap("E", Vector2.LEFT, Vector2(W + 24, C.y - LANE), Vector2(C.x + STOP_D, C.y - LANE))
+	for dl in [["N", Vector2.DOWN], ["S", Vector2.UP], ["W", Vector2.RIGHT], ["E", Vector2.LEFT]]:
+		var d: Vector2 = dl[1]
+		var right := Vector2(-d.y, d.x)
+		var half := H / 2.0 if absf(d.y) > 0.5 else W / 2.0
+		for turn in [false, true]:
+			var off := LW * (0.5 if turn else 1.5)
+			var stop := C - d * STOP_D + right * off
+			var lamp := stop - d * 10.0 + (right * -(LW / 2.0 + 14.0) if turn else right * (LW / 2.0 + 14.0))
+			_add_ap(dl[0] + ("-left" if turn else ""), d, C - d * (half + 24.0) + right * off, stop)
+			aps[-1].turn = turn
+			aps[-1].lamp = lamp
+			aps[-1].twin = aps.size() - (2 if turn else 0)
+	for i in range(0, aps.size(), 2):
+		aps[i].twin = i + 1
 	cars.clear()
 	floats.clear()
 	elapsed = 0.0
@@ -232,6 +269,57 @@ func _on_road(p: Vector2) -> bool:
 	return absf(p.x - C.x) < ROAD / 2.0 + 10.0 or absf(p.y - C.y) < ROAD / 2.0 + 10.0
 
 
+# Which lane's Light a lane obeys. With a shared light, the turn lane follows its through lane.
+func _light_idx(i: int) -> int:
+	if turn_mode == Turn.OWN_ARROW:
+		return i
+	return i - i % 2
+
+
+# Lanes that carry their own lamp the Raccoon can target.
+func _has_lamp(i: int) -> bool:
+	if not aps[i].turn:
+		return true
+	return turn_mode == Turn.OWN_ARROW and aim_mode == Aim.NEAREST
+
+
+func _switch(i: int) -> void:
+	var a: Approach = aps[i]
+	if a.yellow_t > 0.0:
+		return  # already on its way to red
+	var at := a.stop_point - a.dir * 30.0
+	if a.go:
+		a.yellow_t = YELLOW_TIME
+		_float("YELLOW", at, Color.ORANGE)
+	else:
+		a.go = true
+		for c: Car in cars:
+			if _light_idx(c.ap) == i and not c.passed_line and not c.wreck:
+				c.boosted = true
+		_float("GREEN ARROW!" if a.turn else "GREEN!", at, Color.GREEN)
+
+
+# Oncoming through traffic leaves a big enough gap for this turner to cut across.
+func _gap_ok(c: Car) -> bool:
+	var oi := ((c.ap / 2) ^ 1) * 2
+	var ol: Approach = aps[_light_idx(oi)]
+	var thr := c.brave * (1.0 - 0.6 * clampf(c.wait / c.patience, 0.0, 1.0))
+	for o: Car in cars:
+		if o.ap != oi or o.wreck:
+			continue
+		# The turn arc crosses the oncoming through lane just past the centre.
+		var dcon := (C - _front(o)).dot(o.dir) - LW * 0.6
+		if dcon < -CAR_L - 12.0:
+			continue  # already cleared the turner's path
+		if dcon <= 0.0:
+			return false  # in the way right now
+		if not o.passed_line and not o.running and (not ol.go or ol.yellow_t > 0.0):
+			continue  # will stop at its light
+		if dcon / maxf(o.speed, 25.0) < thr:
+			return false
+	return true
+
+
 func _float(text: String, pos: Vector2, color: Color) -> void:
 	floats.append({"text": text, "pos": pos, "t": 1.0, "color": color})
 
@@ -284,6 +372,11 @@ func _handle_toggles() -> void:
 	if Input.is_action_just_pressed("t_start"):
 		start_go = not start_go
 		_restart()
+	if Input.is_action_just_pressed("t_turn"):
+		turn_mode = (turn_mode + 1) % 4
+		_restart()
+	if Input.is_action_just_pressed("t_aim"):
+		aim_mode = (aim_mode + 1) % 2
 
 
 func _update_raccoon(dt: float) -> void:
@@ -310,14 +403,16 @@ func _update_raccoon(dt: float) -> void:
 			r_pos += inp * spd * dt
 	r_pos = r_pos.clamp(Vector2(RACCOON_R, RACCOON_R), Vector2(W - RACCOON_R, H - RACCOON_R))
 
-	# Target: nearest stop line in range, biased toward the way the raccoon faces.
+	# Target: nearest lamp in range, biased toward the way the raccoon faces.
 	r_target = -1
 	var best := INF
 	for i in aps.size():
-		var d: float = r_pos.distance_to(aps[i].stop_point)
+		if not _has_lamp(i):
+			continue
+		var d: float = r_pos.distance_to(aps[i].lamp)
 		if d > SIGNAL_RANGE:
 			continue
-		var s: float = d - 60.0 * r_facing.dot((aps[i].stop_point - r_pos).normalized())
+		var s: float = d - 60.0 * r_facing.dot((aps[i].lamp - r_pos).normalized())
 		if s < best:
 			best = s
 			r_target = i
@@ -331,18 +426,10 @@ func _update_raccoon(dt: float) -> void:
 
 	# One button tampers with the light: red -> green, green -> yellow (-> red).
 	if r_stun <= 0.0 and r_target >= 0 and Input.is_action_just_pressed("switch"):
-		var a: Approach = aps[r_target]
-		if a.yellow_t > 0.0:
-			pass  # already on its way to red
-		elif a.go:
-			a.yellow_t = YELLOW_TIME
-			_float("YELLOW", a.stop_point - a.dir * 30.0, Color.ORANGE)
-		else:
-			a.go = true
-			for c: Car in cars:
-				if c.ap == r_target and not c.passed_line and not c.wreck:
-					c.boosted = true
-			_float("GREEN!", a.stop_point - a.dir * 30.0, Color.GREEN)
+		_switch(r_target)
+	if r_stun <= 0.0 and r_target >= 0 and Input.is_action_just_pressed("arrow") \
+			and turn_mode == Turn.OWN_ARROW and aim_mode == Aim.BUTTON:
+		_switch(aps[r_target].twin)
 
 	if tow_enabled and Input.is_action_just_pressed("tow") and r_stun <= 0.0:
 		if towing:
@@ -386,6 +473,8 @@ func _update_spawns(dt: float) -> void:
 	var interval := maxf(1.0, 3.2 - elapsed * 0.008)  # peaks at ~4.5 min
 	for i in aps.size():
 		var a: Approach = aps[i]
+		if a.turn and turn_mode == Turn.OFF:
+			continue
 		a.spawn_t -= dt
 		if a.spawn_t > 0.0:
 			continue
@@ -399,9 +488,11 @@ func _update_spawns(dt: float) -> void:
 			a.blocked_t += dt
 			continue
 		a.blocked_t = 0.0
-		a.spawn_t = interval * randf_range(0.6, 1.4)
+		a.spawn_t = interval * randf_range(0.6, 1.4) / (TURN_SHARE if a.turn else 1.0)
 		var c := Car.new()
 		c.ap = i
+		c.turn = a.turn
+		c.brave = randf_range(1.2, 2.4)
 		c.pos = a.spawn
 		c.dir = a.dir
 		c.speed = BASE_SPEED * 0.8
@@ -422,23 +513,47 @@ func _update_cars(dt: float) -> void:
 			keep.append(c)
 			continue
 		var a: Approach = aps[c.ap]
+		var lt: Approach = aps[_light_idx(c.ap)]
 		var front := _front(c)
 		var target := BASE_SPEED * rush * (GO_BOOST if c.boosted else 1.0)
 
 		# Stop line.
-		var dist := (a.stop_point - front).dot(c.dir)
+		var dist := (a.stop_point - front).dot(a.dir)
 		if not c.passed_line:
 			if dist < 0.0:
 				c.passed_line = true
-				if a.go:
+				if lt.go:
 					c.boosted = true
-			elif (not a.go or a.yellow_t > 0.0) and not c.running:
+			elif (not lt.go or lt.yellow_t > 0.0) and not c.running:
 				# On yellow, drivers who'd have to brake hard push through instead.
-				var need := c.speed * c.speed / (4.0 * DECEL) * (2.0 if a.yellow_t > 0.0 else 1.0)
+				var need := c.speed * c.speed / (4.0 * DECEL) * (2.0 if lt.yellow_t > 0.0 else 1.0)
 				if dist < need - 1.0 and c.speed > 40.0:
 					c.passed_line = true  # too close to stop: commits
 				else:
 					target = minf(target, sqrt(2.0 * DECEL * maxf(dist - 2.0, 0.0)))
+
+		# Left turners pull up to the turn point, then wait for a gap in oncoming traffic
+		# (shared light only; with its own arrow the turn is protected, so they just go).
+		# A turner caught in the box when the light drops clears out regardless.
+		var hold := false
+		if c.turn and c.arc_s < 0.0:
+			var ds := (a.stop_point - c.pos).dot(a.dir)
+			var green := lt.go and lt.yellow_t <= 0.0
+			if turn_mode == Turn.SHARED_YIELD and (green or not c.passed_line) and not c.gunned and not c.running:
+				if c.wait >= c.patience and c.passed_line:
+					c.gunned = true
+					_float("GUNS IT!", c.pos + Vector2(0, -24), Color.ORANGE)
+				elif not _gap_ok(c):
+					hold = true
+					target = minf(target, sqrt(2.0 * DECEL * maxf(ds - 1.0, 0.0)))
+			if ds <= 0.0:
+				if hold:
+					c.pos = a.stop_point
+					c.speed = 0.0
+				elif c.passed_line:
+					c.arc_s = -ds
+		if c.turn and c.arc_s >= 0.0 and not c.turned:
+			target = minf(target, BASE_SPEED * rush * TURN_SPEED)
 
 		# Obstacles in the own lane: queued cars and any wreckage.
 		var strip := _strip(c)
@@ -471,7 +586,21 @@ func _update_cars(dt: float) -> void:
 			c.speed = minf(target, c.speed + ACCEL * dt)
 		else:
 			c.speed = maxf(target, c.speed - DECEL * 2.0 * dt)
-		c.pos += c.dir * c.speed * dt
+		if c.turn and c.arc_s >= 0.0 and not c.turned:
+			# Quarter circle from the turn lane's stop point into the cross road's inner lane.
+			c.arc_s += c.speed * dt
+			var rad := STOP_D + LW * 0.5
+			var th := c.arc_s / rad
+			var lf := Vector2(a.dir.y, -a.dir.x)
+			if th >= PI / 2.0:
+				c.turned = true
+				c.dir = lf
+				c.pos = a.stop_point + (a.dir + lf) * rad + lf * (c.arc_s - rad * PI / 2.0)
+			else:
+				c.pos = a.stop_point + lf * rad - lf * rad * cos(th) + a.dir * rad * sin(th)
+				c.dir = (lf * sin(th) + a.dir * cos(th)).normalized()
+		else:
+			c.pos += c.dir * c.speed * dt
 
 		# Waiting and the waiting penalty.
 		if c.speed < 8.0 and freeze_t <= 0.0:
@@ -596,33 +725,62 @@ func _draw() -> void:
 	var road := Color(0.28, 0.28, 0.3)
 	draw_rect(Rect2(C.x - ROAD / 2, -40, ROAD, H + 80), road)
 	draw_rect(Rect2(-40, C.y - ROAD / 2, W + 80, ROAD), road)
-	# Centre dashes (outside the box).
-	var y := -20.0
-	while y < H + 20:
-		if absf(y - C.y) > ROAD / 2 + 10:
-			draw_line(Vector2(C.x, y), Vector2(C.x, y + 14), Color(0.9, 0.8, 0.2), 2.0)
-		y += 28.0
-	var x := -20.0
-	while x < W + 20:
-		if absf(x - C.x) > ROAD / 2 + 10:
-			draw_line(Vector2(x, C.y), Vector2(x + 14, C.y), Color(0.9, 0.8, 0.2), 2.0)
-		x += 28.0
+	# Centre line (yellow, double) and lane dividers (white dashes), outside the box.
+	var yel := Color(0.9, 0.8, 0.2)
+	var edge := ROAD / 2 + 4
+	for s in [-1.0, 1.0]:
+		draw_line(Vector2(C.x + s * 2, -40), Vector2(C.x + s * 2, C.y - edge), yel, 2.0)
+		draw_line(Vector2(C.x + s * 2, C.y + edge), Vector2(C.x + s * 2, H + 40), yel, 2.0)
+		draw_line(Vector2(-40, C.y + s * 2), Vector2(C.x - edge, C.y + s * 2), yel, 2.0)
+		draw_line(Vector2(C.x + edge, C.y + s * 2), Vector2(W + 40, C.y + s * 2), yel, 2.0)
+		var y := -20.0
+		while y < H + 20:
+			if absf(y - C.y) > edge:
+				draw_line(Vector2(C.x + s * LW, y), Vector2(C.x + s * LW, y + 14), Color(1, 1, 1, 0.6), 2.0)
+			y += 28.0
+		var x := -20.0
+		while x < W + 20:
+			if absf(x - C.x) > edge:
+				draw_line(Vector2(x, C.y + s * LW), Vector2(x + 14, C.y + s * LW), Color(1, 1, 1, 0.6), 2.0)
+			x += 28.0
 
-	# Stop lines and signal lamps.
+	# Stop lines, turn arrows painted in the lane, and signal lamps.
 	for i in aps.size():
 		var a: Approach = aps[i]
 		var perp := Vector2(-a.dir.y, a.dir.x)
-		var p0 := a.stop_point + perp * (LANE - 2)
-		var p1 := a.stop_point - perp * (LANE - 2)
-		draw_line(p0, p1, Color.WHITE, 3.0)
-		var lamp := a.stop_point - a.dir * 8.0 - perp * (LANE + 22.0)
-		draw_circle(lamp, 9.0, Color.ORANGE if a.yellow_t > 0.0 else (Color.GREEN if a.go else Color.RED))
-		if i == r_target:
-			draw_arc(lamp, 14.0, 0, TAU, 24, Color.YELLOW, 3.0)
-			var box := Rect2(a.stop_point, Vector2.ZERO).expand(a.stop_point - a.dir * 90.0)
-			box = box.grow_individual(12, 12, 12, 12) if true else box
-			draw_rect(box, Color(1, 1, 0, 0.12))
-			draw_dashed_line(r_pos, lamp, Color(1, 1, 0, 0.5), 2.0, 6.0)
+		if a.turn and turn_mode == Turn.OFF:
+			continue
+		draw_line(a.stop_point + perp * (LW / 2 - 1), a.stop_point - perp * (LW / 2 - 1), Color.WHITE, 3.0)
+		if a.turn:
+			var lf := -perp
+			var b := a.stop_point - a.dir * 60.0
+			var k := b + a.dir * 18.0
+			draw_polyline(PackedVector2Array([b - a.dir * 8.0, k, k + lf * 8.0]), Color(1, 1, 1, 0.8), 3.0)
+			draw_colored_polygon(PackedVector2Array([k + lf * 14.0, k + lf * 7.0 + a.dir * 6.0, k + lf * 7.0 - a.dir * 6.0]), Color(1, 1, 1, 0.8))
+	for i in aps.size():
+		var a: Approach = aps[i]
+		if a.turn and turn_mode != Turn.OWN_ARROW:
+			continue
+		var lamp_col := Color.ORANGE if a.yellow_t > 0.0 else (Color.GREEN if a.go else Color.RED)
+		draw_circle(a.lamp, 9.0, Color(0.1, 0.1, 0.1))
+		draw_circle(a.lamp, 7.5, lamp_col)
+		if a.turn:
+			var lf := Vector2(a.dir.y, -a.dir.x)
+			draw_line(a.lamp - lf * 4.0, a.lamp + lf * 4.0, Color.BLACK, 2.0)
+			draw_line(a.lamp + lf * 4.0, a.lamp + lf * 1.0 + a.dir * 3.0, Color.BLACK, 2.0)
+			draw_line(a.lamp + lf * 4.0, a.lamp + lf * 1.0 - a.dir * 3.0, Color.BLACK, 2.0)
+	if r_target >= 0:
+		var t: Approach = aps[r_target]
+		draw_arc(t.lamp, 14.0, 0, TAU, 24, Color.YELLOW, 3.0)
+		draw_dashed_line(r_pos, t.lamp, Color(1, 1, 0, 0.5), 2.0, 6.0)
+		for j in aps.size():
+			if _light_idx(j) == r_target and not (aps[j].turn and turn_mode == Turn.OFF):
+				var sp: Vector2 = aps[j].stop_point
+				draw_rect(Rect2(sp, Vector2.ZERO).expand(sp - aps[j].dir * 90.0).grow(LW / 2 - 2), Color(1, 1, 0, 0.12))
+		if turn_mode == Turn.OWN_ARROW and aim_mode == Aim.BUTTON:
+			var tw: Approach = aps[t.twin]
+			draw_arc(tw.lamp, 14.0, 0, TAU, 24, Color(0.4, 0.8, 1.0), 2.0)
+			_text("RB", tw.lamp + Vector2(-9, -16), 13, Color(0.4, 0.8, 1.0))
 
 	# Cars.
 	for c: Car in cars:
@@ -639,6 +797,10 @@ func _draw() -> void:
 		elif c.boosted:
 			draw_line(Vector2(-CAR_L / 2 - 8, -5), Vector2(-CAR_L / 2 - 2, -5), Color.WHITE, 2.0)
 			draw_line(Vector2(-CAR_L / 2 - 10, 5), Vector2(-CAR_L / 2 - 2, 5), Color.WHITE, 2.0)
+		if c.turn and not c.turned and not c.wreck and fmod(elapsed * 3.0, 1.0) < 0.5:
+			# Left blinker, front and back (local -y is the driver's left).
+			draw_rect(Rect2(CAR_L / 2 - 6, -CAR_W / 2 - 2, 6, 5), Color(1, 0.65, 0))
+			draw_rect(Rect2(-CAR_L / 2, -CAR_W / 2 - 2, 6, 5), Color(1, 0.65, 0))
 		draw_set_transform(Vector2.ZERO, 0.0)
 		if not c.wreck and not c.running and c.wait > 0.6:
 			# Patience rings: each fills in turn (yellow, orange, red), pips count the
@@ -700,31 +862,33 @@ func _draw() -> void:
 
 func _draw_hud() -> void:
 	draw_rect(Rect2(0, 0, 330, 176), Color(0, 0, 0, 0.55))
-	_text("PROTOTYPE: crossing guard (#5)", Vector2(10, 22), 14, Color(1, 1, 1, 0.6))
+	_text("PROTOTYPE: crossing guard (#5), turn lanes (#9)", Vector2(10, 22), 14, Color(1, 1, 1, 0.6))
 	_text("Score %d" % score, Vector2(10, 52), 26, Color.WHITE)
 	_text("Combo %d  (x%d)" % [combo, 1 + combo / 5], Vector2(10, 78), 18, Color.WHITE)
 	_text("Through %d   Crashes %d" % [throughput, crashes], Vector2(10, 100), 16, Color.WHITE)
 	_text("Rush hour %d   %ds" % [int(elapsed / 20.0) + 1, int(elapsed)], Vector2(10, 120), 16, Color.WHITE)
 	var dash_s := "ready" if r_dash_cd <= 0.0 else "%.1f" % r_dash_cd
-	var wh_s := "off" if not whistle_enabled else ("ready" if whistle_cd <= 0.0 else "%.0fs" % whistle_cd)
-	_text("Dash %s   Whistle %s" % [dash_s, wh_s], Vector2(10, 142), 16, Color.WHITE)
+	_text("Dash %s" % dash_s, Vector2(10, 142), 16, Color.WHITE)
 	if penalty == Pen.ANGER:
 		draw_rect(Rect2(10, 152, 200, 12), Color(0.2, 0, 0))
 		draw_rect(Rect2(10, 152, 2.0 * minf(anger, 100.0), 12), Color.RED)
 		_text("anger", Vector2(216, 164), 12, Color.WHITE)
 
+	var arrow_btn := turn_mode == Turn.OWN_ARROW and aim_mode == Aim.BUTTON
 	var help := [
-		"Move WASD/arrows/stick   Switch light J/K/Z/X (A)   Dash L/C/Shift (X)   Tow U/V (Y)   Whistle I/B (RB)   R restart",
-		"Toggles: [1] Tow %s   [2] Whistle %s   [3] Wait penalty: %s   [4] Lanes start %s (restarts)   [5] Cars %s" % [
+		"Move WASD/arrows/stick   Switch light J/K/Z/X (A)   Dash L/C/Shift (X)   Tow U/V (Y)%s   R restart" % ("   Arrow I/B (RB)" if arrow_btn else ""),
+		"Toggles: [1] Tow %s   [3] Wait penalty: %s   [4] Lanes start %s (restarts)   [5] Cars %s" % [
 			"ON" if tow_enabled else "OFF (wreckage auto-clears in %ds)" % int(WRECK_AUTOCLEAR),
-			"ON" if whistle_enabled else "OFF",
 			PEN_NAMES[penalty],
 			"GO" if start_go else "STOP",
 			"YIELD to raccoon" if yield_raccoon else "IGNORE raccoon"],
+		"[6 / LB] Turn lanes: %s (restarts)%s" % [TURN_NAMES[turn_mode],
+			("   [7] Arrow aim: %s" % AIM_NAMES[aim_mode]) if turn_mode == Turn.OWN_ARROW else ""],
 	]
-	draw_rect(Rect2(0, H - 46, W, 46), Color(0, 0, 0, 0.55))
-	_text(help[0], Vector2(10, H - 27), 14, Color.WHITE)
-	_text(help[1], Vector2(10, H - 8), 14, Color(1, 0.9, 0.6))
+	draw_rect(Rect2(0, H - 64, W, 64), Color(0, 0, 0, 0.55))
+	_text(help[0], Vector2(10, H - 45), 14, Color.WHITE)
+	_text(help[1], Vector2(10, H - 26), 14, Color(1, 0.9, 0.6))
+	_text(help[2], Vector2(10, H - 7), 14, Color(0.6, 1, 0.8))
 
 	if gridlocked:
 		draw_rect(Rect2(0, 0, W, H), Color(0, 0, 0, 0.6))
