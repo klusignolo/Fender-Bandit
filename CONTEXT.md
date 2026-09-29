@@ -72,10 +72,20 @@ _Avoid_: Game over, death, loss
 The multiplier built by consecutive cars getting through safely; a crash resets it.
 _Avoid_: Streak, chain, multiplier (as a noun for the mechanic)
 
+### Traffic
+
+**Swell**:
+One road carrying a heavy share of the traffic for part of a stage, then shifting to another road, flagged at the road edge before it moves.
+_Avoid_: Wave, rush (Rush hour is the escalation), surge
+
+**Platoon**:
+A tight bunch of cars leaving one lane together, flagged at the road edge just before it arrives.
+_Avoid_: Burst, convoy, wave
+
 ### Drivers
 
 **Patience**:
-How long a driver will sit at a red light, in three stages: a Honk, a second Honk, then Blowing the red.
+How long the front driver at a red Light will wait, in three stages: a Honk, a second Honk, then Blowing the red. Drivers queued behind the front one have no Patience.
 _Avoid_: Anger, impatience, timer
 
 **Honk**:
@@ -83,7 +93,7 @@ A driver's warning that their patience is running out.
 _Avoid_: Beep, horn
 
 **Blowing the red**:
-A driver out of patience driving through a red light regardless of cross traffic.
+The front driver, out of Patience, driving through a red Light regardless of cross traffic. It arrives as a Debut; before it, the front driver only Honks.
 _Avoid_: Running the red (run is reserved for a play session), red-light running
 
 **Yield**:
