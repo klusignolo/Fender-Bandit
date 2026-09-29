@@ -49,6 +49,9 @@ const AIM_NAMES := ["nearest lamp (one Switch)", "Switch = straight, RB = its ar
 enum Flow { EVEN, SWELL, BURSTS, BOTH }
 const FLOW_NAMES := ["EVEN (old)", "SWELL (one heavy road, shifts)", "BURSTS (platoons)", "SWELL + BURSTS"]
 const DIR_NAMES := ["N", "S", "W", "E"]
+# Who can Blow the red (key 9): the dev's playtest says it ramps difficulty too hard, too early.
+enum Blow { OFF, FRONT, LINE }
+const BLOW_NAMES := ["OFF (front car honks only)", "FRONT car only", "WHOLE line (old)"]
 const SWELL_HEAVY := 2.0      # spawn rate multiplier on the heavy road
 const SWELL_LIGHT := 0.67     # ...and on the other three (total stays about the same)
 const SWELL_MIN := 20.0       # seconds between shifts of the heavy road
@@ -106,6 +109,7 @@ var penalty: int = Pen.RUN
 var start_go := false
 var yield_raccoon := true
 var flow_mode: int = Flow.BOTH
+var blow_mode: int = Blow.OFF
 
 var heavy := 0          # road index (DIR_NAMES) that gets the heavy flow
 var heavy_next := 1
@@ -212,6 +216,7 @@ func _setup_input() -> void:
 	_bind("t_aim", [KEY_7], [])
 	_bind("t_flow", [KEY_8], [])
 	_axis("t_flow", JOY_AXIS_TRIGGER_LEFT, 1.0)
+	_bind("t_blow", [KEY_9], [])
 
 
 func _restart() -> void:
@@ -431,6 +436,8 @@ func _handle_toggles() -> void:
 		_restart()
 	if Input.is_action_just_pressed("t_aim"):
 		aim_mode = (aim_mode + 1) % 2
+	if Input.is_action_just_pressed("t_blow"):
+		blow_mode = (blow_mode + 1) % 3
 	if Input.is_action_just_pressed("t_flow"):
 		flow_mode = (flow_mode + 1) % 4
 		_restart()
@@ -590,6 +597,16 @@ func _update_spawns(dt: float) -> void:
 func _update_cars(dt: float) -> void:
 	var rush := minf(1.4, 1.0 + elapsed * 0.0015)
 	var keep: Array = []
+	# The front car at each Light: nearest to its stop line, not yet over it.
+	var fronts := {}
+	var front_d := {}
+	for c: Car in cars:
+		if c.wreck or c.passed_line:
+			continue
+		var d: float = (aps[c.ap].stop_point - _front(c)).dot(aps[c.ap].dir)
+		if not front_d.has(c.ap) or d < front_d[c.ap]:
+			fronts[c.ap] = c
+			front_d[c.ap] = d
 	for c: Car in cars:
 		if c.wreck:
 			if not tow_enabled and not c.towed:
@@ -688,11 +705,17 @@ func _update_cars(dt: float) -> void:
 		else:
 			c.pos += c.dir * c.speed * dt
 
-		# Waiting and the waiting penalty.
-		if c.speed < 8.0 and freeze_t <= 0.0:
+		# Waiting and the waiting penalty. Outside WHOLE-line mode only the front car
+		# (and a turner already in the box) spends Patience; the rest of the queue sits calm.
+		var metered: bool = blow_mode == Blow.LINE or c.passed_line or fronts.get(c.ap) == c
+		if not metered:
+			c.wait = 0.0
+		elif c.speed < 8.0 and freeze_t <= 0.0:
 			c.wait += dt
 		elif c.speed > 40.0:
 			c.wait = maxf(0.0, c.wait - dt * 2.0)
+		if blow_mode == Blow.OFF and not c.passed_line:
+			c.wait = minf(c.wait, c.patience - 0.01)  # honks, but never blows the red
 		var ring_i := int(c.wait / (c.patience / PATIENCE_RINGS))
 		if ring_i > c.honks and ring_i < PATIENCE_RINGS:
 			_float("HONK!" if ring_i == 1 else "HONK HONK!", c.pos + Vector2(0, -24), Color.YELLOW)
@@ -903,7 +926,7 @@ func _draw() -> void:
 				if p < ring_i:
 					draw_circle(pip, 2.5, [Color.YELLOW, Color.ORANGE, Color.RED][p])
 			var left := c.patience - c.wait
-			if left <= WARN_TIME:
+			if left <= WARN_TIME and blow_mode != Blow.OFF:
 				if fmod(elapsed * 6.0, 1.0) < 0.5:
 					draw_set_transform(c.pos, c.dir.angle())
 					draw_rect(Rect2(-CAR_L / 2 - 3, -CAR_W / 2 - 3, CAR_L + 6, CAR_W + 6), Color.RED, false, 3.0)
@@ -1004,7 +1027,7 @@ func _draw_hud() -> void:
 			"YIELD to raccoon" if yield_raccoon else "IGNORE raccoon"],
 		"[6 / LB] Turn lanes: %s (restarts)%s" % [TURN_NAMES[turn_mode],
 			("   [7] Arrow aim: %s" % AIM_NAMES[aim_mode]) if turn_mode == Turn.OWN_ARROW else ""],
-		"[8 / LT] Traffic: %s (restarts)" % FLOW_NAMES[flow_mode],
+		"[8 / LT] Traffic: %s (restarts)   [9] Blowing the red: %s" % [FLOW_NAMES[flow_mode], BLOW_NAMES[blow_mode]],
 	]
 	draw_rect(Rect2(0, H - 83, W, 83), Color(0, 0, 0, 0.55))
 	_text(help[0], Vector2(10, H - 64), 14, Color.WHITE)
