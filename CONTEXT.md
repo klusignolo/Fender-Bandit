@@ -14,6 +14,10 @@ _Avoid_: Player character, crossing guard, guard, cursor
 The traffic signal for one approach lane, always Red, Green or Yellow; drivers obey it, not the raccoon.
 _Avoid_: Signal, lamp, Stop/Go
 
+**Arrow**:
+The Light for a left-turn lane; turning drivers go only on its green, protected from oncoming traffic, and the raccoon switches it with a button of its own.
+_Avoid_: Turn signal (that's a car's blinker), left light, protected phase
+
 **Switch**:
 The raccoon's one move on a light: Red turns Green, Green turns Yellow, and Yellow falls to Red on its own.
 _Avoid_: Toggle, flip, Stop, Go
