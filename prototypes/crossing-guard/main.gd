@@ -1,5 +1,6 @@
 # PROTOTYPE, throw away: greybox for "Does crossing-guard traffic direction feel fun?" (issue #5),
-# extended for "How should turn lanes work?" (issue #9).
+# extended for "How should turn lanes work?" (issue #9) and "What stops the light rhythm
+# from going stale?" (issue #14).
 # Everything lives in this one script and is drawn with _draw(). No polish, no tests.
 extends Node2D
 
@@ -44,6 +45,20 @@ const TURN_NAMES := ["OFF (plain 4-way)", "SHARED light, turners yield to oncomi
 # How the Raccoon reaches an arrow light (key 7, OWN_ARROW only).
 enum Aim { NEAREST, BUTTON }
 const AIM_NAMES := ["nearest lamp (one Switch)", "Switch = straight, RB = its arrow"]
+# Traffic shapes under test (key 8), issue #14: does uneven flow break the fixed N/S <-> E/W cycle?
+enum Flow { EVEN, SWELL, BURSTS, BOTH }
+const FLOW_NAMES := ["EVEN (old)", "SWELL (one heavy road, shifts)", "BURSTS (platoons)", "SWELL + BURSTS"]
+const DIR_NAMES := ["N", "S", "W", "E"]
+const SWELL_HEAVY := 2.0      # spawn rate multiplier on the heavy road
+const SWELL_LIGHT := 0.67     # ...and on the other three (total stays about the same)
+const SWELL_MIN := 20.0       # seconds between shifts of the heavy road
+const SWELL_MAX := 30.0
+const SHIFT_WARN := 4.0       # the next heavy road flashes this long before it takes over
+const BURST_MIN := 8.0        # seconds between platoons
+const BURST_MAX := 14.0
+const BURST_WARN := 2.0
+const BURST_GAP := 0.5        # seconds between cars inside a platoon
+const BURST_TURN := 0.3       # share of platoons that come down a turn lane
 
 # One lane approaching the intersection. Lanes come in pairs: index 2k is the
 # through lane, 2k+1 its left-turn lane (twin).
@@ -83,13 +98,21 @@ class Car:
 	var gunned := false     # out of patience: turns regardless
 
 # Dev toggles (keys 1-7)
-var turn_mode: int = Turn.SHARED_YIELD
-var aim_mode: int = Aim.NEAREST
+var turn_mode: int = Turn.OWN_ARROW  # decided in #9
+var aim_mode: int = Aim.BUTTON
 var tow_enabled := true
 var whistle_enabled := false  # playtest: never reached for it
 var penalty: int = Pen.RUN
 var start_go := false
 var yield_raccoon := true
+var flow_mode: int = Flow.BOTH
+
+var heavy := 0          # road index (DIR_NAMES) that gets the heavy flow
+var heavy_next := 1
+var heavy_t := 0.0      # seconds until heavy_next takes over
+var burst_t := 0.0      # seconds until the next platoon leaves
+var burst_lane := -1    # approach the next or current platoon uses; -1 none
+var burst_left := 0     # cars still to come in the current platoon
 
 var aps: Array = []
 var cars: Array = []
@@ -139,6 +162,8 @@ func _ready() -> void:
 			start_go = true
 		if a.begins_with("--turn="):
 			turn_mode = int(a.substr(7))
+		if a.begins_with("--flow="):
+			flow_mode = int(a.substr(7))
 	_restart()
 
 
@@ -185,6 +210,8 @@ func _setup_input() -> void:
 	_bind("t_yield", [KEY_5], [])
 	_bind("t_turn", [KEY_6], [JOY_BUTTON_LEFT_SHOULDER])
 	_bind("t_aim", [KEY_7], [])
+	_bind("t_flow", [KEY_8], [])
+	_axis("t_flow", JOY_AXIS_TRIGGER_LEFT, 1.0)
 
 
 func _restart() -> void:
@@ -218,6 +245,24 @@ func _restart() -> void:
 	towing = null
 	freeze_t = 0.0
 	whistle_cd = 0.0
+	heavy = randi() % 4
+	heavy_next = _other_road(heavy)
+	heavy_t = randf_range(SWELL_MIN, SWELL_MAX)
+	burst_t = randf_range(4.0, 7.0)
+	burst_lane = -1
+	burst_left = 0
+
+
+func _other_road(d: int) -> int:
+	return (d + 1 + randi() % 3) % 4
+
+
+func _swells() -> bool:
+	return flow_mode == Flow.SWELL or flow_mode == Flow.BOTH
+
+
+func _bursts() -> bool:
+	return flow_mode == Flow.BURSTS or flow_mode == Flow.BOTH
 
 
 func _add_ap(label: String, dir: Vector2, spawn: Vector2, stop_point: Vector2) -> void:
@@ -263,6 +308,14 @@ func _strip(c: Car) -> Rect2:
 	if absf(c.dir.x) > 0.5:
 		return r.grow_individual(0, hw, 0, hw)
 	return r.grow_individual(hw, 0, hw, 0)
+
+
+# Where a road enters the screen, between its two incoming lanes.
+func _edge(d: int) -> Vector2:
+	var a: Approach = aps[d * 2]
+	var half := H / 2.0 if absf(a.dir.y) > 0.5 else W / 2.0
+	var inset := 40.0 if a.dir.y > 0.5 else (110.0 if a.dir.y < -0.5 else 80.0)  # clear the help bar
+	return C - a.dir * (half - inset) + Vector2(-a.dir.y, a.dir.x) * LW
 
 
 func _on_road(p: Vector2) -> bool:
@@ -333,6 +386,7 @@ func _process(dt: float) -> void:
 	if not gridlocked:
 		elapsed += dt
 		_update_raccoon(dt)
+		_update_flow(dt)
 		_update_spawns(dt)
 		_update_cars(dt)
 		_check_crashes()
@@ -377,6 +431,9 @@ func _handle_toggles() -> void:
 		_restart()
 	if Input.is_action_just_pressed("t_aim"):
 		aim_mode = (aim_mode + 1) % 2
+	if Input.is_action_just_pressed("t_flow"):
+		flow_mode = (flow_mode + 1) % 4
+		_restart()
 
 
 func _update_raccoon(dt: float) -> void:
@@ -469,6 +526,26 @@ func _drop_tow() -> void:
 		_float("CLEARED +5", c.pos, Color.SKY_BLUE)
 
 
+# The heavy road shifts every so often; platoons leave from one lane at a time.
+func _update_flow(dt: float) -> void:
+	if _swells():
+		heavy_t -= dt
+		if heavy_t <= 0.0:
+			heavy = heavy_next
+			heavy_next = _other_road(heavy)
+			heavy_t = randf_range(SWELL_MIN, SWELL_MAX)
+			_float("RUSH FROM %s" % DIR_NAMES[heavy], _edge(heavy) + Vector2(0, -20), Color.ORANGE)
+	if _bursts() and burst_left <= 0:
+		burst_t -= dt
+		if burst_t <= BURST_WARN and burst_lane < 0:
+			var turn := turn_mode != Turn.OFF and randf() < BURST_TURN
+			burst_lane = (randi() % 4) * 2 + (1 if turn else 0)
+		if burst_t <= 0.0:
+			burst_left = randi_range(4, 6)
+			aps[burst_lane].spawn_t = 0.0
+			burst_t = randf_range(BURST_MIN, BURST_MAX)
+
+
 func _update_spawns(dt: float) -> void:
 	var interval := maxf(1.0, 3.2 - elapsed * 0.008)  # peaks at ~4.5 min
 	for i in aps.size():
@@ -488,7 +565,16 @@ func _update_spawns(dt: float) -> void:
 			a.blocked_t += dt
 			continue
 		a.blocked_t = 0.0
-		a.spawn_t = interval * randf_range(0.6, 1.4) / (TURN_SHARE if a.turn else 1.0)
+		var mult := 1.0
+		if _swells():
+			mult = SWELL_HEAVY if i / 2 == heavy else SWELL_LIGHT
+		a.spawn_t = interval * randf_range(0.6, 1.4) / (TURN_SHARE if a.turn else 1.0) / mult
+		if i == burst_lane and burst_left > 0:
+			burst_left -= 1
+			if burst_left > 0:
+				a.spawn_t = BURST_GAP
+			else:
+				burst_lane = -1
 		var c := Car.new()
 		c.ap = i
 		c.turn = a.turn
@@ -852,6 +938,8 @@ func _draw() -> void:
 	if freeze_t > 0.0:
 		draw_rect(Rect2(0, 0, W, H), Color(0.6, 0.8, 1.0, 0.12))
 
+	_draw_flow()
+
 	for f in floats:
 		var col: Color = f.color
 		col.a = clampf(f.t * 2.0, 0.0, 1.0)
@@ -860,9 +948,41 @@ func _draw() -> void:
 	_draw_hud()
 
 
+func _chevrons(p: Vector2, dir: Vector2, n: int, col: Color) -> void:
+	var side := Vector2(-dir.y, dir.x)
+	for k in n:
+		var tip := p + dir * (k * 12.0 - (n - 1) * 6.0)
+		draw_polyline(PackedVector2Array([tip - dir * 7.0 + side * 11.0, tip, tip - dir * 7.0 - side * 11.0]), col, 4.0)
+
+
+# Telegraphs at the road edges: the heavy road, the road about to turn heavy, and platoons.
+func _draw_flow() -> void:
+	var blink := fmod(elapsed * 4.0, 1.0) < 0.5
+	for d in 4:
+		var a: Approach = aps[d * 2]
+		var p := _edge(d)
+		var out := Vector2(-a.dir.y, a.dir.x) * 62.0
+		var tags: Array = []
+		if _swells() and d == heavy:
+			_chevrons(p, a.dir, 3, Color.ORANGE)
+			tags.append(["HEAVY", Color.ORANGE])
+		elif _swells() and d == heavy_next and heavy_t <= SHIFT_WARN:
+			if blink:
+				_chevrons(p, a.dir, 3, Color(1, 0.65, 0, 0.6))
+			tags.append(["RUSH IN %d" % ceili(heavy_t), Color(1, 0.8, 0.4)])
+		if burst_lane >= 0 and burst_lane / 2 == d:
+			var bl: Approach = aps[burst_lane]
+			var tag := "PLATOON" + (" (LEFT)" if bl.turn else "")
+			if burst_left > 0 or blink:
+				draw_circle(bl.spawn + a.dir * 60.0, 9.0, Color.WHITE)
+			tags.append([tag if burst_left > 0 else tag + "!", Color.WHITE])
+		for t in tags.size():
+			_text(tags[t][0], p + out + Vector2(0, 5 + t * 18 - (tags.size() - 1) * 9), 15, tags[t][1], true)
+
+
 func _draw_hud() -> void:
 	draw_rect(Rect2(0, 0, 330, 176), Color(0, 0, 0, 0.55))
-	_text("PROTOTYPE: crossing guard (#5), turn lanes (#9)", Vector2(10, 22), 14, Color(1, 1, 1, 0.6))
+	_text("PROTOTYPE: crossing guard (#5), turn lanes (#9), traffic (#14)", Vector2(10, 22), 14, Color(1, 1, 1, 0.6))
 	_text("Score %d" % score, Vector2(10, 52), 26, Color.WHITE)
 	_text("Combo %d  (x%d)" % [combo, 1 + combo / 5], Vector2(10, 78), 18, Color.WHITE)
 	_text("Through %d   Crashes %d" % [throughput, crashes], Vector2(10, 100), 16, Color.WHITE)
@@ -884,11 +1004,13 @@ func _draw_hud() -> void:
 			"YIELD to raccoon" if yield_raccoon else "IGNORE raccoon"],
 		"[6 / LB] Turn lanes: %s (restarts)%s" % [TURN_NAMES[turn_mode],
 			("   [7] Arrow aim: %s" % AIM_NAMES[aim_mode]) if turn_mode == Turn.OWN_ARROW else ""],
+		"[8 / LT] Traffic: %s (restarts)" % FLOW_NAMES[flow_mode],
 	]
-	draw_rect(Rect2(0, H - 64, W, 64), Color(0, 0, 0, 0.55))
-	_text(help[0], Vector2(10, H - 45), 14, Color.WHITE)
-	_text(help[1], Vector2(10, H - 26), 14, Color(1, 0.9, 0.6))
-	_text(help[2], Vector2(10, H - 7), 14, Color(0.6, 1, 0.8))
+	draw_rect(Rect2(0, H - 83, W, 83), Color(0, 0, 0, 0.55))
+	_text(help[0], Vector2(10, H - 64), 14, Color.WHITE)
+	_text(help[1], Vector2(10, H - 45), 14, Color(1, 0.9, 0.6))
+	_text(help[2], Vector2(10, H - 26), 14, Color(0.6, 1, 0.8))
+	_text(help[3], Vector2(10, H - 7), 14, Color(0.7, 0.85, 1))
 
 	if gridlocked:
 		draw_rect(Rect2(0, 0, W, H), Color(0, 0, 0, 0.6))
