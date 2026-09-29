@@ -1,13 +1,13 @@
 # Game Jam 2026
 
-An arcade game where the player, as a raccoon tampering with traffic lights, keeps an intersection flowing through stage after stage until it collapses into a pile-up.
+An arcade game where the player, as a raccoon tampering with traffic lights, keeps a growing web of intersections flowing through stage after stage until it collapses into a pile-up.
 
 ## Language
 
 ### The player
 
 **Raccoon**:
-The player-controlled character who roams the intersection flipping its traffic lights and clearing up after crashes.
+The player-controlled character who roams the intersections flipping their traffic lights and clearing up after crashes.
 _Avoid_: Player character, crossing guard, guard, cursor
 
 **Light**:
@@ -37,7 +37,7 @@ One play session: a series of stages, from the first car to gridlock.
 _Avoid_: Game, session, playthrough
 
 **Stage**:
-One intersection within a run, cleared by meeting its quota; each stage is never easier than the last.
+One leg of a run, cleared by meeting its quota; the world grows a piece on Debut stages, and each stage is never easier than the last.
 _Avoid_: Level, round, wave, shift
 
 **Quota**:
@@ -65,8 +65,20 @@ The escalation from stage to stage, with no ceiling.
 _Avoid_: Difficulty, wave, level
 
 **Gridlock**:
-The end of a run: a lane has backed up so far that no more traffic can enter.
+The end of a run: the Jam is full (jam-level Gridlock).
 _Avoid_: Game over, death, loss
+
+**Jam**:
+The city-wide meter of traffic trouble, filled by waiting cars and entry backlog and drained while traffic flows; a full Jam is Gridlock.
+_Avoid_: Anger, congestion meter, pressure, health
+
+**Jam-level**:
+The band the Jam is in: Clear, Busy, Heavy, then Gridlock when full.
+_Avoid_: Danger level, threat, stage (a stage is a leg of a run)
+
+**Dent**:
+A small, permanent loss of Jam capacity left by each Crash.
+_Avoid_: Scar, strike, damage
 
 **Combo**:
 The multiplier built by consecutive cars getting through safely; a crash resets it.
