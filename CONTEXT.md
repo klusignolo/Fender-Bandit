@@ -48,6 +48,14 @@ _Avoid_: Tutorial, campaign, intro
 The stage that introduces a new feature on its own, holding everything else steady.
 _Avoid_: Unlock stage, feature stage
 
+**Attract**:
+The self-running intersection shown behind the title while no one is playing.
+_Avoid_: Demo mode, idle screen, splash
+
+**High-score table**:
+The local list of the top ten initials and scores.
+_Avoid_: Leaderboard (the online kind is out of scope), scoreboard
+
 **Rush hour**:
 The escalation from stage to stage, with no ceiling.
 _Avoid_: Difficulty, wave, level
