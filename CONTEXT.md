@@ -33,8 +33,20 @@ One play session: a series of stages, from the first car to gridlock.
 _Avoid_: Game, session, playthrough
 
 **Stage**:
-One generated intersection within a run, cleared by getting a set number of cars through; each stage is harder than the last.
+One intersection within a run, cleared by meeting its quota; each stage is never easier than the last.
 _Avoid_: Level, round, wave, shift
+
+**Quota**:
+The number of cars a stage needs to get through before it is cleared.
+_Avoid_: Target, goal, car count
+
+**Opening**:
+The fixed first stages of every run, identical each time, before stages are generated.
+_Avoid_: Tutorial, campaign, intro
+
+**Debut**:
+The stage that introduces a new feature on its own, holding everything else steady.
+_Avoid_: Unlock stage, feature stage
 
 **Rush hour**:
 The escalation from stage to stage, with no ceiling.
