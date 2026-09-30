@@ -56,6 +56,17 @@ One meter for the whole city ([#15](https://github.com/klusignolo/GameJam2026/is
 | Dent | Jam capacity lost for good per Crash. | 2% | `DENT` | #15 | Kept small: Wreckage is the real punishment. |
 | Jam-levels | Where Busy and Heavy start, as a share of the capacity not lost to Dents. | Busy 40%, Heavy 70% | `_level()` | #15 | #17: the Heavy pulse adds to the noise when every crossing is backed up. |
 
+## Vehicle sizes
+
+Footprints in world px. They're gameplay, not just art: a longer vehicle blocks the box for longer. The look is in [`docs/sprites.md`](sprites.md).
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Car | The standard vehicle. | 38 × 20 | `CAR_L`, `CAR_W` | #5 | Legible at ~0.66 zoom (#16). |
+| Motorcycle | Small and fast; harder to see. | 22 × 10 | not built | #6 | First guess. |
+| Semi | Long and slow; one rigid sprite, so its turn arc cuts the corner. | 84 × 24 | not built | #6 | First guess. |
+| Raccoon | The player: kept at car scale so the hero reads. | 28 wide (sprite ~28 × 38) | `RACCOON_R` | #5, #6 | |
+
 ## Raccoon
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
