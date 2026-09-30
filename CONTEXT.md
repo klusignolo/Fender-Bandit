@@ -11,12 +11,8 @@ The player-controlled character who roams the intersections flipping their traff
 _Avoid_: Player character, crossing guard, guard, cursor
 
 **Light**:
-The traffic signal for one approach lane, always Red, Green or Yellow; drivers obey it, not the raccoon.
+The traffic signal for one approach into a crossing, always Red, Green or Yellow; drivers obey it, not the raccoon.
 _Avoid_: Signal, lamp, Stop/Go
-
-**Arrow**:
-The Light for a left-turn lane; turning drivers go only on its green, protected from oncoming traffic, and the raccoon switches it with a button of its own.
-_Avoid_: Turn signal (that's a car's blinker), left light, protected phase
 
 **Switch**:
 The raccoon's one move on a light: Red turns Green, Green turns Yellow, and Yellow falls to Red on its own.
@@ -90,10 +86,6 @@ _Avoid_: Streak, chain, multiplier (as a noun for the mechanic)
 One road carrying a heavy share of the traffic for part of a stage, then shifting to another road, flagged at the road edge before it moves.
 _Avoid_: Wave, rush (Rush hour is the escalation), surge
 
-**Platoon**:
-A tight bunch of cars leaving one lane together, flagged at the road edge just before it arrives.
-_Avoid_: Burst, convoy, wave
-
 ### Drivers
 
 **Patience**:
@@ -107,6 +99,10 @@ _Avoid_: Beep, horn
 **Blowing the red**:
 The front driver, out of Patience, driving through a red Light regardless of cross traffic. It arrives as a Debut; before it, the front driver only Honks.
 _Avoid_: Running the red (run is reserved for a play session), red-light running
+
+**Turner**:
+A driver turning left from the shared lane, who waits in the crossing for a gap in oncoming traffic and holds up everyone behind; flagged by an icon that pulses once it is stuck.
+_Avoid_: Left-turner, turning car, yielding (Yield is braking for the raccoon)
 
 **Yield**:
 A driver braking for the raccoon in their path; a driver moving too fast to stop in time hits it instead.
