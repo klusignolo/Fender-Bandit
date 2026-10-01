@@ -1,13 +1,15 @@
 class_name Raccoon
 extends Node2D
 ## The player (ADR 0001: the one node that moves itself). Moves with any bound input at a constant
-## on-screen speed, Switches the nearest Light in range (biased toward the way it faces), and feeds
-## its position to Traffic every tick. Greybox look until the rig (#41).
+## on-screen speed, Switches the nearest Light in range (biased toward the way it faces), Tows Wreckage
+## (grab, drop and the slower walk are Traffic rules), and feeds its position to Traffic every tick.
+## Greybox look until the rig (#41).
 
 const FUR := Color(0.55, 0.55, 0.58)
 const MASK := Color(0.1, 0.1, 0.1)
 const VEST := Color(1, 0.6, 0.1)
 const TARGET := Color(1, 1, 0)
+const ROPE := Color(0.8, 0.6, 0.3)
 
 var traffic: Traffic
 var facing := Vector2.UP
@@ -25,12 +27,15 @@ func _physics_process(delta: float) -> void:
 	if input != Vector2.ZERO:  # the InputMap deadzone already filtered drift
 		facing = input.normalized()
 	var r := Tuning.RACCOON_R
-	position = (position + input * Tuning.RACCOON_SPEED * world_per_px * delta).clamp(
+	var speed := Tuning.RACCOON_SPEED * traffic.raccoon_speed_scale() * world_per_px
+	position = (position + input * speed * delta).clamp(
 			traffic.net.bounds.position + Vector2(r, r), traffic.net.bounds.end - Vector2(r, r))
+	traffic.set_raccoon(position, false)
 	target = _pick_target(world_per_px)
 	if target != null and Input.is_action_just_pressed(&"switch"):
 		traffic.switch(target)
-	traffic.set_raccoon(position, false)
+	if Input.is_action_just_pressed(&"tow"):
+		traffic.tow(Tuning.TOW_RANGE * world_per_px)
 	queue_redraw()
 
 
@@ -56,6 +61,8 @@ func _world_per_screen() -> float:
 
 
 func _draw() -> void:
+	if traffic.towing != null:
+		draw_line(Vector2.ZERO, to_local(traffic.towing.transform.origin), ROPE, 3.0)
 	if target != null:
 		var at := to_local(target.pole)
 		draw_arc(at, 14.0, 0, TAU, 24, TARGET, 3.0)

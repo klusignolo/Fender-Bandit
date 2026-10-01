@@ -33,14 +33,16 @@ class Route:
 	var starts: PackedFloat32Array
 	var length := 0.0
 	var stop_s := 0.0  # where the stop line is: the end of the first stretch, the incoming lane
+	var id: int  # index into RoadNet.routes
+	var sharing: PackedInt32Array  # ids of the routes with a segment in common with this one, itself included
 	var _curves: Array[Curve2D] = []  # not the RoadNet itself: it holds this Route, so that would be a cycle
 
 	func _init(net: RoadNet, ids: PackedInt32Array) -> void:
 		segments = ids
-		for id in ids:
+		for seg in ids:
 			starts.append(length)
-			length += net.segments[id].length
-			_curves.append(net.segments[id].curve)
+			length += net.segments[seg].length
+			_curves.append(net.segments[seg].curve)
 		stop_s = net.segments[ids[0]].length
 
 	## Index into `segments` of the stretch that distance s along the route is on.
@@ -80,7 +82,11 @@ class Approach:
 var crossings: PackedVector2Array = []
 var approaches: Array[Approach] = []
 var segments: Array[Segment] = []
+var routes: Array[Route] = []  # every route, by id
 var bounds := Rect2()  # the map; entries start just outside it
+## For each connector, the other connectors in its box whose paths come close enough for two cars to
+## touch: these are the only pairs of moving cars that can Crash.
+var conflicts: Dictionary[int, PackedInt32Array] = {}
 
 
 func _init() -> void:
@@ -88,6 +94,41 @@ func _init() -> void:
 	bounds = Rect2(-Tuning.ARM_X, -Tuning.ARM_Y, Tuning.ARM_X * 2.0, Tuning.ARM_Y * 2.0)
 	for side in 4:
 		_add_approach(0, side)
+	_find_conflicts()
+	_find_sharing()
+
+
+## Whether point p is on a road: within a lane, or ON_ROAD_MARGIN past the kerb.
+func on_road(p: Vector2) -> bool:
+	for seg in segments:
+		if seg.curve.get_closest_point(p).distance_to(p) < Tuning.LW / 2.0 + Tuning.ON_ROAD_MARGIN:
+			return true
+	return false
+
+
+func _find_conflicts() -> void:
+	var connectors: Array[int] = []
+	for i in segments.size():
+		if segments[i].kind == Segment.Kind.CONNECTOR:
+			connectors.append(i)
+			conflicts[i] = PackedInt32Array()
+	for i in connectors:
+		for j in connectors:
+			if i < j and _crossing_of(i) == _crossing_of(j) and _paths_touch(segments[i].curve, segments[j].curve):
+				conflicts[i].append(j)
+				conflicts[j].append(i)
+
+
+func _crossing_of(segment: int) -> int:
+	return approaches[segments[segment].approach].crossing
+
+
+# Two cars, one on each path, could touch: the paths come within a car's width of each other.
+func _paths_touch(a: Curve2D, b: Curve2D) -> bool:
+	for p in a.get_baked_points():
+		if b.get_closest_point(p).distance_to(p) < Tuning.CAR_W:
+			return true
+	return false
 
 
 func _add_approach(x: int, side: int) -> void:
@@ -109,10 +150,26 @@ func _add_approach(x: int, side: int) -> void:
 	a.incoming = _add_segment(Segment.Kind.INCOMING, i, PackedVector2Array([spawn, a.stop_point]))
 	var straight := _add_segment(Segment.Kind.CONNECTOR, i, PackedVector2Array([a.stop_point, far_line]))
 	var out := _add_segment(Segment.Kind.OUTGOING, i, PackedVector2Array([far_line, gone]))
-	a.routes.append(Route.new(self, PackedInt32Array([a.incoming, straight, out])))
+	_add_route(a, PackedInt32Array([a.incoming, straight, out]))
 	approaches.append(a)
 
 
 func _add_segment(kind: Segment.Kind, approach: int, points: PackedVector2Array) -> int:
 	segments.append(Segment.new(kind, approach, points))
 	return segments.size() - 1
+
+
+func _find_sharing() -> void:
+	for r in routes:
+		for o in routes:
+			for seg in r.segments:
+				if o.segments.has(seg):
+					r.sharing.append(o.id)
+					break
+
+
+func _add_route(a: Approach, ids: PackedInt32Array) -> void:
+	var r := Route.new(self, ids)
+	r.id = routes.size()
+	routes.append(r)
+	a.routes.append(r)

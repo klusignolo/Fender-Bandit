@@ -64,6 +64,14 @@ How cars move, follow and stop. Distances are measured along the car's route.
 | Yellow caution | On Yellow a driver judges its stop as this many times longer, so more drivers push through. Yellow is a risk, not a free stop. | 2× | `YELLOW_CAUTION` (inline) | #21 | |
 | Push slack | A driver within this of just making the stop still stops. | 1 px | `PUSH_SLACK` (inline) | #21 | |
 
+## Crashes and Wreckage
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Crash inset | Each footprint shrinks by this on every side before the Crash check, so a graze doesn't count. | 2 px | `CRASH_INSET` (inline `grow(-2.0)`) | #22 | |
+| Sight inset | A driver watches for Wreckage across its own width, less this on each side. | 2 px | `SIGHT_INSET` (inline, `_strip`) | #22 | |
+| Sight step | Spacing of the points along its route where a driver looks for Wreckage. | 4 px | `SIGHT_STEP` (not in the greybox) | #22 | The greybox checked a straight strip ahead instead; points along the route also follow turns. |
+
 ## Turners
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
@@ -124,6 +132,10 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | Targeting range | How close a Light must be to Switch it (on screen). | 160 px | `SIGNAL_RANGE` | #9 | |
 | Start | Where the Raccoon starts, from the first crossing's centre. | 70, 70 world px | `RACCOON_START` (`r_pos`) | #21 | |
 | Targeting bias | How much facing a Light counts toward picking it: a faced Light counts as up to this many px nearer. | 60 px | `TARGET_BIAS` (inline) | #9, #21 | |
+| Tow range | How close to the footprint of Wreckage the Raccoon must be to Tow it (on screen). | 30 px | `TOW_RANGE` | #22 | |
+| Tow hold | Towed Wreckage trails at most this far from the Raccoon. | 26 world px | `TOW_HOLD` (inline) | #22 | |
+| Tow speed | The Raccoon's walk and Dash speed while towing. | 0.55× walk, 0.6× Dash | `TOW_SPEED`, `TOW_DASH` (inline) | #22 | Dash arrives in #23. |
+| Off-road margin | Towed Wreckage whose centre is this far past the kerb is off the road, and is gone. | 10 world px | `ON_ROAD_MARGIN` (inline, `_on_road`) | #22 | |
 | Yellow | How long a Light stays Yellow before falling to Red. | 1.5s | `YELLOW_TIME` | #5 | |
 
 ## Presentation tied to tuning

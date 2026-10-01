@@ -2,7 +2,7 @@ class_name World
 extends Node2D
 ## One Run's world (#13 §2): owns the Traffic simulation, steps it at a fixed 60 Hz, and draws it.
 ## Greybox: roads are drawn here from the RoadNet curves; cars are pooled Vehicle nodes keyed by
-## car id; each Light has a LightPole. Nothing here decides a rule.
+## car id; each Light has a LightPole; each Crash gets a CrashMarker. Nothing here decides a rule.
 
 const GRASS := Color(0.2, 0.36, 0.2)
 const GRASS_FAR := Color(0.12, 0.2, 0.12)
@@ -26,6 +26,8 @@ func _ready() -> void:
 	Engine.physics_ticks_per_second = Traffic.TICK_HZ
 	traffic.car_spawned.connect(_on_car_spawned)
 	traffic.car_exited.connect(_on_car_exited)
+	traffic.crashed.connect(_on_crashed)
+	traffic.towed.connect(_on_towed)
 	for l in traffic.lights:
 		add_child(LightPole.new(l))
 	add_child(_vehicle_layer)
@@ -53,6 +55,16 @@ func _on_car_spawned(car: Car) -> void:
 		_vehicle_layer.add_child(v)
 	v.show_car(car)
 	_vehicles[car.id] = v
+
+
+func _on_crashed(_a: Car, _b: Car, at: Vector2) -> void:
+	add_child(CrashMarker.new(at))
+
+
+## Wreckage towed off the road is gone: same as a car leaving the map.
+func _on_towed(car: Car, off_road: bool) -> void:
+	if off_road:
+		_on_car_exited(car)
 
 
 func _on_car_exited(car: Car) -> void:

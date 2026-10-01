@@ -37,6 +37,11 @@ const HARD_BRAKE := 2.0  # how many times DECEL a driver brakes at to hold a low
 const YELLOW_CAUTION := 2.0  # on Yellow a driver judges its stop as this many times longer, so more push through
 const PUSH_SLACK := 1.0  # px: a driver this close to just making the stop still stops
 
+# Crashes and Wreckage
+const CRASH_INSET := 2.0  # each footprint shrinks by this on every side before the Crash check, so a graze doesn't count
+const SIGHT_INSET := 2.0  # a driver watches for Wreckage across its own width, less this on each side
+const SIGHT_STEP := 4.0  # px between the points along its route where a driver looks for Wreckage
+
 # Lights
 const YELLOW_TIME := 1.5  # seconds a Light stays Yellow before falling to Red
 
@@ -46,6 +51,11 @@ const RACCOON_SPEED := 230.0
 const SIGNAL_RANGE := 160.0  # how close a Light's pole must be to Switch it
 const TARGET_BIAS := 60.0  # how much facing a Light counts toward picking it, in px of distance
 const RACCOON_START := Vector2(70, 70)  # world px from the first crossing's centre
+const TOW_RANGE := 30.0  # how close to the footprint of Wreckage the Raccoon must be to Tow it
+const TOW_HOLD := 26.0  # world px: towed Wreckage trails at most this far from the Raccoon
+const TOW_SPEED := 0.55  # the Raccoon's walking speed while towing, as a share of RACCOON_SPEED
+const TOW_DASH := 0.6  # its Dash speed while towing, as a share of the Dash speed (Dash is #23)
+const ON_ROAD_MARGIN := 10.0  # world px: towed Wreckage whose centre is this far past the kerb is off the road
 
 # Camera
 const FIT := 1.03  # zoom a touch past "fits everything", so the map edges bleed off
