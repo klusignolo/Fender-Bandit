@@ -6,7 +6,7 @@ Solo entry for the 2026 HCSS Game Jam (https://itch.io/jam/2026-hcss-game-jam).
 Submission deadline: Oct 14, 2026, 11:59 PM Central. Engine: Godot 3.6+ (required); we use the latest Godot (4.7.x) with GDScript.
 Submitted games and assets become HCSS IP.
 
-Themes: "Raccoons" and "Accidents happen!". Concept: a raccoon, controlled
+Themes: "Raccoons" and "Accidents happen!". Title: **Fender Bandit** ("Stop. Go. Oops."). Concept: a raccoon, controlled
 directly by the player, directs traffic. Players try to route traffic safely,
 and crashes are the comedic payoff.
 

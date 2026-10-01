@@ -163,7 +163,8 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 
 | ID | Shows | Notes |
 |---|---|---|
-| `logo` | Title logo over Attract | Construction-stripe lockup; waits on the name (#11) |
+| `logo` | Title logo over Attract: **FENDER BANDIT**, with the tagline **"Stop. Go. Oops."** in small Bungee underneath | Construction-stripe lockup in Bungee. One flourish, such as a raccoon mask or a crumpled bumper worked into a letter. Name and tagline from #11 |
+| `app_icon` | Window, web favicon and itch thumbnail | A "Raccoon Crossing" sign: an orange construction diamond with a navy raccoon silhouette and navy border. Must read at 16 px (#11) |
 | `ui_sign_panel` | Blue sign 9-patch | Most screens |
 | `ui_button_*` | Cabinet button glyphs for the controls card | A Switch, X Dash, Y Tow (#10, #17) |
 | `ui_new_badge` | "NEW: …" on the tally card | Construction stripes |

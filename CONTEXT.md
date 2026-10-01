@@ -1,6 +1,6 @@
 # Game Jam 2026
 
-An arcade game where the player, as a raccoon tampering with traffic lights, keeps a growing web of intersections flowing through stage after stage until it collapses into a pile-up.
+**Fender Bandit** is an arcade game where the player, as a raccoon tampering with traffic lights, keeps a growing web of intersections flowing through stage after stage until it collapses into a pile-up.
 
 ## Language
 
