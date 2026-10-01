@@ -1,10 +1,13 @@
 extends Node
-## Placeholder Main for the week-1 smoke export (#20). The real flow state machine lands in #35.
-## Shows which actions are held, so the InputMap can be checked on the cabinet and in a browser.
+## Main. For now it just builds one World; the flow state machine replaces this in #35.
+## Agent flags, after `--` on the command line (#13 §10):
+##   --seed=N       seed the simulation, so a run repeats exactly (default: random)
+##   --shot=<path>  save a PNG of the screen after --at seconds of simulated time, then quit
+##   --at=S         when --shot fires, in seconds of simulated time (default 15, as in the greybox)
 
-const ACTIONS: Array[StringName] = [&"move_left", &"move_right", &"move_up", &"move_down", &"switch", &"dash", &"tow", &"pause"]
-
-var _label: Label
+var _shot_path := ""
+var _shot_at := 15.0
+var _world: World
 
 
 func _ready() -> void:
@@ -12,17 +15,24 @@ func _ready() -> void:
 	# Keep this when #35 replaces this placeholder.
 	if OS.has_feature("template") and not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
-	print("Fender Bandit booted, window mode %d" % DisplayServer.window_get_mode())
-	_label = Label.new()
-	_label.add_theme_font_size_override(&"font_size", 28)
-	_label.position = Vector2(64, 64)
-	add_child(_label)
+	var seed_value := randi()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--seed="):
+			seed_value = int(a.substr(7))
+		elif a.begins_with("--shot="):
+			_shot_path = a.substr(7)
+		elif a.begins_with("--at="):
+			_shot_at = float(a.substr(5))
+	print("Fender Bandit booted, window mode %d, seed %d" % [DisplayServer.window_get_mode(), seed_value])
+	_world = World.new(seed_value)
+	add_child(_world)
 
 
-func _process(_delta: float) -> void:
-	var held: PackedStringArray = []
-	for action in ACTIONS:
-		if Input.is_action_pressed(action):
-			held.append(action)
-	_label.text = "FENDER BANDIT\nStop. Go. Oops.\n\nHeld: %s" %", ".join(held)
-
+func _physics_process(_delta: float) -> void:
+	if _shot_path != "" and _world.traffic.time >= _shot_at:
+		var path := _shot_path
+		_shot_path = ""
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(path)
+		print("Saved shot to %s" % path)
+		get_tree().quit()

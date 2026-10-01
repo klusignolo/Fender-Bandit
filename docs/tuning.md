@@ -2,7 +2,7 @@
 
 Every number the game is tuned by: what it's for, its starting value, the ticket that set it, and what playtests have said. All values are **starting points, to be tuned (or cut) by feel**. When a playtest changes one, update its row and add a note; don't start a new file.
 
-The latest greybox with all of these in it: `prototypes/turners/` on the [`prototype/crossing-guard`](https://github.com/klusignolo/GameJam2026/tree/prototype/crossing-guard/prototypes/turners) branch. Its constants use the names in the **Greybox** column.
+The latest greybox with all of these in it: `prototypes/turners/` on the [`prototype/crossing-guard`](https://github.com/klusignolo/GameJam2026/tree/prototype/crossing-guard/prototypes/turners) branch. Its constants use the names in the **Greybox** column. The game keeps every number here in `game/tuning.gd` (`Tuning`) under the same names. Where the greybox used an unnamed number, the ticket that ported it named it, and the Greybox column says "inline".
 
 ## Stage knobs
 
@@ -35,6 +35,34 @@ Uneven from stage 1, so a fixed light cycle starves a road ([#14](https://github
 | Swell strength | The heavy road's spawn rate compared with the others. | 2× heavy, 0.67× the rest | `SWELL_HEAVY`, `SWELL_LIGHT` | #14 | "Helps break the rhythm." #17: the dev likes the triple-chevron tell ("intuitive that traffic will be heavier in that lane"). |
 | Swell shift | How long a road stays heavy, and the warning before the next one. | 20–30s, 4s warning | `SWELL_MIN/MAX`, `SHIFT_WARN` | #14 | |
 | ~~Platoon~~ | **Cut in #17.** It was a tight bunch of 4–6 cars leaving one entry every 8–14s. | n/a | n/a | #14 | #17: "heavy and platoon FEEL like they do the same thing." The Swell stays. |
+
+## Spawning
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| First car | Seconds before each entry's first car, drawn per entry. With four entries the first car arrives about 3s in, so the first Switch is a calm one. | 2.5–4.5s | `FIRST_SPAWN` (inline) | #21 | |
+| Spawn jitter | Each gap between cars on an entry is the spawn gap times a draw from this range. | 0.6–1.4× | `SPAWN_JITTER` (inline) | #21 | |
+| Entry speed | A new car drives on at this share of base speed. | 0.8× | `SPAWN_SPEED` (inline) | #21 | |
+| Entry room | Clear road an entry needs behind its last car before the next one drives on. | 4 px | `SPAWN_CLEAR` (inline) | #21 | |
+| Entry point | How far past the map edge a new car's centre starts. | 24 px | `SPAWN_BACK` (inline) | #21 | |
+
+## Driving
+
+How cars move, follow and stop. Distances are measured along the car's route.
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Base speed | Cruising speed, before the car speed knob. | 150 px/s | `BASE_SPEED` | #5 | |
+| Go boost | Speed multiplier for a car waved through: its whole queue when the Light turns Green, or any car crossing the line on Green or Yellow. | 1.45× | `GO_BOOST` | #5 | |
+| Acceleration | How fast a car gets up to speed. | 260 px/s² | `ACCEL` | #5 | |
+| Braking | The comfortable braking that stops are planned with. | 420 px/s² | `DECEL` | #5 | |
+| Hard braking | How many times harder than comfortable a driver brakes to shed speed, and when judging whether it can still stop for a Light. | 2× | `HARD_BRAKE` (inline) | #21 | |
+| Look-ahead | How far ahead a driver watches for the car in front. | 220 px | `LOOK` | #5 | |
+| Following gap | The bumper gap a driver stops short of the car in front. | 8 px | `FOLLOW_GAP` (inline) | #21 | |
+| Stop margin | How far short of the stop line a driver stops. | 2 px | `STOP_MARGIN` (inline) | #21 | |
+| Push-through floor | A driver slower than this always stops for Red or Yellow. A faster driver too close to stop braking hard pushes through. | 40 px/s | `PUSH_MIN_SPEED` (inline) | #21 | |
+| Yellow caution | On Yellow a driver judges its stop as this many times longer, so more drivers push through. Yellow is a risk, not a free stop. | 2× | `YELLOW_CAUTION` (inline) | #21 | |
+| Push slack | A driver within this of just making the stop still stops. | 1 px | `PUSH_SLACK` (inline) | #21 | |
 
 ## Turners
 
@@ -75,6 +103,18 @@ Footprints in world px. They're gameplay, not just art: a longer vehicle blocks 
 | Semi | Long and slow; one rigid sprite, so its turn arc cuts the corner. | 84 × 24 | not built | #6 | First guess. |
 | Raccoon | The player: kept at car scale so the hero reads. | 28 wide (sprite ~28 × 38) | `RACCOON_R` | #5, #6 | |
 
+## Roads
+
+World px. One lane each way. At zoom 1, the map around one crossing fills the screen.
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Arm length | From the crossing centre to the map edge: horizontal, then vertical. | 640, 360 | `ARM_X`, `ARM_Y` | #16 | |
+| Lane width | Each road is two lanes wide. | 30 | `LW` | #5 | |
+| Stop line | From the crossing centre to the stop line. | 48 | `STOP_D` | #5 | |
+| Pole position | Where a Light's pole stands: back from its stop line, and out past the kerb. The Raccoon targets this point. | 10 back, 14 out | `POLE_BACK`, `POLE_OUT` (inline) | #21 | |
+| Exit margin | How far past the map edge a car drives before it leaves. | 60 | `EXIT_MARGIN` (inline) | #21 | |
+
 ## Raccoon
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
@@ -82,6 +122,8 @@ Footprints in world px. They're gameplay, not just art: a longer vehicle blocks 
 | Move speed | On-screen speed, constant at any zoom. | 230 px/s | `RACCOON_SPEED` | #15 | #16: travel between crossings felt like a chore, partly because Dash went unused. |
 | Dash | Burst speed, how long it lasts and its cooldown. | 640 px/s for 0.18s, 0.9s cooldown | `DASH_*` | #5 | #16: Space was added as Dash. |
 | Targeting range | How close a Light must be to Switch it (on screen). | 160 px | `SIGNAL_RANGE` | #9 | |
+| Start | Where the Raccoon starts, from the first crossing's centre. | 70, 70 world px | `RACCOON_START` (`r_pos`) | #21 | |
+| Targeting bias | How much facing a Light counts toward picking it: a faced Light counts as up to this many px nearer. | 60 px | `TARGET_BIAS` (inline) | #9, #21 | |
 | Yellow | How long a Light stays Yellow before falling to Red. | 1.5s | `YELLOW_TIME` | #5 | |
 
 ## Presentation tied to tuning
@@ -91,6 +133,7 @@ Footprints in world px. They're gameplay, not just art: a longer vehicle blocks 
 | Patience ring | Hidden until the driver's first Honk | #17 | A ring on every front car at red was noise by stage 4. |
 | Blowing-the-red warning | The car flashes "!!" for its last 3s of Patience | #14 | `BLOW_WARN` |
 | Reveal | 2.5s pull-back when a crossing attaches | #16 | `REVEAL_TIME` |
+| Camera fit | Zoom 1.03× past "the whole map fits", so the map edges bleed off screen | #16 | `FIT` |
 
 ## Audio
 

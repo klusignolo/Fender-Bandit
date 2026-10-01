@@ -30,6 +30,8 @@ The Godot project lives in `game/`. Run these from the repo root in Git Bash:
 
 - **Export both builds:** `game/tools/export.sh` (add `--debug` for debug builds). It writes `game/build/web/index.html` and `game/build/windows/FenderBandit.exe`; `game/build/` is gitignored.
 - **Serve the web build:** `node game/tools/serve_web.mjs`, then open http://localhost:8060. Stop it by its PID, never by killing every `node.exe` (godot-mcp runs on Node too).
+- **Run the tests:** `game/tools/test.sh` (add `--only=<part of file:test name>` to filter). It runs every `game/test/test_*.gd` headless and exits non-zero on any failure or logged error.
+- **Screenshot a run:** `<godot console exe> --path game -- --seed=1 --shot=<png> --at=<sim seconds>`. A seed makes the run repeat exactly. It needs a window, so don't pass `--headless`.
 - **Headless boot check of the exe:** `game/build/windows/FenderBandit.exe --quit-after 90 --log-file <file>`. Exported Windows builds go exclusive fullscreen.
 
 ## Agent skills
