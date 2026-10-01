@@ -2,7 +2,6 @@ extends Node
 ## Placeholder Main for the week-1 smoke export (#20). The real flow state machine lands in #35.
 ## Shows which actions are held, so the InputMap can be checked on the cabinet and in a browser.
 
-const AUDIO_CHECK := "res://tools/audio_check/audio_check.tscn"
 const ACTIONS: Array[StringName] = [&"move_left", &"move_right", &"move_up", &"move_down", &"switch", &"dash", &"tow", &"pause"]
 
 var _label: Label
@@ -25,9 +24,5 @@ func _process(_delta: float) -> void:
 	for action in ACTIONS:
 		if Input.is_action_pressed(action):
 			held.append(action)
-	_label.text = "FENDER BANDIT\nStop. Go. Oops.\n\nHeld: %s\n\nTow (Y / L / C) opens the audio check." % ", ".join(held)
+	_label.text = "FENDER BANDIT\nStop. Go. Oops.\n\nHeld: %s" %", ".join(held)
 
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"tow"):
-		get_tree().change_scene_to_file(AUDIO_CHECK)

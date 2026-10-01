@@ -15,23 +15,25 @@ Like `docs/sprites.md`, this is a living register. When a sound is made or chang
 ### Web limits (from [#8](https://github.com/klusignolo/GameJam2026/issues/8))
 
 - In the web build, audio plays in Sample mode: WAV/MP3/OGG clips, **no AudioEffects** (no bus reverb, filters or pitch shift), no generated audio, and positional audio is unreliable. Bake every variation into the files or do it with `pitch_scale` and volume.
-- `pitch_scale` moves **pitch and tempo together** (it's the Web Audio playback rate). *To verify in the week-1 smoke export:* a live `pitch_scale` change on a looping MP3 in a browser. See **Week-1 audio check** below.
+- **Never force `playback_type`.** Leave it at the default: Sample on the web, Stream on desktop. Forcing Sample plays nothing on desktop.
+- `pitch_scale` moves **pitch and tempo together** (it's the Web Audio playback rate). A live change on a looping clip works in the browser (verified in the week-1 check below).
+- **In the browser, MP3 and OGG loop at the end of the file.** Sample mode honours `loop_offset` but ignores `bpm`/`beat_count` (Godot 4.7.2 passes `loop_end = 0` for both formats). So every looping music file must **end exactly at its loop end**. MP3 can't, because the encoder pads the end, so music ships as OGG cut with ffmpeg (see **Lyria loops**). On desktop, the `bpm`/`beat_count` loop end works.
 - No audio plays until the first key or button press, which is also the press that leaves Attract.
 
 ### Week-1 audio check ([#20](https://github.com/klusignolo/GameJam2026/issues/20))
 
-A throwaway scene in `game/tools/audio_check/` answers both open questions in a real browser. To run it, export (`game/tools/export.sh`), serve (`node game/tools/serve_web.mjs`), open http://localhost:8060 and press Tow (L) on the title.
-
-- **The clip:** `loop_check.mp3`, 120 BPM, 16 beats (8s): a pad, a kick on every beat and an eighth-note lead. Its PCM loops perfectly, so any click or gap at the seam comes from the MP3. It's made by `make_loop_check.mjs` (Node, `@breezystack/lamejs`, 160 kbps mono), and looped by import settings (`loop`, `bpm` 120, `beat_count` 16), the same way the Lyria tracks will be. The decoded MP3 is 8.046s, about 46 ms longer than the loop. Some of that is probably encoder delay at the *start* of the file, so a click at the seam may come from the clip, not from MP3 looping. If it clicks, try a small `loop_offset` (about 0.025s) before blaming MP3. Also note whether the browser honours the `beat_count` loop point at all: a double kick or a 46 ms stutter means it loops the whole buffer.
-- **The check:** the player forces Sample playback. Switch glides `pitch_scale` through the `MUSIC_PITCH` steps over `MUSIC_GLIDE`, and Dash snaps it back to 1.0.
-- **Automated so far:** in headless Chrome the web build boots on WebGL 2, single-threaded, and `pitch_scale` glides live with no errors. Whether it *sounds* right needs ears.
+Done on 2026-10-01 with a throwaway scene. It's gone now; see commit history for `game/tools/audio_check/`. The test clip was 24s at 120 BPM, generated in code, with periodic PCM, looped from 8s to 24s.
 
 | Check | Outcome |
 |---|---|
-| Live `pitch_scale` change on a looping MP3, Sample mode, in a browser | *Pending: the dev listens.* |
-| MP3 loop seam has no click or gap (at 1.0 and 1.12) | *Pending: the dev listens.* |
+| Live `pitch_scale` glide through `MUSIC_PITCH` on a looping clip, Sample mode, in a browser | **Pass.** The tempo glides smoothly and live, with no restart. |
+| Loop seam, Windows build (Stream mode) | **Pass.** It loops cleanly at 1.0 and 1.12. |
+| Loop seam, browser | **MP3: fails.** It clicks every loop because the browser loops to the padded file end. **OGG cut at the loop end: inconclusive.** The dev's Bluetooth speakers clicked at random moments, even in the browser's own `<audio>` player. Recheck on wired audio when the real tracks land (#38). |
 
-Once both outcomes are recorded here, delete `game/tools/audio_check/` and the Tow hook that opens it in `game/main/main.gd`.
+What the check found:
+
+- **MP3 encoder pre-roll.** Every MP3 decodes with about 25 ms of silence at the start (LAME's 1105-sample delay; measured by decoding and matching against the source PCM). Godot doesn't strip it, so `loop_offset` must never be 0, or every repeat replays the silence. Any later `loop_offset` is fine.
+- **The browser loop end** is described under **Web limits** above.
 
 ### Sources and pipeline
 
@@ -39,11 +41,22 @@ Once both outcomes are recorded here, delete `game/tools/audio_check/` and the T
 |---|---|---|---|
 | **Procedural** | Most SFX | `game/tools/make_sfx.gd`, a headless Godot script with a fixed seed: `godot --headless --path game -s tools/make_sfx.gd`. It writes `game/audio/sfx/*.wav` via `AudioStreamWAV.save_to_wav`. | The function name in **Recipe** |
 | **jsfxr** (sfxr.me) | UI blips, Combo, Jam-level, Swell whistle, Raccoon bonk | Make it in the browser, export WAV to `game/audio/sfx/`. | The jsfxr parameter string in **Recipe** |
-| **Lyria** (Gemini app, work account) | Theme, gameplay groove, stinger | Download the MP3 and keep it as MP3 in `game/audio/music/`. Set the loop in Godot's import dock (below). | The prompt in **Recipe** |
+| **Lyria** (Gemini app, work account) | Theme, gameplay groove, stinger | Download the MP3 and convert it with ffmpeg to an OGG in `game/audio/music/`, cut to end at the loop end (below). Keep the downloaded MP3 in `audio_src/` at the repo root, outside the Godot project so it doesn't ship. | The prompt in **Recipe**, plus the loop values |
 
-No Python or ffmpeg is needed. If an MP3 loop seam clicks in a browser, install ffmpeg (`winget install ffmpeg`) and convert that track to OGG. Same import settings.
+ffmpeg is installed (`winget install Gyan.FFmpeg`). Python isn't needed.
 
-**Lyria loops:** Lyria tracks usually start with an intro and end on a fade. In the import dock, turn on `loop`, set `bpm`, and set `beat_count` so the loop ends on the last full bar before the fade. Set `loop_offset` to the first bar after the intro, so repeats skip it. Record all four values on the track's entry.
+**Lyria loops:** Lyria tracks usually start with an intro and end on a fade. Pick two times, in seconds:
+
+- **`loop_offset`:** the first bar after the intro. Never 0.
+- **The loop end:** the end of the last full bar before the fade, so that the loop length is a whole number of bars.
+
+Measure both on the MP3 as ffmpeg decodes it, then cut and convert:
+
+```
+ffmpeg -i theme.mp3 -af "atrim=end=<loop end>" -c:a libvorbis -q:a 6 theme.ogg
+```
+
+Import the OGG with `loop` on and `loop_offset` set; leave `bpm`/`beat_count` at 0. The file now ends at the loop end, which loops correctly in both the browser and the desktop build. Record `loop_offset` and the loop end on the track's entry. The stinger doesn't loop: cut it the same way and leave `loop` off.
 
 **Lyria prompt template:** *"Instrumental cartoon caper / heist jazz-funk, [tempo] BPM, [mood]. Walking upright bass, tight snare and hi-hat, punchy brass stabs, playful [lead]. Sneaky and mischievous, comedic, loopable, no vocals, no long fade."*
 
@@ -79,7 +92,7 @@ Every sound starts as *not made*. Fill in **File** and **Recipe** as each one is
 
 ### Music
 
-| Sound | Use | Source | File | Recipe | Loop (bpm / beat_count / loop_offset) |
+| Sound | Use | Source | File | Recipe | Loop (loop_offset / loop end, in seconds) |
 |---|---|---|---|---|---|
 | `theme` | Attract, title, controls, results, initials, High-score table | Lyria | | Template, about 100 BPM, laid-back and sly, muted-trumpet lead | |
 | `groove` | Every Stage and tally card; glides with the jam-level | Lyria | | Template, about 112 BPM, driving and busy, brass-section lead | |
