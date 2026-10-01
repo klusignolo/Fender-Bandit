@@ -32,7 +32,7 @@ func _ready() -> void:
 		add_child(LightPole.new(l))
 	add_child(_vehicle_layer)
 	raccoon = Raccoon.new(traffic)
-	raccoon.position = traffic.net.crossings[0] + Tuning.RACCOON_START
+	raccoon.position = traffic.raccoon_position  # its start
 	add_child(raccoon)
 	var cam := Camera2D.new()
 	var b := traffic.net.bounds

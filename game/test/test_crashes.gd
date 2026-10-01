@@ -37,9 +37,9 @@ func _first_crash(seed_value := 3) -> Array:
 	return [t, events]
 
 
-## Grab Wreckage w: stand on it and Tow.
-func _grab(t: Traffic, w: Car) -> void:
-	t.set_raccoon(w.transform.origin, false)
+## Grab Wreckage w: stand `from` its centre and Tow.
+func _grab(t: Traffic, w: Car, from := Vector2.ZERO) -> void:
+	t.set_raccoon(w.transform.origin + from, false)
 	t.tow(Tuning.TOW_RANGE)
 
 
@@ -179,7 +179,11 @@ func test_towed_wreckage_never_crashes() -> void:
 	if not check(not events.crashes.is_empty(), "a first Crash"):
 		return
 	var w: Car = events.crashes[0][0]
-	_grab(t, w)
+	t.switch(t.lights[N])  # only E moves from here on, so nothing else hits the Raccoon
+	t.switch(t.lights[W])
+	_grab(t, w, Vector2(0, Tuning.TOW_HOLD))  # holding it from beside the car, out of its way
+	if not check(t.towing == w, "towing the Wreckage"):
+		return
 	t.switch(t.lights[E])
 	var m := _await_moving_car(t, E)
 	if not check(m != null, "a car cruising in on E"):

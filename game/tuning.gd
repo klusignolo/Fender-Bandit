@@ -39,8 +39,8 @@ const PUSH_SLACK := 1.0  # px: a driver this close to just making the stop still
 
 # Crashes and Wreckage
 const CRASH_INSET := 2.0  # each footprint shrinks by this on every side before the Crash check, so a graze doesn't count
-const SIGHT_INSET := 2.0  # a driver watches for Wreckage across its own width, less this on each side
-const SIGHT_STEP := 4.0  # px between the points along its route where a driver looks for Wreckage
+const SIGHT_INSET := 2.0  # a driver watches for Wreckage and the Raccoon across its own width, less this on each side
+const SIGHT_STEP := 4.0  # px between the points along its route where a driver looks for Wreckage and the Raccoon
 
 # Lights
 const YELLOW_TIME := 1.5  # seconds a Light stays Yellow before falling to Red
@@ -48,14 +48,23 @@ const YELLOW_TIME := 1.5  # seconds a Light stays Yellow before falling to Red
 # Raccoon (on-screen px: world values scale with 1/zoom)
 const RACCOON_R := 14.0
 const RACCOON_SPEED := 230.0
+const DASH_SPEED := 640.0  # on-screen px/s for the length of a Dash
+const DASH_TIME := 0.18  # seconds a Dash lasts
+const DASH_COOLDOWN := 0.9  # seconds from the start of one Dash until the next can start
 const SIGNAL_RANGE := 160.0  # how close a Light's pole must be to Switch it
 const TARGET_BIAS := 60.0  # how much facing a Light counts toward picking it, in px of distance
 const RACCOON_START := Vector2(70, 70)  # world px from the first crossing's centre
 const TOW_RANGE := 30.0  # how close to the footprint of Wreckage the Raccoon must be to Tow it
 const TOW_HOLD := 26.0  # world px: towed Wreckage trails at most this far from the Raccoon
 const TOW_SPEED := 0.55  # the Raccoon's walking speed while towing, as a share of RACCOON_SPEED
-const TOW_DASH := 0.6  # its Dash speed while towing, as a share of the Dash speed (Dash is #23)
+const TOW_DASH := 0.6  # its Dash speed while towing, as a share of DASH_SPEED
 const ON_ROAD_MARGIN := 10.0  # world px: towed Wreckage whose centre is this far past the kerb is off the road
+const YIELD_MARGIN := 8.0  # world px: a driver Yields to the Raccoon this far beyond RACCOON_R
+const HIT_REACH := 10.0  # world px: a car hits the Raccoon when its centre is this close to the car's footprint...
+const HIT_MIN_SPEED := 30.0  # ...and the car is faster than this, world px/s
+const STUN_TIME := 0.8  # seconds a hit Raccoon is stunned
+const KNOCK_SPEED := 420.0  # world px/s a hit knocks the Raccoon back at, the way the car drives...
+const KNOCK_DECAY := 900.0  # ...slowing by this much each second
 
 # Camera
 const FIT := 1.03  # zoom a touch past "fits everything", so the map edges bleed off

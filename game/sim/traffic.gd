@@ -9,6 +9,7 @@ signal car_exited(car: Car)
 signal light_changed(light: Light)
 signal crashed(a: Car, b: Car, at: Vector2)  # at least one of the two is fresh Wreckage
 signal towed(car: Car, off_road: bool)  # towed Wreckage dropped; off the road, it's gone from cars
+signal raccoon_hit(car: Car)  # a car too fast to stop hit the Raccoon: it is stunned and knocked back
 
 const TICK_HZ := 60
 const DT := 1.0 / TICK_HZ
@@ -17,9 +18,11 @@ var net: RoadNet
 var lights: Array[Light] = []
 var cars: Array[Car] = []
 var time := 0.0  # seconds simulated
-var raccoon_position := Vector2.ZERO
+var raccoon_position := Vector2.ZERO  # from set_raccoon; RACCOON_START until then
 var raccoon_dashing := false
 var towing: Car = null  # the Wreckage the Raccoon is towing
+var raccoon_stun := 0.0  # seconds the Raccoon is stunned for: it can't act, and is knocked back
+var raccoon_knock := Vector2.ZERO  # world px/s the Raccoon is being knocked back at; the Raccoon moves itself by it
 
 # Stage knobs; Stages (#29) sets these per stage. Stage 1 until then.
 var k_gap: float = Tuning.K_GAP[0]
@@ -37,25 +40,30 @@ var _tow_hold := Vector2.ZERO  # where the towed Wreckage trails, from the Racco
 func _init(seed_value: int) -> void:
 	_rng.seed = seed_value
 	net = RoadNet.new()
+	raccoon_position = net.crossings[0] + Tuning.RACCOON_START
 	for i in net.approaches.size():
 		lights.append(Light.new(i, net.approaches[i]))
 		_spawn_left.append(_rng.randf_range(Tuning.FIRST_SPAWN[0], Tuning.FIRST_SPAWN[1]))
 		_due.append(0)
 
 
-## The Raccoon's state this tick. Towed Wreckage follows it; Yield is #23.
+## The Raccoon's state this tick. Towed Wreckage follows it, and drivers Yield to it.
 func set_raccoon(position: Vector2, dashing: bool) -> void:
 	raccoon_position = position
 	raccoon_dashing = dashing
 
 
-## The Raccoon's speed as a share of its own: slower while towing.
+## The Raccoon's speed as a share of its own walk or Dash speed: slower while towing.
 func raccoon_speed_scale() -> float:
-	return Tuning.TOW_SPEED if towing != null else 1.0
+	if towing == null:
+		return 1.0
+	return Tuning.TOW_DASH if raccoon_dashing else Tuning.TOW_SPEED
 
 
-## Switch a Light: Red turns Green and waves its queue on, Green turns Yellow. Yellow ignores it.
+## Switch a Light: Red turns Green and waves its queue on, Green turns Yellow. Yellow ignores it. So does a stunned Raccoon.
 func switch(light: Light) -> void:
+	if raccoon_stun > 0.0:
+		return
 	match light.state:
 		Light.State.RED:
 			light.state = Light.State.GREEN
@@ -71,8 +79,10 @@ func switch(light: Light) -> void:
 
 
 ## Tow: drop the Wreckage the Raccoon is towing, or grab the nearest Wreckage within `reach` world px
-## of the Raccoon (the Raccoon converts its on-screen TOW_RANGE).
+## of the Raccoon (the Raccoon converts its on-screen TOW_RANGE). A stunned Raccoon can't.
 func tow(reach: float) -> void:
+	if raccoon_stun > 0.0:
+		return
 	if towing != null:
 		_drop()
 		return
@@ -91,6 +101,8 @@ func tow(reach: float) -> void:
 
 func step() -> void:
 	time += DT
+	raccoon_stun = maxf(raccoon_stun - DT, 0.0)
+	raccoon_knock = raccoon_knock.move_toward(Vector2.ZERO, Tuning.KNOCK_DECAY * DT)
 	for l in lights:
 		if l.state == Light.State.YELLOW:
 			l.yellow_left -= DT
@@ -101,6 +113,7 @@ func step() -> void:
 	_spawn()
 	_drive()
 	_check_crashes()
+	_check_hit()
 
 
 # Every car that's due joins its entry's queue, then drives on as soon as the road has room.
@@ -193,10 +206,11 @@ func _stop_line_limit(c: Car) -> float:
 	return sqrt(2.0 * Tuning.DECEL * maxf(dist - Tuning.STOP_MARGIN, 0.0))
 
 
-# Slow for whatever is nearest ahead: a moving car on the route, or Wreckage.
+# Slow for whatever is nearest ahead: a moving car on the route, Wreckage, or the Raccoon (Yield).
 func _obstacle_limit(c: Car) -> float:
 	var gap := _follow_gap(c)
 	gap = minf(gap, _wreckage_gap(c, minf(gap, Tuning.LOOK)))  # Wreckage past the car in front can't matter yet
+	gap = minf(gap, _raccoon_gap(c, minf(gap, Tuning.LOOK)))
 	if gap == INF:
 		return INF
 	return sqrt(2.0 * Tuning.DECEL * maxf(gap - Tuning.FOLLOW_GAP, 0.0))
@@ -241,6 +255,27 @@ func _wreckage_gap(c: Car, within: float) -> float:
 		for w in near:
 			if p.origin.distance_to(w.transform.origin) <= half + w.radius() and w.crosses(left, right):
 				return d
+		d += Tuning.SIGHT_STEP
+	return INF
+
+
+# Yield: the gap to the Raccoon, looking up to `within` along the route. It's in the car's path where a line
+# across the car's width (less SIGHT_INSET each side) comes within RACCOON_R + YIELD_MARGIN of it. The margin
+# only widens the path: the gap runs to its body (RACCOON_R), so the car pulls up close. The look starts half a
+# car back from the bumper, so a Raccoon over the car's back half still holds it. INF if none.
+func _raccoon_gap(c: Car, within: float) -> float:
+	var half := c.width / 2.0 - Tuning.SIGHT_INSET
+	var reach := Tuning.RACCOON_R + Tuning.YIELD_MARGIN
+	var bumper := c.transform.origin + c.transform.x * c.length / 2.0
+	if raccoon_position.distance_to(bumper) > within + c.length / 2.0 + half + reach:
+		return INF
+	var front := c.s + c.length / 2.0
+	var d := -c.length / 2.0
+	while d <= within:
+		var p := c.route.pose(front + d)
+		var near := Geometry2D.get_closest_point_to_segment(raccoon_position, p.origin - p.y * half, p.origin + p.y * half)
+		if near.distance_to(raccoon_position) <= reach:
+			return d + Tuning.YIELD_MARGIN
 		d += Tuning.SIGHT_STEP
 	return INF
 
@@ -290,6 +325,21 @@ func _check_crashes() -> void:
 			if not c.wreckage and c.transform.origin.distance_to(w.transform.origin) < c.radius() + w.radius() \
 					and w.overlaps(c, Tuning.CRASH_INSET):
 				_crash(w, c)
+
+
+# The Raccoon getting hit: a moving car faster than HIT_MIN_SPEED with the Raccoon within HIT_REACH of its
+# footprint. It's stunned, knocked back the way the car drives, and drops its Tow. A stunned Raccoon can't be hit again.
+func _check_hit() -> void:
+	if raccoon_stun > 0.0:
+		return
+	for c in cars:
+		if not c.wreckage and c.speed > Tuning.HIT_MIN_SPEED and c.reaches(raccoon_position, Tuning.HIT_REACH):
+			raccoon_stun = Tuning.STUN_TIME
+			raccoon_knock = c.transform.x * Tuning.KNOCK_SPEED
+			if towing != null:
+				_drop()
+			raccoon_hit.emit(c)
+			return
 
 
 func _connectors_under(c: Car) -> PackedInt32Array:

@@ -69,8 +69,8 @@ How cars move, follow and stop. Distances are measured along the car's route.
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Crash inset | Each footprint shrinks by this on every side before the Crash check, so a graze doesn't count. | 2 px | `CRASH_INSET` (inline `grow(-2.0)`) | #22 | |
-| Sight inset | A driver watches for Wreckage across its own width, less this on each side. | 2 px | `SIGHT_INSET` (inline, `_strip`) | #22 | |
-| Sight step | Spacing of the points along its route where a driver looks for Wreckage. | 4 px | `SIGHT_STEP` (not in the greybox) | #22 | The greybox checked a straight strip ahead instead; points along the route also follow turns. |
+| Sight inset | A driver watches for Wreckage and the Raccoon across its own width, less this on each side. | 2 px | `SIGHT_INSET` (inline, `_strip`) | #22, #23 | |
+| Sight step | Spacing of the points along its route where a driver looks for Wreckage and the Raccoon. | 4 px | `SIGHT_STEP` (not in the greybox) | #22, #23 | The greybox checked a straight strip ahead instead; points along the route also follow turns. |
 
 ## Turners
 
@@ -128,14 +128,18 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Move speed | On-screen speed, constant at any zoom. | 230 px/s | `RACCOON_SPEED` | #15 | #16: travel between crossings felt like a chore, partly because Dash went unused. |
-| Dash | Burst speed, how long it lasts and its cooldown. | 640 px/s for 0.18s, 0.9s cooldown | `DASH_*` | #5 | #16: Space was added as Dash. |
+| Dash | Burst speed (on screen), how long it lasts and its cooldown, counted from the start of the Dash. | 640 px/s for 0.18s, 0.9s cooldown | `DASH_SPEED`, `DASH_TIME`, `DASH_COOLDOWN` (`DASH_CD`) | #5, #23 | #16: Space was added as Dash. |
 | Targeting range | How close a Light must be to Switch it (on screen). | 160 px | `SIGNAL_RANGE` | #9 | |
 | Start | Where the Raccoon starts, from the first crossing's centre. | 70, 70 world px | `RACCOON_START` (`r_pos`) | #21 | |
 | Targeting bias | How much facing a Light counts toward picking it: a faced Light counts as up to this many px nearer. | 60 px | `TARGET_BIAS` (inline) | #9, #21 | |
 | Tow range | How close to the footprint of Wreckage the Raccoon must be to Tow it (on screen). | 30 px | `TOW_RANGE` | #22 | |
 | Tow hold | Towed Wreckage trails at most this far from the Raccoon. | 26 world px | `TOW_HOLD` (inline) | #22 | |
-| Tow speed | The Raccoon's walk and Dash speed while towing. | 0.55× walk, 0.6× Dash | `TOW_SPEED`, `TOW_DASH` (inline) | #22 | Dash arrives in #23. |
+| Tow speed | The Raccoon's walk and Dash speed while towing. | 0.55× walk, 0.6× Dash | `TOW_SPEED`, `TOW_DASH` (inline) | #22 | |
 | Off-road margin | Towed Wreckage whose centre is this far past the kerb is off the road, and is gone. | 10 world px | `ON_ROAD_MARGIN` (inline, `_on_road`) | #22 | |
+| Yield margin | A driver Yields to the Raccoon when a line across its width, looking ahead from half a car back, comes within RACCOON_R plus this. It only widens the path: the driver stops short of the Raccoon's body by FOLLOW_GAP. | 8 world px | `YIELD_MARGIN` (`RACCOON_R - 6`) | #23 | |
+| Hit | A car hits the Raccoon when the Raccoon's centre is within this of its footprint and the car is moving faster than the minimum. | 10 world px, over 30 world px/s | `HIT_REACH` (`RACCOON_R - 4`), `HIT_MIN_SPEED` (inline) | #23 | |
+| Stun | How long a hit Raccoon can't act. | 0.8s | `STUN_TIME` (`r_stun`) | #23 | |
+| Knockback | A hit knocks the Raccoon the way the car drives, slowing to a stop. | 420 world px/s, slowing by 900 px/s² | `KNOCK_SPEED`, `KNOCK_DECAY` (inline, on-screen px) | #23 | The greybox scaled these by 1/zoom; here they're world px, so the knockback shrinks on screen with the cars. |
 | Yellow | How long a Light stays Yellow before falling to Red. | 1.5s | `YELLOW_TIME` | #5 | |
 
 ## Presentation tied to tuning
@@ -143,6 +147,8 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | Setting | Value | Set by | Notes |
 |---|---|---|---|
 | Patience ring | Hidden until the driver's first Honk | #17 | A ring on every front car at red was noise by stage 4. |
+| Dash cooldown ring | Fills around the Raccoon while Dash cools down; gone once it's ready | #23 | |
+| BONK! | Over the Raccoon for as long as it's stunned | #23 | Stands in for the greybox's floating "BONK" until the juice pass (#19 story 47). |
 | Blowing-the-red warning | The car flashes "!!" for its last 3s of Patience | #14 | `BLOW_WARN` |
 | Reveal | 2.5s pull-back when a crossing attaches | #16 | `REVEAL_TIME` |
 | Camera fit | Zoom 1.03× past "the whole map fits", so the map edges bleed off screen | #16 | `FIT` |
