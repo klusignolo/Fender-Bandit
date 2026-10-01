@@ -43,6 +43,14 @@ Uneven from stage 1, so a fixed light cycle starves a road ([#14](https://github
 | Turner gap | Seconds of clear oncoming road a Turner wants before it goes. Higher values mean longer holds. | 1.4–2.0s, drawn per driver | `GAP_MIN/MAX` | #17 | Holds of about 1–4s on green in headless runs. |
 | Turn speed | Speed through the turn, as a share of normal speed. | 0.7× | `TURN_SPEED` | #9 | |
 
+## Right turns
+
+Right turns happen everywhere, for natural-looking traffic ([#13](https://github.com/klusignolo/GameJam2026/issues/13)). They aren't a difficulty lever: a right-turning car obeys its Light (no turning on red), never waits for a gap, never holds up its lane, and signals with its right blinker. Where geometry leaves no straight exit (the T, some 5-way approaches), the route picker chooses among the movements the approach actually has.
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Right-turn share | Share of drivers who turn right. It's drawn separately from the Turner share; everyone else goes straight. Flat from stage 1, with no Debut. | 15% | not built | #13 | |
+
 ## The Jam
 
 One meter for the whole city ([#15](https://github.com/klusignolo/GameJam2026/issues/15)). Its fill must scale with map size ([#16](https://github.com/klusignolo/GameJam2026/issues/16)).
