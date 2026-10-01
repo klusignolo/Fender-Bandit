@@ -24,6 +24,14 @@ Both MCP servers are configured in `.mcp.json`.
 - **Docs: Context7.** Look up Godot 4.7 / GDScript APIs through the Context7 MCP (`resolve-library-id`, then `get-library-docs`) before writing engine code. Don't rely on memory: Godot 3 and 4 APIs differ a lot.
 - **Run and debug: godot-mcp** (Coding-Solo, `@coding-solo/godot-mcp`). Use it to launch the editor, run a project and read its debug output. It needs Node.js. `GODOT_PATH` defaults to the winget install of Godot 4.7.2; set the env var to override it.
 
+### Project commands
+
+The Godot project lives in `game/`. Run these from the repo root in Git Bash:
+
+- **Export both builds:** `game/tools/export.sh` (add `--debug` for debug builds). It writes `game/build/web/index.html` and `game/build/windows/FenderBandit.exe`; `game/build/` is gitignored.
+- **Serve the web build:** `node game/tools/serve_web.mjs`, then open http://localhost:8060. Stop it by its PID, never by killing every `node.exe` (godot-mcp runs on Node too).
+- **Headless boot check of the exe:** `game/build/windows/FenderBandit.exe --quit-after 90 --log-file <file>`. Exported Windows builds go exclusive fullscreen.
+
 ## Agent skills
 
 ### Issue tracker

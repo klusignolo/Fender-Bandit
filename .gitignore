@@ -3,3 +3,6 @@
 
 # Agent worktrees
 .claude/worktrees/
+
+# Export output
+game/build/

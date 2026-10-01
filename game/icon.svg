@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Placeholder for the "Raccoon Crossing" diamond (#11). The real icon lands in the UI art pass. -->
+  <rect x="22" y="22" width="84" height="84" rx="10" transform="rotate(45 64 64)" fill="#ffc627" stroke="#1d2b53" stroke-width="7"/>
+  <circle cx="64" cy="64" r="16" fill="#1d2b53"/>
+</svg>

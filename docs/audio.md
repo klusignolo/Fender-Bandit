@@ -15,8 +15,23 @@ Like `docs/sprites.md`, this is a living register. When a sound is made or chang
 ### Web limits (from [#8](https://github.com/klusignolo/GameJam2026/issues/8))
 
 - In the web build, audio plays in Sample mode: WAV/MP3/OGG clips, **no AudioEffects** (no bus reverb, filters or pitch shift), no generated audio, and positional audio is unreliable. Bake every variation into the files or do it with `pitch_scale` and volume.
-- `pitch_scale` moves **pitch and tempo together** (it's the Web Audio playback rate). *To verify in the week-1 smoke export:* a live `pitch_scale` change on a looping MP3 in a browser.
+- `pitch_scale` moves **pitch and tempo together** (it's the Web Audio playback rate). *To verify in the week-1 smoke export:* a live `pitch_scale` change on a looping MP3 in a browser. See **Week-1 audio check** below.
 - No audio plays until the first key or button press, which is also the press that leaves Attract.
+
+### Week-1 audio check ([#20](https://github.com/klusignolo/GameJam2026/issues/20))
+
+A throwaway scene in `game/tools/audio_check/` answers both open questions in a real browser. To run it, export (`game/tools/export.sh`), serve (`node game/tools/serve_web.mjs`), open http://localhost:8060 and press Tow (L) on the title.
+
+- **The clip:** `loop_check.mp3`, 120 BPM, 16 beats (8s): a pad, a kick on every beat and an eighth-note lead. Its PCM loops perfectly, so any click or gap at the seam comes from the MP3. It's made by `make_loop_check.mjs` (Node, `@breezystack/lamejs`, 160 kbps mono), and looped by import settings (`loop`, `bpm` 120, `beat_count` 16), the same way the Lyria tracks will be. The decoded MP3 is 8.046s, about 46 ms longer than the loop. Some of that is probably encoder delay at the *start* of the file, so a click at the seam may come from the clip, not from MP3 looping. If it clicks, try a small `loop_offset` (about 0.025s) before blaming MP3. Also note whether the browser honours the `beat_count` loop point at all: a double kick or a 46 ms stutter means it loops the whole buffer.
+- **The check:** the player forces Sample playback. Switch glides `pitch_scale` through the `MUSIC_PITCH` steps over `MUSIC_GLIDE`, and Dash snaps it back to 1.0.
+- **Automated so far:** in headless Chrome the web build boots on WebGL 2, single-threaded, and `pitch_scale` glides live with no errors. Whether it *sounds* right needs ears.
+
+| Check | Outcome |
+|---|---|
+| Live `pitch_scale` change on a looping MP3, Sample mode, in a browser | *Pending: the dev listens.* |
+| MP3 loop seam has no click or gap (at 1.0 and 1.12) | *Pending: the dev listens.* |
+
+Once both outcomes are recorded here, delete `game/tools/audio_check/` and the Tow hook that opens it in `game/main/main.gd`.
 
 ### Sources and pipeline
 
