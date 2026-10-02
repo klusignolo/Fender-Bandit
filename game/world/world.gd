@@ -3,7 +3,7 @@ extends Node2D
 ## One Run's world (#13 §2): owns the Traffic simulation, steps it at a fixed 60 Hz, and draws it.
 ## Greybox: roads are drawn here from the RoadNet curves; cars are pooled Vehicle nodes keyed by
 ## car id; each Light has a LightPole; each Crash gets a CrashMarker; the JamMeter sits on a HUD
-## layer. Nothing here decides a rule.
+## layer; EntryCues marks the Swell and backlog at each entry. Nothing here decides a rule.
 
 const GRASS := Color(0.2, 0.36, 0.2)
 const GRASS_FAR := Color(0.12, 0.2, 0.12)
@@ -32,6 +32,7 @@ func _ready() -> void:
 	for l in traffic.lights:
 		add_child(LightPole.new(l))
 	add_child(_vehicle_layer)
+	add_child(EntryCues.new(traffic))
 	raccoon = Raccoon.new(traffic)
 	raccoon.position = traffic.raccoon_position  # its start
 	add_child(raccoon)

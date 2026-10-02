@@ -11,6 +11,7 @@ func _traffic(seed_value: int, right: float, turners: float) -> Traffic:
 	var t := Traffic.new(seed_value)
 	t.k_right = right
 	t.k_turners = turners
+	t.k_swell = false
 	return t
 
 

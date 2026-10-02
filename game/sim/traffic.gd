@@ -14,6 +14,7 @@ signal honked(car: Car)  # a front driver (or holding Turner) Honked: car.honks 
 signal blew_red(car: Car)  # a front driver out of Patience is Blowing the red
 signal jam_level_changed(level: Jam.Level)  # the Jam moved into another Jam-level, up or down
 signal gridlocked  # the Jam is full: the Run is over
+signal swell_flagged(next: int)  # the Swell moves to road `next` in SHIFT_WARN seconds
 
 const TICK_HZ := 60
 const DT := 1.0 / TICK_HZ
@@ -28,6 +29,9 @@ var jam: Jam  # the city-wide Jam; a fresh one each stage, carrying the Run's De
 var towing: Car = null  # the Wreckage the Raccoon is towing
 var raccoon_stun := 0.0  # seconds the Raccoon is stunned for: it can't act, and is knocked back
 var raccoon_knock := Vector2.ZERO  # world px/s the Raccoon is being knocked back at; the Raccoon moves itself by it
+var swell := 0  # the Swell road: the entry approach spawning at SWELL_HEAVY, the rest at SWELL_LIGHT
+var swell_next := 0  # the road the Swell moves to next
+var swell_left := 0.0  # seconds until the Swell moves to swell_next
 
 # Stage knobs; Stages (#29) sets these per stage. Stage 1 until then.
 var k_gap: float = Tuning.K_GAP[0]
@@ -36,9 +40,11 @@ var k_turners := 0.0  # Turner share: none before stage 3
 var k_right := Tuning.RIGHT_SHARE  # flat from stage 1; a knob so tests can turn right turns off
 var k_patience: float = Tuning.K_PATIENCE[0]
 var blowing_unlocked := false  # Blowing the red: its Debut is stage 7. Until then, drivers out of Patience only Honk.
+var k_swell := true  # Swells on; a knob so tests can keep every entry at k_gap
 
 var _rng := RandomNumberGenerator.new()
 var _patience_rng := RandomNumberGenerator.new()  # its own stream, so drawing Patience doesn't shift any other draw
+var _swell_rng := RandomNumberGenerator.new()  # its own stream, so drawing Swells doesn't shift any other draw
 var _next_id := 1
 var _spawn_left: Array[float] = []  # per approach: seconds until its next car is due
 var _due: Array[int] = []  # per approach: cars due that haven't found room to drive on yet
@@ -52,6 +58,7 @@ var _jam_level := Jam.Level.CLEAR  # the Jam-level last signalled
 func _init(seed_value: int, dents := 0) -> void:
 	_rng.seed = seed_value
 	_patience_rng.seed = seed_value
+	_swell_rng.seed = seed_value
 	net = RoadNet.new()
 	jam = Jam.new(net.crossings.size(), dents)
 	raccoon_position = net.crossings[0] + Tuning.RACCOON_START
@@ -59,6 +66,19 @@ func _init(seed_value: int, dents := 0) -> void:
 		lights.append(Light.new(i, net.approaches[i]))
 		_spawn_left.append(_rng.randf_range(Tuning.FIRST_SPAWN[0], Tuning.FIRST_SPAWN[1]))
 		_due.append(0)
+	var entries := _entries()
+	swell = entries[_swell_rng.randi_range(0, entries.size() - 1)]
+	_draw_swell()
+
+
+## Whether the Swell's move to swell_next is flagged: it moves within SHIFT_WARN seconds.
+func swell_warning() -> bool:
+	return swell_left <= Tuning.SHIFT_WARN
+
+
+## Cars due at entry `i` that haven't found room on its road yet: its backlog.
+func backlog(i: int) -> int:
+	return _due[i]
 
 
 ## The Raccoon's state this tick. Towed Wreckage follows it, and drivers Yield to it.
@@ -123,10 +143,11 @@ func step() -> void:
 			if l.yellow_left <= 0.0:
 				l.state = Light.State.RED
 				light_changed.emit(l)
+	_move_swell()
 	_haul()  # before cars drive, so they brake for where towed Wreckage is now
 	_spawn()
 	_drive()
-	_spend_patience()
+	jam.step(_spend_patience() + Tuning.JAM_BACKLOG * _backlog_total(), DT)
 	_check_crashes()
 	_check_hit()
 	_check_jam()
@@ -140,7 +161,7 @@ func _spawn() -> void:
 			continue
 		_spawn_left[i] -= DT
 		if _spawn_left[i] <= 0.0:
-			_spawn_left[i] += k_gap * _rng.randf_range(Tuning.SPAWN_JITTER[0], Tuning.SPAWN_JITTER[1])
+			_spawn_left[i] += k_gap * _rng.randf_range(Tuning.SPAWN_JITTER[0], Tuning.SPAWN_JITTER[1]) / _swell_rate(i)
 			_due[i] += 1
 		if _due[i] <= 0:
 			continue
@@ -158,6 +179,51 @@ func _spawn() -> void:
 		c.patience = k_patience * _patience_rng.randf_range(Tuning.PATIENCE_JITTER[0], Tuning.PATIENCE_JITTER[1])
 		cars.append(c)
 		car_spawned.emit(c)
+
+
+# Cars waiting in every entry's backlog.
+func _backlog_total() -> int:
+	var n := 0
+	for d in _due:
+		n += d
+	return n
+
+
+# The approaches fed from the map edge.
+func _entries() -> Array[int]:
+	var out: Array[int] = []
+	for i in net.approaches.size():
+		if net.approaches[i].entry:
+			out.append(i)
+	return out
+
+
+# The next Swell is flagged SHIFT_WARN seconds ahead; the Swell road moves on once its time is up. With
+# k_swell off the Swell stands still and is never flagged.
+func _move_swell() -> void:
+	if not k_swell:
+		return
+	var warned := swell_warning()
+	swell_left -= DT
+	if swell_warning() and not warned:
+		swell_flagged.emit(swell_next)
+	if swell_left <= 0.0:
+		swell = swell_next
+		_draw_swell()
+
+
+# The next Swell: another road, and how long until the Swell moves to it.
+func _draw_swell() -> void:
+	var others := _entries().filter(func(i: int) -> bool: return i != swell)
+	swell_next = others[_swell_rng.randi_range(0, others.size() - 1)]
+	swell_left += _swell_rng.randf_range(Tuning.SWELL_MIN, Tuning.SWELL_MAX)
+
+
+# An entry's spawn rate, as a multiple of k_gap's: the Swell road's is heavy, the rest light.
+func _swell_rate(i: int) -> float:
+	if not k_swell:
+		return 1.0
+	return Tuning.SWELL_HEAVY if i == swell else Tuning.SWELL_LIGHT
 
 
 # A new driver's movement: Turner at the k_turners share, right at k_right, otherwise straight. With
@@ -221,8 +287,8 @@ func _drive() -> void:
 
 # Patience: only the front driver at each red (or Yellow) Light spends it, and a Turner holding for a gap,
 # while stopped. Only the front driver can be out of it: once Blowing the red has debuted, it flashes "!!" for
-# its last BLOW_WARN seconds, then Blows the red. Before then it only Honks.
-func _spend_patience() -> void:
+# its last BLOW_WARN seconds, then Blows the red. Before then it only Honks. Returns the Jam fill per second from the drivers Honking.
+func _spend_patience() -> float:
 	var honking := 0.0  # Jam fill per second from the drivers Honking
 	var fronts: Dictionary[Light, Car] = {}
 	for c in cars:
@@ -246,7 +312,7 @@ func _spend_patience() -> void:
 		if c.blow_warning and c.wait >= c.patience and c.line_distance < Tuning.BLOW_REACH and not c.blowing:
 			c.blowing = true
 			blew_red.emit(c)
-	jam.step(honking, DT)
+	return honking
 
 
 # Red stops a driver at the line. A driver too close to stop even braking hard pushes through; on

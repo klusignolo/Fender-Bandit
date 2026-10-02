@@ -1,7 +1,7 @@
 class_name Jam
 extends RefCounted
-## The city-wide Jam (#26): one meter for the whole map, filled by Honking drivers (and entry backlog, from
-## #27) and drained always (more per crossing) and per car that leaves. Each Crash leaves a Dent, a permanent loss of capacity;
+## The city-wide Jam (#26): one meter for the whole map, filled by Honking drivers and entry backlog (#27) and
+## drained always (more per crossing) and per car that leaves. Each Crash leaves a Dent, a permanent loss of capacity;
 ## the Run hands its Dents to the next stage's Jam. Full is Gridlock.
 
 enum Level { CLEAR, BUSY, HEAVY, GRIDLOCK }
@@ -38,12 +38,12 @@ func level() -> Level:
 	return Level.CLEAR
 
 
-## One tick of `dt` seconds, with drivers Honking at `honking` (fill per second): fill less the drain.
+## One tick of `dt` seconds, filling at `fill_per_s` (Honking drivers and entry backlog): fill less the drain.
 ## Once full, it stays full: Gridlock ends the Run.
-func step(honking: float, dt: float) -> void:
+func step(fill_per_s: float, dt: float) -> void:
 	if level() == Level.GRIDLOCK:
 		return
-	fill = clampf(fill + (honking - Tuning.JAM_DRAIN * crossings) * dt, 0.0, capacity())
+	fill = clampf(fill + (fill_per_s - Tuning.JAM_DRAIN * crossings) * dt, 0.0, capacity())
 
 
 ## A car left the map.

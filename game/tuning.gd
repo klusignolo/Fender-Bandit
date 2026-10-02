@@ -15,6 +15,13 @@ const SPAWN_SPEED := 0.8  # a new car enters at this share of BASE_SPEED
 const SPAWN_CLEAR := 4.0  # room an entry needs behind its last car before the next one drives on
 const SPAWN_BACK := 24.0  # a new car's centre starts this far past the map edge
 
+# Swells
+const SWELL_HEAVY := 2.0  # the Swell road's spawn rate, as a multiple of k_gap's...
+const SWELL_LIGHT := 0.67  # ...and every other road's
+const SWELL_MIN := 20.0  # seconds a road stays the Swell road, drawn per Swell from SWELL_MIN to SWELL_MAX
+const SWELL_MAX := 30.0
+const SHIFT_WARN := 4.0  # seconds before the Swell moves that its next road is flagged
+
 # Roads (world px)
 const ARM_X := 640.0  # entry arm length, centre to map edge, horizontal
 const ARM_Y := 360.0  # ...vertical
@@ -65,6 +72,7 @@ const JAM_FLOOR := 10.0  # Dents never take the capacity below this
 const JAM_BUSY := 0.4  # the Jam is Busy from this share of the capacity left after Dents...
 const JAM_HEAVY := 0.7  # ...and Heavy from this share; full is Gridlock
 const JAM_HONK: Array[float] = [0.0, 0.5, 1.0]  # fill per second for each driver Honking, by its Honks so far
+const JAM_BACKLOG := 0.6  # fill per second for each car waiting in an entry's backlog
 const JAM_DRAIN := 1.5  # drain per second, always, for each crossing on the map
 const JAM_EXIT := 0.4  # drain for each car that leaves the map
 

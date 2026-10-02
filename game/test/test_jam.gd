@@ -82,6 +82,7 @@ func test_a_stage_starts_with_the_dents_the_run_hands_it() -> void:
 	var t := Traffic.new(3, 5)
 	t.k_right = 0.0
 	t.k_turners = 0.0
+	t.k_swell = false
 	check_eq(t.jam.dents, 5, "Dents handed to the stage")
 	check_eq(t.jam.fill, 0.0, "Jam at the stage start")
 	if check_eq(_crash(t, 1), 1, "Crashes with every Light green within 30s"):
