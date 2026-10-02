@@ -46,7 +46,7 @@ func _await_moving_car(t: Traffic, seconds := 10.0) -> Car:
 # --- Yield ------------------------------------------------------------------------
 
 func test_cars_yield_to_the_raccoon_standing_in_their_lane() -> void:
-	var t := Traffic.new(3)
+	var t := straight_traffic(3)
 	var hits := []
 	t.raccoon_hit.connect(func(c: Car) -> void: hits.append(c))
 	t.switch(t.lights[E])
@@ -66,7 +66,7 @@ func test_cars_yield_to_the_raccoon_standing_in_their_lane() -> void:
 
 
 func test_a_car_waiting_at_the_line_holds_for_the_raccoon_over_its_back_half() -> void:
-	var t := Traffic.new(3)
+	var t := straight_traffic(3)
 	var hits := []
 	t.raccoon_hit.connect(func(c: Car) -> void: hits.append(c))
 	var m: Car = null
@@ -88,7 +88,7 @@ func test_a_car_waiting_at_the_line_holds_for_the_raccoon_over_its_back_half() -
 # --- Getting hit -------------------------------------------------------------------
 
 func test_a_car_too_fast_to_stop_hits_the_raccoon_and_knocks_it_back_stunned() -> void:
-	var t := Traffic.new(3)
+	var t := straight_traffic(3)
 	var hits := []
 	t.raccoon_hit.connect(func(c: Car) -> void: hits.append(c))
 	t.switch(t.lights[E])
@@ -105,7 +105,7 @@ func test_a_car_too_fast_to_stop_hits_the_raccoon_and_knocks_it_back_stunned() -
 
 
 func test_getting_hit_drops_the_tow() -> void:
-	var t := Traffic.new(3)
+	var t := straight_traffic(3)
 	var tows := []
 	t.towed.connect(func(c: Car, off: bool) -> void: tows.append([c, off]))
 	var w := _wreckage(t)
@@ -125,7 +125,7 @@ func test_getting_hit_drops_the_tow() -> void:
 
 
 func test_a_stunned_raccoon_cant_switch_or_tow_until_it_recovers() -> void:
-	var t := Traffic.new(3)
+	var t := straight_traffic(3)
 	var w := _wreckage(t)
 	if not check(w != null, "a first Crash"):
 		return
@@ -154,7 +154,7 @@ func test_a_stunned_raccoon_cant_switch_or_tow_until_it_recovers() -> void:
 # --- Dash ---------------------------------------------------------------------------
 
 func test_dash_reaches_traffic_and_towing_slows_it() -> void:
-	var t := Traffic.new(3)
+	var t := straight_traffic(3)
 	var w := _wreckage(t)
 	if not check(w != null, "a first Crash"):
 		return

@@ -26,7 +26,7 @@ func _run(t: Traffic, seconds: float) -> void:
 
 ## Green on N and W together, stepped until the first Crash (or 30s).
 func _first_crash(seed_value := 3) -> Array:
-	var t := Traffic.new(seed_value)
+	var t := straight_traffic(seed_value)
 	var events := Log.new(t)
 	t.switch(t.lights[N])
 	t.switch(t.lights[W])
@@ -90,7 +90,7 @@ func test_conflicting_cars_in_the_same_box_crash() -> void:
 
 func test_cars_that_dont_conflict_never_crash() -> void:
 	for pair: Array in [[N, S], [W, E]]:
-		var t := Traffic.new(5)
+		var t := straight_traffic(5)
 		var events := Log.new(t)
 		t.switch(t.lights[pair[0]])
 		t.switch(t.lights[pair[1]])

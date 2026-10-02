@@ -27,7 +27,7 @@ func _cars_at(t: Traffic, l: Light) -> Array[Car]:
 
 func test_stage_one_opens_on_red_with_the_first_car_about_three_seconds_in() -> void:
 	for seed_value: int in [1, 2, 3, 4, 5]:
-		var t := Traffic.new(seed_value)
+		var t := straight_traffic(seed_value)
 		check_eq(t.lights.size(), 4, "one plain 4-way crossing has four Lights")
 		check(t.lights.all(func(l: Light) -> bool: return l.state == Light.State.RED), "every Light starts on Red (seed %d)" % seed_value)
 		var first := -1.0
@@ -39,7 +39,7 @@ func test_stage_one_opens_on_red_with_the_first_car_about_three_seconds_in() -> 
 
 
 func test_spawned_cars_are_announced() -> void:
-	var t := Traffic.new(1)
+	var t := straight_traffic(1)
 	var events := Log.new(t)
 	_run(t, 10.0)
 	check(events.spawned.size() >= 4, "about one car per entry every 3.2s: got %d in 10s" % events.spawned.size())
@@ -49,7 +49,7 @@ func test_spawned_cars_are_announced() -> void:
 # --- the Light cycle ------------------------------------------------------------
 
 func test_switch_takes_red_to_green_to_yellow_and_yellow_falls_to_red_by_itself() -> void:
-	var t := Traffic.new(1)
+	var t := straight_traffic(1)
 	var events := Log.new(t)
 	var l := t.lights[0]
 	t.switch(l)
@@ -70,7 +70,7 @@ func test_switch_takes_red_to_green_to_yellow_and_yellow_falls_to_red_by_itself(
 # --- queueing and following -------------------------------------------------------
 
 func test_cars_queue_behind_each_other_at_red_without_touching() -> void:
-	var t := Traffic.new(7)
+	var t := straight_traffic(7)
 	_run(t, 30.0)
 	for l in t.lights:
 		var q := _cars_at(t, l)
@@ -87,7 +87,7 @@ func test_cars_queue_behind_each_other_at_red_without_touching() -> void:
 
 
 func test_green_lets_the_queue_drive_through_and_off_the_map() -> void:
-	var t := Traffic.new(7)
+	var t := straight_traffic(7)
 	var events := Log.new(t)
 	_run(t, 20.0)
 	var l := t.lights[2]
@@ -104,7 +104,7 @@ func test_green_lets_the_queue_drive_through_and_off_the_map() -> void:
 
 
 func test_a_follower_never_closes_on_the_car_in_front() -> void:
-	var t := Traffic.new(3)
+	var t := straight_traffic(3)
 	t.switch(t.lights[0])
 	for i in 40 * Traffic.TICK_HZ:
 		t.step()
@@ -120,7 +120,7 @@ func test_a_follower_never_closes_on_the_car_in_front() -> void:
 
 ## Green on one Light, then Switch it to Yellow the moment a moving car is `near` to `far` px from the line.
 func _yellow_with_car_at(near: float, far: float) -> Array:
-	var t := Traffic.new(11)
+	var t := straight_traffic(11)
 	var l := t.lights[1]
 	t.switch(l)
 	for i in 30 * Traffic.TICK_HZ:

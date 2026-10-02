@@ -4,6 +4,8 @@ extends RefCounted
 
 var id: int
 var route: RoadNet.Route
+var movement: RoadNet.Movement:  # straight, right, or left (a Turner)
+	get: return route.movement
 var light: Light  # the Light it obeys at its crossing
 var s := 0.0  # distance of its centre along the route
 var speed := 0.0
@@ -16,12 +18,26 @@ var line_distance := 0.0  # from its front bumper to the stop line; negative onc
 var transform := Transform2D()  # pose: origin is the centre, x points the way it drives
 var wreckage := false  # Crashed: Wreckage, stopped for good. Once towed, its pose no longer follows s.
 var towed := false  # Wreckage the Raccoon is towing: it never Crashes, but cars still brake for it
+var holding := false  # a Turner stopped at its line, waiting for a gap in oncoming traffic
+var hold_time := 0.0  # seconds it has spent holding; the opposing Turner that has waited longer goes first
+var turn_gap := 0.0  # a Turner's Turner gap, seconds
+var committed := false  # a Turner that has had its gap and gone: it doesn't stop for oncoming traffic again
 
 
 func _init(car_id: int, r: RoadNet.Route, l: Light) -> void:
 	id = car_id
 	route = r
 	light = l
+
+
+## Whether its centre is past the box, off the connector it takes through the crossing.
+func past_box() -> bool:
+	return route.index_at(s) > 1
+
+
+## Whether its back is past the box too.
+func out_of_box() -> bool:
+	return route.index_at(s - length / 2.0) > 1
 
 
 ## The corners of its footprint, shrunk by `inset` on every side (a negative inset grows it).

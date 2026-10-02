@@ -3,11 +3,16 @@ extends RefCounted
 ## The road geometry, as Curve2D segments (#13 §5): for each approach, the incoming lane up to its
 ## stop line, one connector per movement through the crossing box, and the outgoing lane to the map
 ## edge. Cars hold a Route of segments and a distance along it. Road drawing uses the same curves.
-## For now: one plain 4-way crossing at the origin, straight movements only.
+## For now: one plain 4-way crossing at the origin.
 
 ## Sides of a crossing, and the way cars on that side's incoming lane travel.
 const SIDE_NAMES: Array[String] = ["N", "S", "W", "E"]
 const SIDE_DIR: Array[Vector2] = [Vector2.DOWN, Vector2.UP, Vector2.RIGHT, Vector2.LEFT]
+
+## The movements a car can make through a crossing; an approach's `routes` are indexed by them.
+enum Movement { STRAIGHT, RIGHT, LEFT }
+## A cubic Bézier handle this many radii long traces a quarter circle closely.
+const QUARTER_HANDLE := 0.5523
 
 
 ## One stretch of lane.
@@ -18,12 +23,10 @@ class Segment:
 	var length: float
 	var approach: int  # the approach whose lane or movement this is
 
-	func _init(k: Kind, a: int, points: PackedVector2Array) -> void:
+	func _init(k: Kind, a: int, c: Curve2D) -> void:
 		kind = k
 		approach = a
-		curve = Curve2D.new()
-		for p in points:
-			curve.add_point(p)
+		curve = c
 		length = curve.get_baked_length()
 
 
@@ -34,6 +37,7 @@ class Route:
 	var length := 0.0
 	var stop_s := 0.0  # where the stop line is: the end of the first stretch, the incoming lane
 	var id: int  # index into RoadNet.routes
+	var movement: Movement
 	var sharing: PackedInt32Array  # ids of the routes with a segment in common with this one, itself included
 	var _curves: Array[Curve2D] = []  # not the RoadNet itself: it holds this Route, so that would be a cycle
 
@@ -76,7 +80,9 @@ class Approach:
 	var pole: Vector2  # where its Light hangs, at the kerb by the stop line
 	var entry := true  # fed from the map edge
 	var incoming: int  # segment id
-	var routes: Array[Route] = []  # one per movement
+	var outgoing: int  # segment id of the lane leaving the crossing the way its cars travel
+	var opposite := -1  # index of the approach facing it across the crossing, or -1
+	var routes: Array[Route] = []  # one per movement, indexed by Movement
 
 
 var crossings: PackedVector2Array = []
@@ -94,8 +100,22 @@ func _init() -> void:
 	bounds = Rect2(-Tuning.ARM_X, -Tuning.ARM_Y, Tuning.ARM_X * 2.0, Tuning.ARM_Y * 2.0)
 	for side in 4:
 		_add_approach(0, side)
+	for a in approaches:
+		_add_turns(a)
+		var o := _approach_toward(a.crossing, -a.direction)
+		if o != null:
+			a.opposite = approaches.find(o)
 	_find_conflicts()
 	_find_sharing()
+
+
+## The driver's right and left, for a car travelling `d`.
+static func right_of(d: Vector2) -> Vector2:
+	return Vector2(-d.y, d.x)
+
+
+static func left_of(d: Vector2) -> Vector2:
+	return Vector2(d.y, -d.x)
 
 
 ## Whether point p is on a road: within a lane, or ON_ROAD_MARGIN past the kerb.
@@ -134,7 +154,7 @@ func _paths_touch(a: Curve2D, b: Curve2D) -> bool:
 func _add_approach(x: int, side: int) -> void:
 	var c := crossings[x]
 	var d := SIDE_DIR[side]
-	var right := Vector2(-d.y, d.x)
+	var right := right_of(d)
 	var off := right * Tuning.LW * 0.5
 	var reach := Tuning.ARM_Y if absf(d.y) > 0.5 else Tuning.ARM_X
 	var a := Approach.new()
@@ -147,15 +167,53 @@ func _add_approach(x: int, side: int) -> void:
 	var spawn := c - d * (reach + Tuning.SPAWN_BACK) + off
 	var far_line := c + d * Tuning.STOP_D + off
 	var gone := c + d * (reach + Tuning.EXIT_MARGIN) + off
-	a.incoming = _add_segment(Segment.Kind.INCOMING, i, PackedVector2Array([spawn, a.stop_point]))
-	var straight := _add_segment(Segment.Kind.CONNECTOR, i, PackedVector2Array([a.stop_point, far_line]))
-	var out := _add_segment(Segment.Kind.OUTGOING, i, PackedVector2Array([far_line, gone]))
-	_add_route(a, PackedInt32Array([a.incoming, straight, out]))
+	a.incoming = _add_segment(Segment.Kind.INCOMING, i, _line(spawn, a.stop_point))
+	var straight := _add_segment(Segment.Kind.CONNECTOR, i, _line(a.stop_point, far_line))
+	a.outgoing = _add_segment(Segment.Kind.OUTGOING, i, _line(far_line, gone))
+	_add_route(a, Movement.STRAIGHT, PackedInt32Array([a.incoming, straight, a.outgoing]))
 	approaches.append(a)
 
 
-func _add_segment(kind: Segment.Kind, approach: int, points: PackedVector2Array) -> int:
-	segments.append(Segment.new(kind, approach, points))
+# The right and left turns: a quarter circle from the stop line onto the outgoing lane that leaves
+# the crossing the way the car turns. Needs every approach of the crossing added first.
+func _add_turns(a: Approach) -> void:
+	var i := approaches.find(a)
+	var d := a.direction
+	for m: Movement in [Movement.RIGHT, Movement.LEFT]:
+		var to := right_of(d) if m == Movement.RIGHT else left_of(d)
+		var out := _approach_toward(a.crossing, to).outgoing
+		var end := segments[out].curve.get_point_position(0)
+		var connector := _add_segment(Segment.Kind.CONNECTOR, i, _arc(a.stop_point, d, end, to))
+		_add_route(a, m, PackedInt32Array([a.incoming, connector, out]))
+
+
+# The approach into crossing x whose cars travel the way `dir` points, or null. Its outgoing lane leaves the
+# crossing that way too.
+func _approach_toward(x: int, dir: Vector2) -> Approach:
+	for a in approaches:
+		if a.crossing == x and a.direction.is_equal_approx(dir):
+			return a
+	return null
+
+
+static func _line(from: Vector2, to: Vector2) -> Curve2D:
+	var c := Curve2D.new()
+	c.add_point(from)
+	c.add_point(to)
+	return c
+
+
+# A quarter circle from `from`, heading `d_from`, to `to`, heading `d_to`, as one cubic Bézier.
+static func _arc(from: Vector2, d_from: Vector2, to: Vector2, d_to: Vector2) -> Curve2D:
+	var handle := (to - from).dot(d_from) * QUARTER_HANDLE  # the radius is how far the turn reaches ahead
+	var c := Curve2D.new()
+	c.add_point(from, Vector2.ZERO, d_from * handle)
+	c.add_point(to, -d_to * handle, Vector2.ZERO)
+	return c
+
+
+func _add_segment(kind: Segment.Kind, approach: int, curve: Curve2D) -> int:
+	segments.append(Segment.new(kind, approach, curve))
 	return segments.size() - 1
 
 
@@ -168,8 +226,9 @@ func _find_sharing() -> void:
 					break
 
 
-func _add_route(a: Approach, ids: PackedInt32Array) -> void:
+func _add_route(a: Approach, m: Movement, ids: PackedInt32Array) -> void:
 	var r := Route.new(self, ids)
 	r.id = routes.size()
+	r.movement = m
 	routes.append(r)
 	a.routes.append(r)

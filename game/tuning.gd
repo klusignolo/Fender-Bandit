@@ -5,6 +5,7 @@ class_name Tuning
 # Stage knobs: [stage 1, stage 9, far limit]. Only the stage-1 values are used until Stages (#29).
 const K_GAP: Array[float] = [3.2, 1.0, 0.6]  # spawn gap per entry, seconds
 const K_SPEED: Array[float] = [1.0, 1.4, 2.0]  # car speed multiplier
+const K_TURNERS: Array[float] = [0.10, 0.20, 0.25]  # Turner share; unlike the others its first value is stage 3, and before that it is zero
 
 # Spawning
 const FIRST_SPAWN: Array[float] = [2.5, 4.5]  # seconds before each entry's first car, drawn per entry
@@ -41,6 +42,13 @@ const PUSH_SLACK := 1.0  # px: a driver this close to just making the stop still
 const CRASH_INSET := 2.0  # each footprint shrinks by this on every side before the Crash check, so a graze doesn't count
 const SIGHT_INSET := 2.0  # a driver watches for Wreckage and the Raccoon across its own width, less this on each side
 const SIGHT_STEP := 4.0  # px between the points along its route where a driver looks for Wreckage and the Raccoon
+
+# Turns
+const RIGHT_SHARE := 0.15  # share of drivers who turn right, flat from stage 1
+const TURN_SPEED := 0.7  # speed through a turn, as a share of normal speed
+const TURNER_GAP: Array[float] = [1.4, 2.0]  # seconds of clear oncoming road a Turner wants before it goes, drawn per driver
+const GAP_MIN_SPEED := 25.0  # px/s: a Turner judges an oncoming car as arriving at least this fast
+const HOLD_SLACK := 1.0  # px: a Turner this close to its hold point (centre on the stop line) is holding there
 
 # Lights
 const YELLOW_TIME := 1.5  # seconds a Light stays Yellow before falling to Red

@@ -51,7 +51,7 @@ func _physics_process(_delta: float) -> void:
 func _on_car_spawned(car: Car) -> void:
 	var v: Vehicle = _pool.pop_back() if not _pool.is_empty() else null
 	if v == null:
-		v = Vehicle.new()
+		v = Vehicle.new(traffic)
 		_vehicle_layer.add_child(v)
 	v.show_car(car)
 	_vehicles[car.id] = v

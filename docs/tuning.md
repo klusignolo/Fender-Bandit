@@ -13,7 +13,7 @@ The difficulty curves. Each is fixed for a whole Stage and steps up between Stag
 | Spawn gap | Seconds between cars on each entry. The main volume dial. | 3.2s → 1.0s → 0.6s | `K_GAP` | #7 | #17: the dev didn't get past stage 4. Tough, but "a good starting point". |
 | Car speed | Multiplier on car speed. Less time to react. | 1.0× → 1.4× → 2.0× | `K_SPEED` | #7 | |
 | Patience | Seconds a front driver waits at red before running out (three Honk stages). Paces the Honks; from stage 7 it's the Blowing-the-red timer. | 15s → 12s → 7s | `K_PATIENCE` | #7, #14 | |
-| Turner share | Share of drivers who turn left (Turners) and may hold up their lane. It breaks the plain N/S ↔ E/W rhythm. Zero before stage 3. | 10% at stage 3 → 20% at stage 9 → 25% | `K_TURNERS` | #17 | #17: 15% → 30% felt like too many. The dev wants it to "stay lower". |
+| Turner share | Share of drivers who turn left (Turners) and may hold up their lane. It breaks the plain N/S ↔ E/W rhythm. Zero before stage 3. | 10% at stage 3 → 20% at stage 9 → 25% | `K_TURNERS` | #17, #24 | #17: 15% → 30% felt like too many. The dev wants it to "stay lower". |
 | Ease past 9 | How fast knobs close in on their far limit after stage 9 (the share of the gap left each stage). | 0.85 | `K_EASE` | #7 | Expert Runs should become impossible somewhere around stages 15–20. |
 
 **Open question: Debuts hold the knobs, but the Opening is almost all Debuts.** Stages 3, 4, 5, 7, 8 and 9 are Debuts, so "Debuts hold the knobs still" and "the knobs reach their stage-9 values by stage 9" can't both be true. For now, a Debut stage uses the previous stage's values, and the next stage jumps to its own values. Decide this in the build or in a later tuning pass.
@@ -76,8 +76,10 @@ How cars move, follow and stop. Distances are measured along the car's route.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
-| Turner gap | Seconds of clear oncoming road a Turner wants before it goes. Higher values mean longer holds. | 1.4–2.0s, drawn per driver | `GAP_MIN/MAX` | #17 | Holds of about 1–4s on green in headless runs. |
-| Turn speed | Speed through the turn, as a share of normal speed. | 0.7× | `TURN_SPEED` | #9 | |
+| Turner gap | Seconds of clear oncoming road a Turner wants before it goes: no oncoming car in the box, and none due at its stop line sooner. Higher values mean longer holds. | 1.4–2.0s, drawn per driver | `TURNER_GAP` (`GAP_MIN/MAX`) | #17, #24 | Holds of about 1–4s on green in headless runs. #24 soak, 25% Turners, N and S on Green for 90s: median hold 1.1–2.6s at the stage-1 spawn gap, up to about 18s at the stage-9 gap. |
+| Gap judging speed | A Turner judges an oncoming car as arriving at least this fast, so a crawling or stopped car close to the line still counts as in the way. | 25 px/s | `GAP_MIN_SPEED` (inline) | #24 | |
+| Hold point | A Turner pulls up with its centre on the stop line, nose in the box, and holds within this of that point. | 1 px | `HOLD_SLACK` (inline) | #24 | |
+| Turn speed | Speed through a turn, left or right, as a share of normal speed. A car turning right or left slows in time to enter the box at it. | 0.7× | `TURN_SPEED` | #9, #24 | |
 
 ## Right turns
 
@@ -85,7 +87,7 @@ Right turns happen everywhere, for natural-looking traffic ([#13](https://github
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
-| Right-turn share | Share of drivers who turn right. It's drawn separately from the Turner share; everyone else goes straight. Flat from stage 1, with no Debut. | 15% | not built | #13 | |
+| Right-turn share | Share of drivers who turn right. It's drawn separately from the Turner share; everyone else goes straight. Flat from stage 1, with no Debut. | 15% | `RIGHT_SHARE` (not in the greybox) | #13, #24 | |
 
 ## The Jam
 
@@ -148,6 +150,8 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 |---|---|---|---|
 | Patience ring | Hidden until the driver's first Honk | #17 | A ring on every front car at red was noise by stage 4. |
 | Dash cooldown ring | Fills around the Raccoon while Dash cools down; gone once it's ready | #23 | |
+| Turner arrow | An upright bubble over every Turner, pointing the way it will turn, from spawn until it starts its turn; bigger and pulsing amber while it holds | #17, #24 | Greybox drawing: `Vehicle.ARROW_R`, `ARROW_LIFT`, `PULSE_SPEED`. |
+| Right blinker | Flashes 2×/s at the front and back right corners from spawn until the car is through its turn | #13, #24 | `Vehicle.BLINK_HZ`; `blinker` colour from docs/sprites.md. |
 | BONK! | Over the Raccoon for as long as it's stunned | #23 | Stands in for the greybox's floating "BONK" until the juice pass (#19 story 47). |
 | Blowing-the-red warning | The car flashes "!!" for its last 3s of Patience | #14 | `BLOW_WARN` |
 | Reveal | 2.5s pull-back when a crossing attaches | #16 | `REVEAL_TIME` |

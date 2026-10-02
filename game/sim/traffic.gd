@@ -27,6 +27,8 @@ var raccoon_knock := Vector2.ZERO  # world px/s the Raccoon is being knocked bac
 # Stage knobs; Stages (#29) sets these per stage. Stage 1 until then.
 var k_gap: float = Tuning.K_GAP[0]
 var k_speed: float = Tuning.K_SPEED[0]
+var k_turners := 0.0  # Turner share: none before stage 3
+var k_right := Tuning.RIGHT_SHARE  # flat from stage 1; a knob so tests can turn right turns off
 
 var _rng := RandomNumberGenerator.new()
 var _next_id := 1
@@ -134,10 +136,26 @@ func _spawn() -> void:
 			continue
 		_due[i] -= 1
 		_next_id += 1
+		c.route = a.routes[_pick_movement()]
+		if c.movement == RoadNet.Movement.LEFT:
+			c.turn_gap = _rng.randf_range(Tuning.TURNER_GAP[0], Tuning.TURNER_GAP[1])
 		c.speed = Tuning.BASE_SPEED * Tuning.SPAWN_SPEED
 		c.tint = Color.from_hsv(_rng.randf(), 0.65, 0.95)
 		cars.append(c)
 		car_spawned.emit(c)
+
+
+# A new driver's movement: Turner at the k_turners share, right at k_right, otherwise straight. With
+# both knobs at zero it draws nothing, so the run is the same as before turns existed.
+func _pick_movement() -> RoadNet.Movement:
+	if k_turners + k_right <= 0.0:
+		return RoadNet.Movement.STRAIGHT
+	var r := _rng.randf()
+	if r < k_turners:
+		return RoadNet.Movement.LEFT
+	if r < k_turners + k_right:
+		return RoadNet.Movement.RIGHT
+	return RoadNet.Movement.STRAIGHT
 
 
 # Room for the new car: the last car in is far enough along, and no Wreckage lies within its stopping
@@ -169,6 +187,8 @@ func _drive() -> void:
 			continue
 		var target := Tuning.BASE_SPEED * k_speed * (Tuning.GO_BOOST if c.boosted else 1.0)
 		target = minf(target, _stop_line_limit(c))
+		target = minf(target, _turn_limit(c))
+		target = minf(target, _turner_limit(c))
 		target = minf(target, _obstacle_limit(c))
 		if c.speed < target:
 			c.speed = minf(target, c.speed + Tuning.ACCEL * DT)
@@ -206,6 +226,60 @@ func _stop_line_limit(c: Car) -> float:
 	return sqrt(2.0 * Tuning.DECEL * maxf(dist - Tuning.STOP_MARGIN, 0.0))
 
 
+# A car turning right or left takes its turn at TURN_SPEED: it slows in time to reach the box at that
+# speed, and holds it until its centre is off the connector.
+func _turn_limit(c: Car) -> float:
+	if c.movement == RoadNet.Movement.STRAIGHT or c.past_box():
+		return INF
+	var v := Tuning.BASE_SPEED * k_speed * Tuning.TURN_SPEED
+	return sqrt(v * v + 2.0 * Tuning.DECEL * maxf(c.line_distance, 0.0))
+
+
+# A Turner pulls up with its centre on its stop line and holds there, holding up everyone behind, until it
+# has its gap. Then it's committed, and doesn't stop for oncoming traffic again.
+func _turner_limit(c: Car) -> float:
+	c.holding = false
+	if c.movement != RoadNet.Movement.LEFT or c.committed:
+		return INF
+	var to_hold := c.route.stop_s - c.s
+	if to_hold > Tuning.LOOK:
+		return INF
+	if _gap_ok(c):
+		c.committed = to_hold <= Tuning.HOLD_SLACK
+		return INF
+	if to_hold <= Tuning.HOLD_SLACK:
+		c.holding = true
+		c.hold_time += DT
+	return sqrt(2.0 * Tuning.DECEL * maxf(to_hold, 0.0))
+
+
+# A Turner's gap: no oncoming car in the box, and none due at its line within the Turner gap. Oncoming cars
+# that will stop at their own Light don't count, so a Turner caught by a red clears out once the oncoming
+# road stops, whatever the cross traffic does. Opposing Turners take turns: of two holding, the one that has
+# waited longer goes first (on a tie, the older car), and the cars stuck behind it can't come.
+func _gap_ok(c: Car) -> bool:
+	var opposite := net.approaches[c.light.id].opposite
+	if opposite < 0:
+		return true
+	var oncoming := lights[opposite]
+	var stuck := -INF  # oncoming cars behind this far along are stuck behind a Turner that waits for this one
+	for o in cars:
+		if o.light == oncoming and o.holding:
+			if o.hold_time > c.hold_time or (o.hold_time == c.hold_time and o.id < c.id):
+				return false
+			stuck = maxf(stuck, o.s)
+	for o in cars:
+		if o.light != oncoming or o.wreckage or o.holding or o.s < stuck or o.out_of_box():
+			continue
+		if o.line_distance < 0.0:
+			return false  # in the box
+		if not o.passed_line and o.light.state != Light.State.GREEN:
+			continue  # will stop at its Light
+		if o.line_distance / maxf(o.speed, Tuning.GAP_MIN_SPEED) < c.turn_gap:
+			return false
+	return true
+
+
 # Slow for whatever is nearest ahead: a moving car on the route, Wreckage, or the Raccoon (Yield).
 func _obstacle_limit(c: Car) -> float:
 	var gap := _follow_gap(c)
@@ -216,7 +290,9 @@ func _obstacle_limit(c: Car) -> float:
 	return sqrt(2.0 * Tuning.DECEL * maxf(gap - Tuning.FOLLOW_GAP, 0.0))
 
 
-# The bumper gap to the nearest moving car ahead on any stretch of this car's own route, or INF.
+# The bumper gap to the nearest moving car ahead on any stretch of this car's own route, or INF. A car from
+# the same lane that took another way through the box counts until its back is out of the box: its turn
+# starts where this car's path does.
 func _follow_gap(c: Car) -> float:
 	var front := c.s + c.length / 2.0
 	var nearest := INF
@@ -224,6 +300,11 @@ func _follow_gap(c: Car) -> float:
 	for r in c.route.sharing:
 		for o: Car in _by_route[r]:
 			if o == c:
+				continue
+			if o.route != c.route and o.route.segments[0] == c.route.segments[0] and not o.out_of_box():
+				var lane_gap := o.s - o.length / 2.0 - front  # same lane in, so distances along both routes agree
+				if lane_gap > -o.length and lane_gap < Tuning.LOOK:
+					nearest = minf(nearest, lane_gap)
 				continue
 			var seg := o.route.segment_at(o.s)
 			for k in range(first, c.route.segments.size()):
@@ -367,6 +448,7 @@ func _crash(a: Car, b: Car) -> void:
 		c.wreckage = true
 		c.speed = 0.0
 		c.boosted = false
+		c.holding = false
 	crashed.emit(a, b, (a.transform.origin + b.transform.origin) / 2.0)
 
 
