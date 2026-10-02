@@ -6,6 +6,7 @@ class_name Tuning
 const K_GAP: Array[float] = [3.2, 1.0, 0.6]  # spawn gap per entry, seconds
 const K_SPEED: Array[float] = [1.0, 1.4, 2.0]  # car speed multiplier
 const K_TURNERS: Array[float] = [0.10, 0.20, 0.25]  # Turner share; unlike the others its first value is stage 3, and before that it is zero
+const K_PATIENCE: Array[float] = [15.0, 12.0, 7.0]  # seconds a front driver waits at red before it's out of Patience
 
 # Spawning
 const FIRST_SPAWN: Array[float] = [2.5, 4.5]  # seconds before each entry's first car, drawn per entry
@@ -49,6 +50,13 @@ const TURN_SPEED := 0.7  # speed through a turn, as a share of normal speed
 const TURNER_GAP: Array[float] = [1.4, 2.0]  # seconds of clear oncoming road a Turner wants before it goes, drawn per driver
 const GAP_MIN_SPEED := 25.0  # px/s: a Turner judges an oncoming car as arriving at least this fast
 const HOLD_SLACK := 1.0  # px: a Turner this close to its hold point (centre on the stop line) is holding there
+
+# Patience
+const PATIENCE_JITTER: Array[float] = [0.9, 1.1]  # each driver's Patience is K_PATIENCE times a draw from this range
+const PATIENCE_RINGS := 3  # Patience is spent in this many equal stages: Honk, second Honk, then out
+const BLOW_REACH := 14.0  # px: a driver out of Patience Blows the red once its front bumper is this close to the line
+const BLOW_WARN := 3.0  # seconds of Patience left when a driver who will Blow the red starts flashing "!!"
+const WAIT_SPEED := 8.0  # px/s: a driver with Patience spends it only while slower than this
 
 # Lights
 const YELLOW_TIME := 1.5  # seconds a Light stays Yellow before falling to Red

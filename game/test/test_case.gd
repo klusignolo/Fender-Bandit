@@ -26,3 +26,43 @@ func straight_traffic(seed_value: int) -> Traffic:
 	t.k_right = 0.0
 	t.k_turners = 0.0
 	return t
+
+
+## Steps Traffic while steering k_turners so each planned light's cars come out as planned: plan[light][n]
+## is whether its n-th car is a Turner (past the end of its list, either). Traffic draws a car's movement
+## from the knob as it spawns, and the knob is shared, so a tick where one light's next car should be a
+## Turner and another's shouldn't can spoil a plan. matches() catches that; then try another seed.
+class Plan:
+	var plan: Dictionary
+	var spawned: Dictionary = {}  # light → the cars it has spawned, in order
+
+	func _init(t: Traffic, p: Dictionary) -> void:  # holds no reference to the Traffic, so nothing leaks
+		plan = p
+		for l: int in p:
+			spawned[l] = []
+		t.car_spawned.connect(func(c: Car) -> void:
+			if spawned.has(c.light.id):
+				spawned[c.light.id].append(c))
+
+	func step(t: Traffic) -> void:
+		var turner := false
+		for l: int in plan:
+			var n: int = spawned[l].size()
+			turner = turner or (n < plan[l].size() and plan[l][n])
+		t.k_turners = 1.0 if turner else 0.0
+		t.step()
+
+	func run(t: Traffic, seconds: float) -> void:
+		for i in roundi(seconds * Traffic.TICK_HZ):
+			step(t)
+
+	func car(light: int, n: int) -> Car:
+		return spawned[light][n] if n < spawned[light].size() else null
+
+	## Whether every planned car spawned so far is a Turner or not as planned.
+	func matches() -> bool:
+		for l: int in plan:
+			for n in mini(spawned[l].size(), plan[l].size()):
+				if (spawned[l][n].movement == RoadNet.Movement.LEFT) != plan[l][n]:
+					return false
+		return true

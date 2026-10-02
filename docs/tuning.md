@@ -12,7 +12,7 @@ The difficulty curves. Each is fixed for a whole Stage and steps up between Stag
 |---|---|---|---|---|---|
 | Spawn gap | Seconds between cars on each entry. The main volume dial. | 3.2s → 1.0s → 0.6s | `K_GAP` | #7 | #17: the dev didn't get past stage 4. Tough, but "a good starting point". |
 | Car speed | Multiplier on car speed. Less time to react. | 1.0× → 1.4× → 2.0× | `K_SPEED` | #7 | |
-| Patience | Seconds a front driver waits at red before running out (three Honk stages). Paces the Honks; from stage 7 it's the Blowing-the-red timer. | 15s → 12s → 7s | `K_PATIENCE` | #7, #14 | |
+| Patience | Seconds a front driver waits at red before it's out of Patience (three stages). Paces the Honks; from stage 7 it also sets when the driver Blows the red. | 15s → 12s → 7s | `K_PATIENCE` | #7, #14, #25 | |
 | Turner share | Share of drivers who turn left (Turners) and may hold up their lane. It breaks the plain N/S ↔ E/W rhythm. Zero before stage 3. | 10% at stage 3 → 20% at stage 9 → 25% | `K_TURNERS` | #17, #24 | #17: 15% → 30% felt like too many. The dev wants it to "stay lower". |
 | Ease past 9 | How fast knobs close in on their far limit after stage 9 (the share of the gap left each stage). | 0.85 | `K_EASE` | #7 | Expert Runs should become impossible somewhere around stages 15–20. |
 
@@ -89,6 +89,17 @@ Right turns happen everywhere, for natural-looking traffic ([#13](https://github
 |---|---|---|---|---|---|
 | Right-turn share | Share of drivers who turn right. It's drawn separately from the Turner share; everyone else goes straight. Flat from stage 1, with no Debut. | 15% | `RIGHT_SHARE` (not in the greybox) | #13, #24 | |
 
+## Patience
+
+Only the front driver at each red (or Yellow) Light spends Patience, plus a Turner holding for its gap, and only while stopped. Cars queued behind the front one have none. A driver who stops being the front driver (it crosses its line, or its Light turns Green) starts again from zero. Patience is spent in three equal stages: a Honk at the first third, a second Honk at two thirds, then Blowing the red once its Debut (stage 7) has come. Before then the front driver only Honks. Only the front driver at the line can Blow the red; a holding Turner only Honks. The per-stage Patience itself is the `K_PATIENCE` stage knob above.
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Patience spread | Each driver's Patience is the stage's Patience times a draw from this range, so a row of red Lights doesn't Honk in unison. | 0.9–1.1× | `PATIENCE_JITTER` (inline, `_new_driver`) | #25 | |
+| Patience stages | The equal stages Patience is spent in: Honk, second Honk, then out. | 3 | `PATIENCE_RINGS` | #14, #25 | |
+| Waiting speed | A driver with Patience spends it only while slower than this. | 8 px/s | `WAIT_SPEED` (inline) | #25 | The greybox also gave back Patience at 2× while a metered driver moved faster than 40 px/s. Not ported: here a driver who stops being the front driver starts again from zero. |
+| Blow reach | A driver out of Patience Blows the red once its front bumper is this close to the stop line. | 14 px | `BLOW_REACH` (inline) | #25 | |
+
 ## The Jam
 
 One meter for the whole city ([#15](https://github.com/klusignolo/GameJam2026/issues/15)). Its fill must scale with map size ([#16](https://github.com/klusignolo/GameJam2026/issues/16)).
@@ -148,12 +159,13 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 
 | Setting | Value | Set by | Notes |
 |---|---|---|---|
-| Patience ring | Hidden until the driver's first Honk | #17 | A ring on every front car at red was noise by stage 4. |
+| Patience ring | Hidden until the driver's first Honk. A ring around the car fills through the current stage (yellow, then red for the last); pips below count the stages gone: yellow, yellow, and red while "!!" shows | #17, #25 | A ring on every front car at red was noise by stage 4. Greybox drawing: `Vehicle.RING_R`, `PIP_DROP`. |
+| HONK! | "HONK!" or "HONK HONK!" rises off the car and fades at each Honk | #25 | Stands in for `cue_honk`. `Vehicle.HONK_TIME`, `HONK_RISE`, `HONK_SIZE` (on-screen px). |
 | Dash cooldown ring | Fills around the Raccoon while Dash cools down; gone once it's ready | #23 | |
 | Turner arrow | An upright bubble over every Turner, pointing the way it will turn, from spawn until it starts its turn; bigger and pulsing amber while it holds | #17, #24 | Greybox drawing: `Vehicle.ARROW_R`, `ARROW_LIFT`, `PULSE_SPEED`. |
 | Right blinker | Flashes 2×/s at the front and back right corners from spawn until the car is through its turn | #13, #24 | `Vehicle.BLINK_HZ`; `blinker` colour from docs/sprites.md. |
 | BONK! | Over the Raccoon for as long as it's stunned | #23 | Stands in for the greybox's floating "BONK" until the juice pass (#19 story 47). |
-| Blowing-the-red warning | The car flashes "!!" for its last 3s of Patience | #14 | `BLOW_WARN` |
+| Blowing-the-red warning | The car flashes "!!" for its last 3s of Patience, once Blowing the red has debuted. Blowing the red, the car is outlined red until it leaves | #14, #25 | `BLOW_WARN`; `Vehicle.WARN_HZ`, `WARN_SIZE` (on-screen px). |
 | Reveal | 2.5s pull-back when a crossing attaches | #16 | `REVEAL_TIME` |
 | Camera fit | Zoom 1.03× past "the whole map fits", so the map edges bleed off screen | #16 | `FIT` |
 

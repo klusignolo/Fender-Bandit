@@ -5,10 +5,12 @@ extends Node
 ##   --shot=<path>  save a PNG of the screen after --at seconds of simulated time, then quit
 ##   --at=S         when --shot fires, in seconds of simulated time (default 15, as in the greybox)
 ##   --turners=X    Turner share, 0 to 1 (default: the stage-1 value, none), until Stages (#29) sets it
+##   --blowing      unlock Blowing the red (its Debut is stage 7), until Stages (#29) sets it
 
 var _shot_path := ""
 var _shot_at := 15.0
 var _turners := -1.0  # from --turners; negative leaves the stage value
+var _blowing := false  # from --blowing
 var _world: World
 
 
@@ -27,10 +29,13 @@ func _ready() -> void:
 			_shot_at = float(a.substr(5))
 		elif a.begins_with("--turners="):
 			_turners = float(a.substr(10))
+		elif a == "--blowing":
+			_blowing = true
 	print("Fender Bandit booted, window mode %d, seed %d" % [DisplayServer.window_get_mode(), seed_value])
 	_world = World.new(seed_value)
 	if _turners >= 0.0:
 		_world.traffic.k_turners = _turners
+	_world.traffic.blowing_unlocked = _blowing
 	add_child(_world)
 
 

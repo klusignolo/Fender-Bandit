@@ -10,6 +10,8 @@ signal light_changed(light: Light)
 signal crashed(a: Car, b: Car, at: Vector2)  # at least one of the two is fresh Wreckage
 signal towed(car: Car, off_road: bool)  # towed Wreckage dropped; off the road, it's gone from cars
 signal raccoon_hit(car: Car)  # a car too fast to stop hit the Raccoon: it is stunned and knocked back
+signal honked(car: Car)  # a front driver (or holding Turner) Honked: car.honks says which Honk
+signal blew_red(car: Car)  # a front driver out of Patience is Blowing the red
 
 const TICK_HZ := 60
 const DT := 1.0 / TICK_HZ
@@ -29,8 +31,11 @@ var k_gap: float = Tuning.K_GAP[0]
 var k_speed: float = Tuning.K_SPEED[0]
 var k_turners := 0.0  # Turner share: none before stage 3
 var k_right := Tuning.RIGHT_SHARE  # flat from stage 1; a knob so tests can turn right turns off
+var k_patience: float = Tuning.K_PATIENCE[0]
+var blowing_unlocked := false  # Blowing the red: its Debut is stage 7. Until then, drivers out of Patience only Honk.
 
 var _rng := RandomNumberGenerator.new()
+var _patience_rng := RandomNumberGenerator.new()  # its own stream, so drawing Patience doesn't shift any other draw
 var _next_id := 1
 var _spawn_left: Array[float] = []  # per approach: seconds until its next car is due
 var _due: Array[int] = []  # per approach: cars due that haven't found room to drive on yet
@@ -41,6 +46,7 @@ var _tow_hold := Vector2.ZERO  # where the towed Wreckage trails, from the Racco
 
 func _init(seed_value: int) -> void:
 	_rng.seed = seed_value
+	_patience_rng.seed = seed_value
 	net = RoadNet.new()
 	raccoon_position = net.crossings[0] + Tuning.RACCOON_START
 	for i in net.approaches.size():
@@ -114,6 +120,7 @@ func step() -> void:
 	_haul()  # before cars drive, so they brake for where towed Wreckage is now
 	_spawn()
 	_drive()
+	_spend_patience()
 	_check_crashes()
 	_check_hit()
 
@@ -141,6 +148,7 @@ func _spawn() -> void:
 			c.turn_gap = _rng.randf_range(Tuning.TURNER_GAP[0], Tuning.TURNER_GAP[1])
 		c.speed = Tuning.BASE_SPEED * Tuning.SPAWN_SPEED
 		c.tint = Color.from_hsv(_rng.randf(), 0.65, 0.95)
+		c.patience = k_patience * _patience_rng.randf_range(Tuning.PATIENCE_JITTER[0], Tuning.PATIENCE_JITTER[1])
 		cars.append(c)
 		car_spawned.emit(c)
 
@@ -203,8 +211,36 @@ func _drive() -> void:
 	cars = keep
 
 
+# Patience: only the front driver at each red (or Yellow) Light spends it, and a Turner holding for a gap,
+# while stopped. Only the front driver can be out of it: once Blowing the red has debuted, it flashes "!!" for
+# its last BLOW_WARN seconds, then Blows the red. Before then it only Honks.
+func _spend_patience() -> void:
+	var fronts: Dictionary[Light, Car] = {}
+	for c in cars:
+		if c.wreckage or c.passed_line or c.light.state == Light.State.GREEN:
+			continue
+		if not fronts.has(c.light) or c.line_distance < fronts[c.light].line_distance:
+			fronts[c.light] = c
+	for c in cars:
+		var front: bool = fronts.get(c.light) == c
+		if not front and not c.holding:
+			c.wait = 0.0
+		elif c.speed < Tuning.WAIT_SPEED:
+			c.wait += DT
+		var stage := mini(int(c.wait / (c.patience / Tuning.PATIENCE_RINGS)), Tuning.PATIENCE_RINGS - 1)
+		var honk := stage > c.honks
+		c.honks = stage
+		if honk:
+			honked.emit(c)
+		c.blow_warning = blowing_unlocked and front and c.patience - c.wait <= Tuning.BLOW_WARN
+		if c.blow_warning and c.wait >= c.patience and c.line_distance < Tuning.BLOW_REACH and not c.blowing:
+			c.blowing = true
+			blew_red.emit(c)
+
+
 # Red stops a driver at the line. A driver too close to stop even braking hard pushes through; on
 # Yellow it judges the stop longer, so more push through. A car crossing on Green or Yellow is waved on.
+# A driver Blowing the red ignores it.
 func _stop_line_limit(c: Car) -> float:
 	if c.passed_line:
 		return INF
@@ -215,7 +251,7 @@ func _stop_line_limit(c: Car) -> float:
 		if l.state != Light.State.RED:
 			c.boosted = true
 		return INF
-	if l.state == Light.State.GREEN:
+	if l.state == Light.State.GREEN or c.blowing:
 		return INF
 	var need := c.speed * c.speed / (2.0 * Tuning.DECEL * Tuning.HARD_BRAKE)
 	if l.state == Light.State.YELLOW:

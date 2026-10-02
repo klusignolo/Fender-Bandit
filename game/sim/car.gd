@@ -22,6 +22,11 @@ var holding := false  # a Turner stopped at its line, waiting for a gap in oncom
 var hold_time := 0.0  # seconds it has spent holding; the opposing Turner that has waited longer goes first
 var turn_gap := 0.0  # a Turner's Turner gap, seconds
 var committed := false  # a Turner that has had its gap and gone: it doesn't stop for oncoming traffic again
+var wait := 0.0  # seconds this driver has spent waiting with Patience: only the front driver at a red, or a holding Turner
+var patience := 0.0  # seconds it will wait with Patience, drawn per driver
+var honks := 0  # Honks so far: 0, 1 or 2
+var blowing := false  # out of Patience: Blowing the red, it drives through its red Light regardless of cross traffic
+var blow_warning := false  # its last BLOW_WARN seconds of Patience, once Blowing the red has debuted: it flashes "!!"
 
 
 func _init(car_id: int, r: RoadNet.Route, l: Light) -> void:
