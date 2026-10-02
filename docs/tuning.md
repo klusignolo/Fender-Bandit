@@ -107,11 +107,13 @@ One meter for the whole city ([#15](https://github.com/klusignolo/GameJam2026/is
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Fill from waiting | Per second, for each front driver (or Turner) that has Honked. | 0.5/s after one Honk, 1.0/s after two | `JAM_HONK` | #15 | |
-| Fill from backlog | Per second, for each car that can't get onto the map. | 0.6/s | `JAM_BACKLOG` | #15 | |
+| Fill from backlog | Per second, for each car that can't get onto the map. | 0.6/s | `JAM_BACKLOG` | #15 (built in #27) | |
 | Drain | Per second, always. **Scales with crossings** so a bigger map doesn't fill the Jam faster. | 1.5/s per crossing | `JAM_DRAIN` | #15, #16 | #16: with a flat 1.5/s, the Jam filled far too fast once the second crossing attached. Scaling by crossings was first tried in #17. |
 | Drain per exit | A bonus for each car that leaves the map. | 0.4 | `JAM_EXIT` | #16 | |
-| Dent | Jam capacity lost for good per Crash. | 2% | `DENT` | #15 | Kept small: Wreckage is the real punishment. |
-| Jam-levels | Where Busy and Heavy start, as a share of the capacity not lost to Dents. | Busy 40%, Heavy 70% | `_level()` | #15 | #17: the Heavy pulse adds to the noise when every crossing is backed up. |
+| Dent | Jam capacity lost for good per Crash. | 2 (of 100) | `DENT` | #15, #26 | Kept small: Wreckage is the real punishment. |
+| Capacity | The Jam's size before any Dents. | 100 | `JAM_CAP` | #15 | |
+| Capacity floor | Dents never take the capacity below this. | 10 | `JAM_FLOOR` (inline in the greybox's `_cap()`) | #26 | Only matters after 45 Crashes in one Run. |
+| Jam-levels | Where Busy and Heavy start, as a share of the capacity not lost to Dents. | Busy 40%, Heavy 70%; Gridlock when full | `JAM_BUSY`, `JAM_HEAVY` (inline in the greybox's `_level()`) | #15, #26 | #17: the Heavy pulse adds to the noise when every crossing is backed up. |
 
 ## Vehicle sizes
 

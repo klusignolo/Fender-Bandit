@@ -2,7 +2,8 @@ class_name World
 extends Node2D
 ## One Run's world (#13 §2): owns the Traffic simulation, steps it at a fixed 60 Hz, and draws it.
 ## Greybox: roads are drawn here from the RoadNet curves; cars are pooled Vehicle nodes keyed by
-## car id; each Light has a LightPole; each Crash gets a CrashMarker. Nothing here decides a rule.
+## car id; each Light has a LightPole; each Crash gets a CrashMarker; the JamMeter sits on a HUD
+## layer. Nothing here decides a rule.
 
 const GRASS := Color(0.2, 0.36, 0.2)
 const GRASS_FAR := Color(0.12, 0.2, 0.12)
@@ -42,6 +43,9 @@ func _ready() -> void:
 	cam.zoom = Vector2(z, z)
 	add_child(cam)
 	cam.make_current()
+	var hud := CanvasLayer.new()
+	hud.add_child(JamMeter.new(traffic))
+	add_child(hud)
 
 
 func _physics_process(_delta: float) -> void:

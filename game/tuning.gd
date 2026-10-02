@@ -58,6 +58,16 @@ const BLOW_REACH := 14.0  # px: a driver out of Patience Blows the red once its 
 const BLOW_WARN := 3.0  # seconds of Patience left when a driver who will Blow the red starts flashing "!!"
 const WAIT_SPEED := 8.0  # px/s: a driver with Patience spends it only while slower than this
 
+# The Jam
+const JAM_CAP := 100.0  # the Jam's capacity before Dents
+const DENT := 2.0  # Jam capacity each Crash takes away for good
+const JAM_FLOOR := 10.0  # Dents never take the capacity below this
+const JAM_BUSY := 0.4  # the Jam is Busy from this share of the capacity left after Dents...
+const JAM_HEAVY := 0.7  # ...and Heavy from this share; full is Gridlock
+const JAM_HONK: Array[float] = [0.0, 0.5, 1.0]  # fill per second for each driver Honking, by its Honks so far
+const JAM_DRAIN := 1.5  # drain per second, always, for each crossing on the map
+const JAM_EXIT := 0.4  # drain for each car that leaves the map
+
 # Lights
 const YELLOW_TIME := 1.5  # seconds a Light stays Yellow before falling to Red
 

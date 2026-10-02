@@ -12,6 +12,8 @@ signal towed(car: Car, off_road: bool)  # towed Wreckage dropped; off the road, 
 signal raccoon_hit(car: Car)  # a car too fast to stop hit the Raccoon: it is stunned and knocked back
 signal honked(car: Car)  # a front driver (or holding Turner) Honked: car.honks says which Honk
 signal blew_red(car: Car)  # a front driver out of Patience is Blowing the red
+signal jam_level_changed(level: Jam.Level)  # the Jam moved into another Jam-level, up or down
+signal gridlocked  # the Jam is full: the Run is over
 
 const TICK_HZ := 60
 const DT := 1.0 / TICK_HZ
@@ -22,6 +24,7 @@ var cars: Array[Car] = []
 var time := 0.0  # seconds simulated
 var raccoon_position := Vector2.ZERO  # from set_raccoon; RACCOON_START until then
 var raccoon_dashing := false
+var jam: Jam  # the city-wide Jam; a fresh one each stage, carrying the Run's Dents
 var towing: Car = null  # the Wreckage the Raccoon is towing
 var raccoon_stun := 0.0  # seconds the Raccoon is stunned for: it can't act, and is knocked back
 var raccoon_knock := Vector2.ZERO  # world px/s the Raccoon is being knocked back at; the Raccoon moves itself by it
@@ -42,12 +45,15 @@ var _due: Array[int] = []  # per approach: cars due that haven't found room to d
 var _wreckage: Array[Car] = []  # this tick's Wreckage, towed or not
 var _by_route: Array[Array] = []  # this tick's moving cars, by route id
 var _tow_hold := Vector2.ZERO  # where the towed Wreckage trails, from the Raccoon
+var _jam_level := Jam.Level.CLEAR  # the Jam-level last signalled
 
 
-func _init(seed_value: int) -> void:
+## A stage's traffic. The Run hands it the Dents from its earlier stages.
+func _init(seed_value: int, dents := 0) -> void:
 	_rng.seed = seed_value
 	_patience_rng.seed = seed_value
 	net = RoadNet.new()
+	jam = Jam.new(net.crossings.size(), dents)
 	raccoon_position = net.crossings[0] + Tuning.RACCOON_START
 	for i in net.approaches.size():
 		lights.append(Light.new(i, net.approaches[i]))
@@ -123,6 +129,7 @@ func step() -> void:
 	_spend_patience()
 	_check_crashes()
 	_check_hit()
+	_check_jam()
 
 
 # Every car that's due joins its entry's queue, then drives on as soon as the road has room.
@@ -204,6 +211,7 @@ func _drive() -> void:
 			c.speed = maxf(target, c.speed - Tuning.DECEL * Tuning.HARD_BRAKE * DT)
 		c.s += c.speed * DT
 		if c.s >= c.route.length:
+			jam.exit()
 			car_exited.emit(c)
 			continue
 		_place(c)
@@ -215,6 +223,7 @@ func _drive() -> void:
 # while stopped. Only the front driver can be out of it: once Blowing the red has debuted, it flashes "!!" for
 # its last BLOW_WARN seconds, then Blows the red. Before then it only Honks.
 func _spend_patience() -> void:
+	var honking := 0.0  # Jam fill per second from the drivers Honking
 	var fronts: Dictionary[Light, Car] = {}
 	for c in cars:
 		if c.wreckage or c.passed_line or c.light.state == Light.State.GREEN:
@@ -232,10 +241,12 @@ func _spend_patience() -> void:
 		c.honks = stage
 		if honk:
 			honked.emit(c)
+		honking += Tuning.JAM_HONK[c.honks]
 		c.blow_warning = blowing_unlocked and front and c.patience - c.wait <= Tuning.BLOW_WARN
 		if c.blow_warning and c.wait >= c.patience and c.line_distance < Tuning.BLOW_REACH and not c.blowing:
 			c.blowing = true
 			blew_red.emit(c)
+	jam.step(honking, DT)
 
 
 # Red stops a driver at the line. A driver too close to stop even braking hard pushes through; on
@@ -444,6 +455,17 @@ func _check_crashes() -> void:
 				_crash(w, c)
 
 
+# Signal the Jam-level when it changes. A full Jam is Gridlock; Jam stays full from then on.
+func _check_jam() -> void:
+	var l := jam.level()
+	if l == _jam_level:
+		return
+	_jam_level = l
+	jam_level_changed.emit(l)
+	if l == Jam.Level.GRIDLOCK:
+		gridlocked.emit()
+
+
 # The Raccoon getting hit: a moving car faster than HIT_MIN_SPEED with the Raccoon within HIT_REACH of its
 # footprint. It's stunned, knocked back the way the car drives, and drops its Tow. A stunned Raccoon can't be hit again.
 func _check_hit() -> void:
@@ -485,6 +507,7 @@ func _crash(a: Car, b: Car) -> void:
 		c.speed = 0.0
 		c.boosted = false
 		c.holding = false
+	jam.dent()
 	crashed.emit(a, b, (a.transform.origin + b.transform.origin) / 2.0)
 
 
