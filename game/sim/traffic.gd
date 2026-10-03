@@ -46,13 +46,16 @@ var k_right := Tuning.RIGHT_SHARE  # flat from stage 1; a knob so tests can turn
 var k_patience := 0.0
 var blowing_unlocked := false  # Blowing the red. While it's off, drivers out of Patience only Honk.
 var k_swell := true  # Swells on; a knob so tests can keep every entry at k_gap
+var k_motorcycles := 0.0  # the vehicle mix: share of new vehicles that are motorcycles...
+var k_semis := 0.0  # ...and semis; the rest are cars
 
 var _rng := RandomNumberGenerator.new()
 var _patience_rng := RandomNumberGenerator.new()  # its own stream, so drawing Patience doesn't shift any other draw
 var _swell_rng := RandomNumberGenerator.new()  # its own stream, so drawing Swells doesn't shift any other draw
+var _kind_rng := RandomNumberGenerator.new()  # its own stream, so drawing vehicle kinds doesn't shift any other draw
 var _next_id := 1
 var _spawn_left: Array[float] = []  # per approach: seconds until its next car is due
-var _due: Array[int] = []  # per approach: cars due that haven't found room to drive on yet
+var _due: Array[Array] = []  # per approach: the kinds of the vehicles due that haven't found room to drive on yet, first due first
 var _wreckage: Array[Car] = []  # this tick's Wreckage, towed or not
 var _by_route: Array[Array] = []  # this tick's moving cars, by route id
 var _tow_hold := Vector2.ZERO  # where the towed Wreckage trails, from the Raccoon
@@ -70,16 +73,19 @@ func _init(seed_value: int, dents := 0, stage: StageDef = null) -> void:
 	if stage.features.has(Stages.Feature.TURNERS):
 		k_turners = stage.turners
 	blowing_unlocked = stage.features.has(Stages.Feature.BLOWING)
+	k_motorcycles = stage.motorcycles
+	k_semis = stage.semis
 	_rng.seed = seed_value
 	_patience_rng.seed = seed_value
 	_swell_rng.seed = seed_value
+	_kind_rng.seed = seed_value
 	net = RoadNet.new(stage.crossings)
 	jam = Jam.new(net.crossings.size(), dents)
 	raccoon_position = net.crossings[0] + Tuning.RACCOON_START
 	for i in net.approaches.size():
 		lights.append(Light.new(i, net.approaches[i]))
 		_spawn_left.append(_rng.randf_range(Tuning.FIRST_SPAWN[0], Tuning.FIRST_SPAWN[1]))
-		_due.append(0)
+		_due.append([])
 	var entries := _entries()
 	quota = roundi(stage.target_len / k_gap * entries.size())
 	swell = entries[_swell_rng.randi_range(0, entries.size() - 1)]
@@ -98,7 +104,7 @@ func meet_quota() -> void:
 
 ## Cars due at entry `i` that haven't found room on its road yet: its backlog.
 func backlog(i: int) -> int:
-	return _due[i]
+	return _due[i].size()
 
 
 ## The Raccoon's state this tick. Towed Wreckage follows it, and drivers Yield to it.
@@ -181,7 +187,8 @@ func step() -> void:
 	_check_quota()
 
 
-# Every car that's due joins its entry's queue, then drives on as soon as the road has room.
+# Every vehicle that's due joins its entry's queue, its kind drawn as it falls due, then drives on as soon as the
+# road has room.
 func _spawn() -> void:
 	for i in net.approaches.size():
 		var a := net.approaches[i]
@@ -190,17 +197,18 @@ func _spawn() -> void:
 		_spawn_left[i] -= DT
 		if _spawn_left[i] <= 0.0:
 			_spawn_left[i] += k_gap * _rng.randf_range(Tuning.SPAWN_JITTER[0], Tuning.SPAWN_JITTER[1]) / _swell_rate(i)
-			_due[i] += 1
-		if _due[i] <= 0:
+			_due[i].append(_pick_kind())
+		if _due[i].is_empty():
 			continue
-		var c := Car.new(_next_id, a.routes[0], lights[i])
+		var c := Car.new(_next_id, a.routes[0], lights[i], _due[i][0])
+		c.s = (Tuning.CAR_L - c.length) / 2.0  # its front bumper where a car's is, so a semi enters out of sight
 		_place(c)
 		if not _entry_clear(a, c):
 			continue
-		_due[i] -= 1
+		_due[i].pop_front()
 		_next_id += 1
 		_new_driver(c, i)
-		c.speed = Tuning.BASE_SPEED * Tuning.SPAWN_SPEED
+		c.speed = _entry_speed(c)
 		c.tint = Color.from_hsv(_rng.randf(), 0.65, 0.95)
 		cars.append(c)
 		car_spawned.emit(c)
@@ -212,7 +220,7 @@ func _new_driver(c: Car, i: int) -> void:
 	c.light = lights[i]
 	c.route = _pick_route(net.approaches[i])
 	if c.movement == RoadNet.Movement.LEFT:
-		c.turn_gap = _rng.randf_range(Tuning.TURNER_GAP[0], Tuning.TURNER_GAP[1])
+		c.turn_gap = _rng.randf_range(Tuning.TURNER_GAP[0], Tuning.TURNER_GAP[1]) / c.pace  # a slow semi wants a longer gap
 	c.patience = k_patience * _patience_rng.randf_range(Tuning.PATIENCE_JITTER[0], Tuning.PATIENCE_JITTER[1])
 
 
@@ -229,7 +237,7 @@ func _hand_off(c: Car) -> void:
 func _backlog_total() -> int:
 	var n := 0
 	for d in _due:
-		n += d
+		n += d.size()
 	return n
 
 
@@ -312,17 +320,32 @@ func _pick_movement(a: RoadNet.Approach) -> RoadNet.Movement:
 	return heirs[heirs.size() - 1]  # straight, or the last turn when rounding leaves r just short of 1
 
 
-# Room for the new car: the last car in is far enough along, and no Wreckage lies within its stopping
-# distance of where it would appear.
+# A vehicle falling due: a motorcycle at the k_motorcycles share, a semi at k_semis, otherwise a car. With no mix it
+# draws nothing.
+func _pick_kind() -> Car.Kind:
+	if k_motorcycles + k_semis <= 0.0:
+		return Car.Kind.CAR
+	var r := _kind_rng.randf()
+	if r < k_motorcycles:
+		return Car.Kind.MOTORCYCLE
+	if r < k_motorcycles + k_semis:
+		return Car.Kind.SEMI
+	return Car.Kind.CAR
+
+
+# Room for the new vehicle: the last car in is far enough ahead of its front bumper, and no Wreckage lies within
+# its stopping distance of where it would appear.
 func _entry_clear(a: RoadNet.Approach, new: Car) -> bool:
-	var v := Tuning.BASE_SPEED * Tuning.SPAWN_SPEED  # the speed a new car enters at
+	var v := _entry_speed(new)
 	var room := Tuning.SPAWN_CLEAR + Tuning.FOLLOW_GAP + v * v / (2.0 * Tuning.DECEL * Tuning.HARD_BRAKE)
 	for c in cars:
 		if c.wreckage:
 			if c.overlaps(new, -room):
 				return false
-		elif c.route.segment_at(c.s) == a.incoming and c.s - c.length / 2.0 < Tuning.CAR_L / 2.0 + Tuning.SPAWN_CLEAR:
-			return false
+		elif c.route.segment_at(c.s) == a.incoming:
+			var gap := c.s - c.length / 2.0 - (new.s + new.length / 2.0)
+			if gap < Tuning.SPAWN_CLEAR or (c.speed < v and gap < room):  # behind a slower car it needs room to stop
+				return false
 	return true
 
 
@@ -339,7 +362,7 @@ func _drive() -> void:
 		if c.wreckage:
 			keep.append(c)
 			continue
-		var target := Tuning.BASE_SPEED * k_speed * (Tuning.GO_BOOST if c.boosted else 1.0)
+		var target := _cruise(c) * (Tuning.GO_BOOST if c.boosted else 1.0)
 		target = minf(target, _stop_line_limit(c))
 		target = minf(target, _turn_limit(c))
 		target = minf(target, _turner_limit(c))
@@ -416,22 +439,35 @@ func _stop_line_limit(c: Car) -> float:
 	return sqrt(2.0 * Tuning.DECEL * maxf(dist - Tuning.STOP_MARGIN, 0.0))
 
 
+# A vehicle's normal speed this stage: a car's, times its pace.
+func _cruise(c: Car) -> float:
+	return Tuning.BASE_SPEED * k_speed * c.pace
+
+
+# The speed a new vehicle enters at: a car's SPAWN_SPEED, slower for a semi but no faster for a motorcycle, so
+# it can stop behind the queue at the entry as a car can.
+func _entry_speed(c: Car) -> float:
+	return Tuning.BASE_SPEED * Tuning.SPAWN_SPEED * minf(c.pace, 1.0)
+
+
 # A car turning right or left takes its turn at TURN_SPEED: it slows in time to reach the box at that
 # speed, and holds it until its centre is off the connector.
 func _turn_limit(c: Car) -> float:
 	if c.movement == RoadNet.Movement.STRAIGHT or c.past_box():
 		return INF
-	var v := Tuning.BASE_SPEED * k_speed * Tuning.TURN_SPEED
+	var v := _cruise(c) * Tuning.TURN_SPEED
 	return sqrt(v * v + 2.0 * Tuning.DECEL * maxf(c.line_distance, 0.0))
 
 
 # A Turner pulls up with its centre on its stop line and holds there, holding up everyone behind, until it
-# has its gap. Then it's committed, and doesn't stop for oncoming traffic again.
+# has its gap. A motorcycle or semi holds with its front bumper where a car's would be, so a semi's nose stays out of
+# the cross traffic. Then it's committed, and doesn't stop for oncoming traffic again.
 func _turner_limit(c: Car) -> float:
 	c.holding = false
 	if c.movement != RoadNet.Movement.LEFT or c.committed:
 		return INF
-	var to_hold := c.route.stop_s - c.s
+	var hold_s := c.route.stop_s + (Tuning.CAR_L - c.length) / 2.0  # where its centre holds: its front where a car's would be
+	var to_hold := hold_s - c.s
 	if to_hold > Tuning.LOOK:
 		return INF
 	if _gap_ok(c):
@@ -605,7 +641,8 @@ func _check_quota() -> void:
 		if cars_through >= quota:
 			draining = true
 			_drain_left = Tuning.DRAIN_MAX
-			_due.fill(0)
+			for d in _due:
+				d.clear()
 		return
 	_drain_left -= DT
 	if _drain_left <= 0.0 or cars.all(func(c: Car) -> bool: return c.wreckage):

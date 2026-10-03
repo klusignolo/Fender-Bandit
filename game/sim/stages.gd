@@ -38,6 +38,10 @@ static func def(n: int, seed_value: int) -> StageDef:
 	var turner_stage: int = DEBUTS.find_key(Feature.TURNERS)  # the Turner share's first value is its Debut's
 	if n >= turner_stage:
 		d.turners = _curve(Tuning.K_TURNERS, maxi(k_stage, turner_stage), turner_stage)
+	if d.features.has(Feature.MOTORCYCLES):
+		d.motorcycles = Tuning.MOTO_SHARE
+	if d.features.has(Feature.SEMIS):
+		d.semis = Tuning.SEMI_SHARE
 	d.target_len = lerpf(Tuning.TARGET_LEN[0], Tuning.TARGET_LEN[1], (mini(n, OPENING) - 1) / float(OPENING - 1))
 	return d
 

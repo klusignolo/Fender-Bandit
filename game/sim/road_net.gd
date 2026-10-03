@@ -75,8 +75,12 @@ class Route:
 	func local_at(s: float) -> float:
 		return s - starts[index_at(s)]
 
-	## Position and heading at distance s along the route.
+	## Position and heading at distance s along the route. Before its start (a long vehicle's back as it enters),
+	## it carries on straight back.
 	func pose(s: float) -> Transform2D:
+		if s < 0.0:
+			var p := _curves[0].sample_baked_with_rotation(0.0)
+			return p.translated(p.x * s)
 		var i := index_at(s)
 		var end := length if i == starts.size() - 1 else starts[i + 1]
 		return _curves[i].sample_baked_with_rotation(clampf(s - starts[i], 0.0, end - starts[i]))

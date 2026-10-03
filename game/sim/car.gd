@@ -1,8 +1,12 @@
 class_name Car
 extends RefCounted
-## One vehicle. Traffic moves it along its Route by distance; the view reads its pose.
+## One vehicle: a car, motorcycle or semi. Traffic moves it along its Route by distance; the view reads its pose.
+## Whatever its kind, its footprint is one rigid rectangle centred on its route, so a long one cuts its turns.
+
+enum Kind { CAR, MOTORCYCLE, SEMI }
 
 var id: int
+var kind := Kind.CAR
 var route: RoadNet.Route
 var movement: RoadNet.Movement:  # straight, right, or left (a Turner)
 	get: return route.movement
@@ -11,6 +15,7 @@ var s := 0.0  # distance of its centre along the route
 var speed := 0.0
 var length := Tuning.CAR_L
 var width := Tuning.CAR_W
+var pace := 1.0  # its speed as a multiple of a car's
 var tint := Color.WHITE
 var boosted := false  # waved through on green: drives at GO_BOOST
 var passed_line := false  # over the stop line, or committed to crossing it
@@ -29,10 +34,20 @@ var blowing := false  # out of Patience: Blowing the red, it drives through its 
 var blow_warning := false  # its last BLOW_WARN seconds of Patience, once Blowing the red has debuted: it flashes "!!"
 
 
-func _init(car_id: int, r: RoadNet.Route, l: Light) -> void:
+func _init(car_id: int, r: RoadNet.Route, l: Light, k := Kind.CAR) -> void:
 	id = car_id
 	route = r
 	light = l
+	kind = k
+	match k:
+		Kind.MOTORCYCLE:
+			length = Tuning.MOTO_L
+			width = Tuning.MOTO_W
+			pace = Tuning.MOTO_PACE
+		Kind.SEMI:
+			length = Tuning.SEMI_L
+			width = Tuning.SEMI_W
+			pace = Tuning.SEMI_PACE
 
 
 ## Forget everything about the crossing it just drove through: it's a fresh driver at the next one.

@@ -1,12 +1,17 @@
 class_name Vehicle
 extends Node2D
-## Draws one Car (greybox: a tinted box with a windscreen; Wreckage darkened, skewed and crossed out).
+## Draws one Car (greybox: a tinted box with a windscreen, a slim motorcycle, or a semi's cab and trailer;
+## Wreckage darkened, skewed and crossed out).
 ## A right-turning car flashes its right blinker; a Turner carries an upright arrow that pulses amber
 ## while it holds. A driver spending Patience shows a ring once it has Honked, a "HONK!" at each Honk,
 ## and "!!" before it Blows the red; Blowing the red, it's outlined red. Cues are upright. Pooled by
 ## World; hidden while unused.
 
 const GLASS := Color(0.15, 0.2, 0.3)
+const TYRE := Color(0.08, 0.08, 0.1)  # a motorcycle's wheels...
+const BIKE := Color(0.25, 0.25, 0.3)  # ...and its body, a greybox grey; the rider's helmet takes the tint (docs/sprites.md)
+const CAB := Color("#D9D4C7")  # a semi's cab, a greybox grey (docs/sprites.md fixes the cab's details, not a swatch); its trailer takes the tint
+const SEMI_CAB := 24.0  # a semi's cab length, world px; the trailer is the rest
 const WRECKAGE_DARKEN := 0.55
 const WRECKAGE_SPIN := 0.6  # radians: Wreckage is drawn turned up to this far, so it reads as knocked askew
 const BLINKER := Color("#FFE3A3")  # `blinker` in docs/sprites.md
@@ -104,12 +109,11 @@ func _draw() -> void:
 		return
 	var l := car.length
 	var w := car.width
-	var body := car.tint.darkened(WRECKAGE_DARKEN) if car.wreckage else car.tint
-	draw_rect(Rect2(-l / 2.0, -w / 2.0, l, w), body)
-	draw_rect(Rect2(l / 2.0 - 12.0, -w / 2.0 + 3.0, 6.0, w - 6.0), GLASS)
+	_draw_body()
 	if car.wreckage:
-		draw_line(Vector2(-10, -7), Vector2(10, 7), Color.BLACK, 3.0)
-		draw_line(Vector2(-10, 7), Vector2(10, -7), Color.BLACK, 3.0)
+		var x := Vector2(minf(l / 2.0 - 4.0, 10.0), maxf(w / 2.0 - 3.0, 4.0))
+		draw_line(-x, x, Color.BLACK, 3.0)
+		draw_line(Vector2(-x.x, x.y), Vector2(x.x, -x.y), Color.BLACK, 3.0)
 	elif car.boosted:  # speed lines behind a car waved through on green
 		draw_line(Vector2(-l / 2.0 - 8.0, -5.0), Vector2(-l / 2.0 - 2.0, -5.0), Color.WHITE, 2.0)
 		draw_line(Vector2(-l / 2.0 - 10.0, 5.0), Vector2(-l / 2.0 - 2.0, 5.0), Color.WHITE, 2.0)
@@ -123,6 +127,33 @@ func _draw() -> void:
 		_draw_arrow()
 	if _ring_shown() or _honk_shown() or car.blow_warning:
 		_draw_patience()
+
+
+# Its body, a distinct shape per kind, along +x: a car is a box with a windscreen; a motorcycle a slim body
+# between two wheels with handlebars and a tinted helmet; a semi a tinted trailer behind a pale cab.
+func _draw_body() -> void:
+	var l := car.length
+	var w := car.width
+	var tint := _shade(car.tint)
+	match car.kind:
+		Car.Kind.MOTORCYCLE:
+			draw_rect(Rect2(-l / 2.0, -1.5, l, 3.0), TYRE)
+			draw_rect(Rect2(-l / 2.0 + 4.0, -w / 2.0 + 1.0, l - 8.0, w - 2.0), _shade(BIKE))
+			draw_line(Vector2(l / 2.0 - 6.0, -w / 2.0), Vector2(l / 2.0 - 6.0, w / 2.0), INK, 2.0)
+			draw_circle(Vector2(-1.0, 0.0), w * 0.42, tint)
+		Car.Kind.SEMI:
+			draw_rect(Rect2(-l / 2.0, -w / 2.0, l - SEMI_CAB, w), tint)
+			draw_rect(Rect2(l / 2.0 - SEMI_CAB, -w / 2.0, SEMI_CAB, w), _shade(CAB))
+			draw_line(Vector2(l / 2.0 - SEMI_CAB, -w / 2.0), Vector2(l / 2.0 - SEMI_CAB, w / 2.0), INK, 2.0)  # the hitch
+			draw_rect(Rect2(l / 2.0 - 9.0, -w / 2.0 + 3.0, 5.0, w - 6.0), GLASS)
+		_:
+			draw_rect(Rect2(-l / 2.0, -w / 2.0, l, w), tint)
+			draw_rect(Rect2(l / 2.0 - 12.0, -w / 2.0 + 3.0, 6.0, w - 6.0), GLASS)
+
+
+# A body colour, darkened on Wreckage.
+func _shade(c: Color) -> Color:
+	return c.darkened(WRECKAGE_DARKEN) if car.wreckage else c
 
 
 # Drawn in world-aligned axes, so it stays upright however the car is turned. It points the way the

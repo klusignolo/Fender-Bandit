@@ -124,6 +124,10 @@ _Avoid_: Running the red (run is reserved for a play session), red-light running
 A driver turning left from the shared lane, who waits in the crossing for a gap in oncoming traffic and holds up everyone behind; flagged by an icon that pulses once it is stuck.
 _Avoid_: Left-turner, turning car, yielding (Yield is braking for the raccoon)
 
+**Vehicle mix**:
+The share of new vehicles that are cars, motorcycles (small and fast, from stage 5) and semis (long and slow, from stage 8), set per Stage. Every kind follows the same driving rules; a semi is one rigid rectangle, so it cuts its turns.
+_Avoid_: Car type, traffic mix (traffic covers movements too)
+
 **Yield**:
 A driver braking for the raccoon in their path; a driver moving too fast to stop in time hits it instead.
 _Avoid_: Stopping for, avoiding

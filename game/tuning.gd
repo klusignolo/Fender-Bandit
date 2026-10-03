@@ -49,6 +49,14 @@ const EXIT_MARGIN := 60.0  # how far past the map edge a car drives before it le
 # Cars
 const CAR_L := 38.0
 const CAR_W := 20.0
+const MOTO_L := 22.0  # a motorcycle: small and fast
+const MOTO_W := 10.0
+const MOTO_PACE := 1.3  # its speed as a multiple of a car's, cruising and through turns
+const SEMI_L := 84.0  # a semi: long and slow, one rigid rectangle
+const SEMI_W := 24.0
+const SEMI_PACE := 0.75
+const MOTO_SHARE := 0.15  # share of new vehicles that are motorcycles, once they've debuted (stage 5)...
+const SEMI_SHARE := 0.10  # ...and semis (stage 8); the rest are cars
 const BASE_SPEED := 150.0  # px/s, before K_SPEED
 const GO_BOOST := 1.45  # speed multiplier once a car has been waved through on green
 const ACCEL := 260.0  # px/s²

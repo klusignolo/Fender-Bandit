@@ -53,9 +53,9 @@ Uneven from stage 1, so a fixed light cycle starves a road ([#14](https://github
 |---|---|---|---|---|---|
 | First car | Seconds before each entry's first car, drawn per entry. With four entries the first car arrives about 3s in, so the first Switch is a calm one. | 2.5–4.5s | `FIRST_SPAWN` (inline) | #21 | |
 | Spawn jitter | Each gap between cars on an entry is the spawn gap times a draw from this range. | 0.6–1.4× | `SPAWN_JITTER` (inline) | #21 | |
-| Entry speed | A new car drives on at this share of base speed. | 0.8× | `SPAWN_SPEED` (inline) | #21 | |
-| Entry room | Clear road an entry needs behind its last car before the next one drives on. | 4 px | `SPAWN_CLEAR` (inline) | #21 | |
-| Entry point | How far past the map edge a new car's centre starts. | 24 px | `SPAWN_BACK` (inline) | #21 | |
+| Entry speed | A new car drives on at this share of base speed. A semi enters at its pace times this; a motorcycle no faster than a car, so it can stop behind the entry's queue (#30). | 0.8× | `SPAWN_SPEED` (inline) | #21 | |
+| Entry room | Clear road an entry needs behind its last car before the next one drives on. Behind a car slower than it enters at, it also needs its stopping distance plus the follow gap (#30). | 4 px | `SPAWN_CLEAR` (inline) | #21 | |
+| Entry point | How far past the map edge a new car's centre starts. A motorcycle or semi starts with its front bumper where a car's is, so a semi enters wholly out of sight (#30). | 24 px | `SPAWN_BACK` (inline) | #21 | |
 
 ## Driving
 
@@ -87,10 +87,10 @@ How cars move, follow and stop. Distances are measured along the car's route.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
-| Turner gap | Seconds of clear oncoming road a Turner wants before it goes: no oncoming car in the box, and none due at its stop line sooner. Higher values mean longer holds. | 1.4–2.0s, drawn per driver | `TURNER_GAP` (`GAP_MIN/MAX`) | #17, #24 | Holds of about 1–4s on green in headless runs. #24 soak, 25% Turners, N and S on Green for 90s: median hold 1.1–2.6s at the stage-1 spawn gap, up to about 18s at the stage-9 gap. |
+| Turner gap | Seconds of clear oncoming road a Turner wants before it goes: no oncoming car in the box, and none due at its stop line sooner. Higher values mean longer holds. Divided by the vehicle's pace: a slow semi waits for a longer gap, a motorcycle takes a shorter one (#30). | 1.4–2.0s, drawn per driver | `TURNER_GAP` (`GAP_MIN/MAX`) | #17, #24 | Holds of about 1–4s on green in headless runs. #24 soak, 25% Turners, N and S on Green for 90s: median hold 1.1–2.6s at the stage-1 spawn gap, up to about 18s at the stage-9 gap. |
 | Gap judging speed | A Turner judges an oncoming car as arriving at least this fast, so a crawling or stopped car close to the line still counts as in the way. | 25 px/s | `GAP_MIN_SPEED` (inline) | #24 | |
 | Hold point | A Turner pulls up with its centre on the stop line, nose in the box, and holds within this of that point. | 1 px | `HOLD_SLACK` (inline) | #24 | |
-| Turn speed | Speed through a turn, left or right, as a share of normal speed. A car turning right or left slows in time to enter the box at it. | 0.7× | `TURN_SPEED` | #9, #24 | |
+| Turn speed | Speed through a turn, left or right, as a share of normal speed. Normal speed includes the vehicle's pace (#30). A car turning right or left slows in time to enter the box at it. | 0.7× | `TURN_SPEED` | #9, #24 | |
 
 ## Right turns
 
@@ -133,9 +133,20 @@ Footprints in world px. They're gameplay, not just art: a longer vehicle blocks 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Car | The standard vehicle. | 38 × 20 | `CAR_L`, `CAR_W` | #5 | Legible at ~0.66 zoom (#16). |
-| Motorcycle | Small and fast; harder to see. | 22 × 10 | not built | #6 | First guess. |
-| Semi | Long and slow; one rigid sprite, so its turn arc cuts the corner. | 84 × 24 | not built | #6 | First guess. |
+| Motorcycle | Small and fast; harder to see. | 22 × 10 | `MOTO_L`, `MOTO_W` | #6, #30 | First guess. |
+| Semi | Long and slow; one rigid sprite, so its turn arc cuts the corner. | 84 × 24 | `SEMI_L`, `SEMI_W` | #6, #30 | First guess. |
 | Raccoon | The player: kept at car scale so the hero reads. | 28 wide (sprite ~28 × 38) | `RACCOON_R` | #5, #6 | |
+
+## Vehicle mix
+
+Motorcycles debut at stage 5 and semis at stage 8 ([#30](https://github.com/klusignolo/GameJam2026/issues/30)). The `StageDef` carries the mix: each share is on while its feature is, and flat, not a stage curve. A vehicle's kind is drawn as it falls due at its entry, from its own random stream, so the mix never shifts any other seeded draw. Pace scales cruising, the Green boost and the turn speed. A semi also enters slower, while a motorcycle enters at a car's speed. A Turner's gap is divided by its pace, so a slow semi waits for a longer one. Every kind obeys the same rules otherwise. A Turner of any kind holds with its front bumper where a car's would be (a car's centre on the stop line), so a semi's nose stays out of the cross traffic.
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Motorcycle share | Share of new vehicles that are motorcycles, from stage 5. | 15% | `MOTO_SHARE` | #30 | First guess. |
+| Semi share | Share of new vehicles that are semis, from stage 8. The rest are cars. | 10% | `SEMI_SHARE` | #30 | First guess. |
+| Motorcycle pace | A motorcycle's speed as a multiple of a car's. Faster, so the gaps around it close sooner. | ×1.3 | `MOTO_PACE` | #30 | First guess. |
+| Semi pace | A semi's speed as a multiple of a car's. Slow and long, so it sits in the box longer and stacks a queue behind it. | ×0.75 | `SEMI_PACE` | #30 | First guess. |
 
 ## Roads
 

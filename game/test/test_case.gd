@@ -23,7 +23,7 @@ func check_near(got: float, want: float, tolerance: float, what: String) -> bool
 const NO_QUOTA := 1 << 30  # a Quota no test meets, for tests of a stage in full flow
 
 
-## A Traffic with straight traffic only (no right turns or Turners), no Swells and no Quota, as before any existed.
+## A Traffic with straight traffic only (no right turns or Turners), cars only, no Swells and no Quota, as before any existed.
 ## It's stage 1's map and knobs, or `stage`'s.
 func straight_traffic(seed_value: int, stage := 1) -> Traffic:
 	var t := Traffic.new(seed_value, 0, Stages.def(stage, seed_value))
@@ -31,6 +31,8 @@ func straight_traffic(seed_value: int, stage := 1) -> Traffic:
 	t.k_right = 0.0
 	t.k_turners = 0.0
 	t.k_swell = false
+	t.k_motorcycles = 0.0
+	t.k_semis = 0.0
 	return t
 
 
