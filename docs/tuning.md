@@ -33,7 +33,7 @@ Uneven from stage 1, so a fixed light cycle starves a road ([#14](https://github
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Swell strength | The heavy road's spawn rate compared with the others. | 2× heavy, 0.67× the rest | `SWELL_HEAVY`, `SWELL_LIGHT` | #14, #27 | "Helps break the rhythm." #17: the dev likes the triple-chevron tell ("intuitive that traffic will be heavier in that lane"). |
-| Swell shift | How long a road stays heavy, and the warning before the next one. | 20–30s, 4s warning | `SWELL_MIN/MAX`, `SHIFT_WARN` | #14, #27 | |
+| Swell shift | How long a road stays heavy, and the warning before the next one. | 20–30s, 1s warning | `SWELL_MIN/MAX`, `SHIFT_WARN` | #14, #27, dev playtest after #28 | The warning was 4s with blinking chevrons. The dev cut it to 1s, heard only (the `swell` whistle): a nudge to react, not time to prepare. It also tells you a Swell is happening somewhere. |
 | ~~Platoon~~ | **Cut in #17.** It was a tight bunch of 4–6 cars leaving one entry every 8–14s. | n/a | n/a | #14 | #17: "heavy and platoon FEEL like they do the same thing." The Swell stays. |
 
 ## Spawning
@@ -175,7 +175,7 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | HONK! | "HONK!" or "HONK HONK!" rises off the car and fades at each Honk | #25 | Stands in for `cue_honk`. `Vehicle.HONK_TIME`, `HONK_RISE`, `HONK_SIZE` (on-screen px). |
 | Dash cooldown ring | Fills around the Raccoon while Dash cools down; gone once it's ready | #23 | |
 | Turner arrow | An upright bubble over every Turner, pointing the way it will turn, from spawn until it starts its turn; bigger and pulsing amber while it holds | #17, #24 | Greybox drawing: `Vehicle.ARROW_R`, `ARROW_LIFT`, `PULSE_SPEED`. |
-| Swell chevrons | Triple chevrons by the kerb of the Swell road, in from the map edge; blinking on the next Swell road while it's flagged | #14, #27 | Stands in for `cue_swell`. `EntryCues.INSET`, `CHEVRON_OUT`, `BLINK_HZ`. |
+| Swell chevrons | Triple chevrons by the kerb of the Swell road, in from the map edge, lit one after another toward the crossing like a marquee for as long as the Swell is on that road. No cue on the next Swell road before it moves | #14, #27, dev playtest after #28 | Stands in for `cue_swell`. `EntryCues.INSET`, `CHEVRON_OUT`, `MARQUEE_HZ`, `MARQUEE_DIM`. The dev: static or blinking chevrons "look like a power-up" to walk over and pick up. |
 | Entry backlog | "+N" by an entry with cars waiting to get on; while the Jam is Heavy, the end of that lane pulses with a red outline | #19 (story 52), #27 | `EntryCues.TAG_OUT`, `TAG_SIZE`, `PULSE_LENGTH`, `PULSE_HZ`. |
 | Right blinker | Flashes 2×/s at the front and back right corners from spawn until the car is through its turn | #13, #24 | `Vehicle.BLINK_HZ`; `blinker` colour from docs/sprites.md. |
 | BONK! | Over the Raccoon for as long as it's stunned | #23 | Stands in for the greybox's floating "BONK" until the juice pass (#19 story 47). |

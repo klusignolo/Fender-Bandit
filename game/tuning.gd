@@ -20,7 +20,7 @@ const SWELL_HEAVY := 2.0  # the Swell road's spawn rate, as a multiple of k_gap'
 const SWELL_LIGHT := 0.67  # ...and every other road's
 const SWELL_MIN := 20.0  # seconds a road stays the Swell road, drawn per Swell from SWELL_MIN to SWELL_MAX
 const SWELL_MAX := 30.0
-const SHIFT_WARN := 4.0  # seconds before the Swell moves that its next road is flagged
+const SHIFT_WARN := 1.0  # seconds before the Swell moves that its next road is flagged: the whistle, nothing on screen
 
 # Roads (world px)
 const ARM_X := 640.0  # entry arm length, centre to map edge, horizontal

@@ -136,7 +136,7 @@ Every sound starts as *not made*. Fill in **File** and **Recipe** as each one is
 | `combo_break` | **Combo** reset by a **Crash** | Deflating "wah-wah" | jsfxr | | |
 | `jam_busy` | **Jam-level** rises to Busy | Short warning beep | jsfxr | | |
 | `jam_heavy` | **Jam-level** rises to Heavy | Double warning beep | jsfxr | | |
-| `swell` | A **Swell** is flagged | Traffic-cop whistle toot | jsfxr | | |
+| `swell` | A **Swell** is flagged, 1s before it moves (`Traffic.swell_flagged`). The only warning: nothing shows on screen until it moves | Traffic-cop whistle toot | jsfxr | | |
 | `reveal` | A crossing attaches (the reveal) | Whoosh plus construction "ka-chunk" | Procedural | | |
 
 ### UI

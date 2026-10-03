@@ -83,7 +83,7 @@ _Avoid_: Streak, chain, multiplier (as a noun for the mechanic)
 ### Traffic
 
 **Swell**:
-One road carrying a heavy share of the traffic for part of a stage, then shifting to another road, flagged at the road edge before it moves.
+One road carrying a heavy share of the traffic for part of a stage, then shifting to another road, announced by a whistle a moment before it moves and marked at the road edge while it lasts.
 _Avoid_: Wave, rush (Rush hour is the escalation), surge
 
 ### Drivers

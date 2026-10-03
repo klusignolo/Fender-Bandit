@@ -1,6 +1,7 @@
 class_name EntryCues
 extends Node2D
-## At each map entry (#27): triple chevrons on the Swell road, blinking on the next one while it's flagged;
+## At each map entry (#27): triple chevrons on the Swell road, lighting up one after another
+## toward the crossing like a marquee while the Swell is on it;
 ## and, when cars are waiting to get on, its backlog as "+N", with the lane pulsing red while the Jam is Heavy
 ## (story 52). Greybox: the cue_swell sprite (docs/sprites.md) replaces the drawn chevrons.
 
@@ -8,7 +9,8 @@ const INSET := 110.0  # world px in from the map edge, along the lane, where the
 const CHEVRON_OUT := 34.0  # world px from the lane's centre out past the kerb to the chevrons...
 const TAG_OUT := 74.0  # ...and to the "+N"
 const PULSE_LENGTH := 160.0  # world px of lane, in from the map edge, that pulses under a backlog
-const BLINK_HZ := 4.0
+const MARQUEE_HZ := 1.5  # times a second the light runs along the chevrons, back to front
+const MARQUEE_DIM := 0.2  # an unlit chevron's opacity
 const PULSE_HZ := 1.6
 const TAG_SIZE := 26
 const MARKING := Color("#EEF1F6")  # the chevrons and "+N": white, like a road marking (palette in docs/sprites.md)
@@ -30,7 +32,6 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var blink := fmod(_clock * BLINK_HZ, 1.0) < 0.5
 	var pulse := 0.5 + 0.5 * sin(_clock * TAU * PULSE_HZ)
 	var heavy := _traffic.jam.level() >= Jam.Level.HEAVY 
 	for i in _traffic.net.approaches.size():
@@ -45,21 +46,23 @@ func _draw() -> void:
 		if waiting > 0 and heavy:  # an outline, as the lane under it is full of cars
 			var lane := Rect2(edge, Vector2.ZERO).expand(edge + d * PULSE_LENGTH).grow(Tuning.LW / 2.0 + 2.0)
 			draw_rect(lane, Color(HEAVY_RED, 0.35 + 0.65 * pulse), false, 2.0 + 3.0 * pulse)
-		var flagged := i == _traffic.swell_next and _traffic.swell_warning() and blink
-		if _traffic.k_swell and (i == _traffic.swell or flagged):
-			_chevrons(at + right * CHEVRON_OUT, d, MARKING)
+		if _traffic.k_swell and i == _traffic.swell:
+			_chevrons(at + right * CHEVRON_OUT, d)
 		if waiting > 0:
 			_tag("+%d" % waiting, at + right * TAG_OUT, MARKING)
 
 
-# Three chevrons along the lane, pointing the way its cars drive.
-func _chevrons(at: Vector2, d: Vector2, col: Color) -> void:
+# Three chevrons along the lane, pointing the way its cars drive, lit in turn from the back one to the front one:
+# each brightens and fades smoothly, a third of a cycle after the one behind it.
+func _chevrons(at: Vector2, d: Vector2) -> void:
 	var side := RoadNet.right_of(d)
 	for k in 3:
+		var lit := 0.5 + 0.5 * cos(TAU * (_clock * MARQUEE_HZ - k / 3.0))
+		var alpha := lerpf(MARQUEE_DIM, 1.0, lit * lit)
 		var tip := at + d * (k - 1) * 12.0
 		var arm := PackedVector2Array([tip - d * 7.0 + side * 11.0, tip, tip - d * 7.0 - side * 11.0])
-		draw_polyline(arm, INK, 7.0)
-		draw_polyline(arm, col, 4.0)
+		draw_polyline(arm, Color(INK, alpha), 7.0)
+		draw_polyline(arm, Color(MARKING, alpha), 4.0)
 
 
 func _tag(text: String, centre: Vector2, col: Color) -> void:

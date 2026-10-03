@@ -75,7 +75,7 @@ func test_the_swell_moves_to_its_next_road_every_20_to_30_seconds() -> void:
 	check(lengths.size() >= 3, "Swells vary in length: %s" % [lengths.keys()])
 
 
-func test_the_next_swell_is_flagged_4_seconds_before_it_moves() -> void:
+func test_the_next_swell_is_flagged_shift_warn_before_it_moves() -> void:
 	var t := _swelling(3)
 	var flags: Array[int] = []  # the road of each swell_flagged
 	t.swell_flagged.connect(func(next: int) -> void: flags.append(next))
