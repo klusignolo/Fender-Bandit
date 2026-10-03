@@ -34,6 +34,18 @@ The Godot project lives in `game/`. Run these from the repo root in Git Bash:
 - **Screenshot a run:** `<godot console exe> --path game -- --seed=1 --shot=<png> --at=<sim seconds>`. A seed makes the run repeat exactly. It needs a window, so don't pass `--headless`.
 - **Headless boot check of the exe:** `game/build/windows/FenderBandit.exe --quit-after 90 --log-file <file>`. Exported Windows builds go exclusive fullscreen.
 
+## Build mode (phase 1)
+
+Until every phase-1 issue (the sub-issues of #19) is closed, each session takes one issue from start to finish
+without stopping for the dev:
+
+- **Don't ask design questions.** Think each one through, take your own recommendation, and record the decision and
+  why in the issue's closing comment (and in `docs/tuning.md` for knobs). Ask only about a true blocker.
+- **Workflow:** test-first. Run `/code-review` on the diff, then fix the findings you judge worth fixing. Commit,
+  push, and close the issue with architecture notes, without waiting for the dev's OK.
+- **Defer the hands-on checks.** Put a "Hands-on checks" list in each closing comment, and an acceptance item
+  that needs the dev (e.g. "the dev approves the city plan") goes there too. The dev runs them all after phase 1.
+
 ## Agent skills
 
 ### Issue tracker
