@@ -1,8 +1,8 @@
 class_name World
 extends Node2D
-## One Run's world (#13 §2): owns the Traffic simulation, steps it at a fixed 60 Hz, and draws it.
+## One Run's world (#13 §2): owns the Run and its Traffic simulation, steps the Traffic at a fixed 60 Hz, and draws it.
 ## Greybox: roads are drawn here from the RoadNet curves; cars are pooled Vehicle nodes keyed by
-## car id; each Light has a LightPole; each Crash gets a CrashMarker; the JamMeter sits on a HUD
+## car id; each Light has a LightPole; each Crash gets a CrashMarker; the HudStrip sits on a HUD
 ## layer; EntryCues marks the Swell and backlog at each entry. Nothing here decides a rule.
 
 const GRASS := Color(0.2, 0.36, 0.2)
@@ -11,6 +11,7 @@ const ROAD := Color(0.28, 0.28, 0.3)
 const CENTRE_LINE := Color(0.9, 0.8, 0.2)
 const DASH_STEP := 16.0  # px between samples when offsetting a curve for a marking
 
+var run: Run
 var traffic: Traffic
 var raccoon: Raccoon
 
@@ -20,7 +21,9 @@ var _vehicle_layer := Node2D.new()
 
 
 func _init(seed_value: int) -> void:
-	traffic = Traffic.new(seed_value)
+	run = Run.new()
+	traffic = Traffic.new(seed_value, run.dents)
+	run.attach(traffic)
 
 
 func _ready() -> void:
@@ -45,7 +48,7 @@ func _ready() -> void:
 	add_child(cam)
 	cam.make_current()
 	var hud := CanvasLayer.new()
-	hud.add_child(JamMeter.new(traffic))
+	hud.add_child(HudStrip.new(run, traffic))
 	add_child(hud)
 
 

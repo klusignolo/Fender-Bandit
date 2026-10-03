@@ -4,7 +4,7 @@ extends Node2D
 ## and, when cars are waiting to get on, its backlog as "+N", with the lane pulsing red while the Jam is Heavy
 ## (story 52). Greybox: the cue_swell sprite (docs/sprites.md) replaces the drawn chevrons.
 
-const INSET := 110.0  # world px in from the map edge, along the lane, where the cues sit: clear of the Jam meter at the top
+const INSET := 110.0  # world px in from the map edge, along the lane, where the cues sit: clear of the HUD strip at the top
 const CHEVRON_OUT := 34.0  # world px from the lane's centre out past the kerb to the chevrons...
 const TAG_OUT := 74.0  # ...and to the "+N"
 const PULSE_LENGTH := 160.0  # world px of lane, in from the map edge, that pulses under a backlog

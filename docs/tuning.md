@@ -157,6 +157,16 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | Knockback | A hit knocks the Raccoon the way the car drives, slowing to a stop. | 420 world px/s, slowing by 900 px/s² | `KNOCK_SPEED`, `KNOCK_DECAY` (inline, on-screen px) | #23 | The greybox scaled these by 1/zoom; here they're world px, so the knockback shrinks on screen with the cars. |
 | Yellow | How long a Light stays Yellow before falling to Red. | 1.5s | `YELLOW_TIME` | #5 | |
 
+## Score and Combo
+
+`Run` keeps the score ([#28](https://github.com/klusignolo/GameJam2026/issues/28)). Each car out adds 1 to Combo, then scores `EXIT_SCORE × (1 + Combo ÷ COMBO_STEP)`, with whole-number division. A Crash resets Combo; each `crashed` signal counts as one Crash, so a car hitting Wreckage counts as another.
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Exit score | Points per car that leaves the map, times the Combo multiplier. | 10 | `EXIT_SCORE` (inline) | #19, #28 | |
+| Combo step | The multiplier goes up by 1 every this much Combo: ×1 at Combo 1–4, ×2 at 5–9, ×3 from 10. | 5 | `COMBO_STEP` (inline) | #19, #28 | |
+| Tow bonus | Points for towing Wreckage off the road. Leaves Combo alone. | 5 | `TOW_BONUS` (inline) | #19, #28 | |
+
 ## Presentation tied to tuning
 
 | Setting | Value | Set by | Notes |
@@ -170,6 +180,7 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | Right blinker | Flashes 2×/s at the front and back right corners from spawn until the car is through its turn | #13, #24 | `Vehicle.BLINK_HZ`; `blinker` colour from docs/sprites.md. |
 | BONK! | Over the Raccoon for as long as it's stunned | #23 | Stands in for the greybox's floating "BONK" until the juice pass (#19 story 47). |
 | Blowing-the-red warning | The car flashes "!!" for its last 3s of Patience, once Blowing the red has debuted. Blowing the red, the car is outlined red until it leaves | #14, #25 | `BLOW_WARN`; `Vehicle.WARN_HZ`, `WARN_SIZE` (on-screen px). |
+| HUD strip | A sign_blue band along the top: stage and score on the left, the Jam meter in the middle, Combo and its multiplier on the right, in white with an ink outline | #19 (story 73), #28 | Greybox drawing: `HudStrip.HEIGHT`, `SIDE`, `TEXT_SIZE`. `EntryCues.INSET` keeps the N road's cues below it. |
 | Reveal | 2.5s pull-back when a crossing attaches | #16 | `REVEAL_TIME` |
 | Camera fit | Zoom 1.03× past "the whole map fits", so the map edges bleed off screen | #16 | `FIT` |
 

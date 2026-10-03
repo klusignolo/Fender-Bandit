@@ -100,6 +100,11 @@ const STUN_TIME := 0.8  # seconds a hit Raccoon is stunned
 const KNOCK_SPEED := 420.0  # world px/s a hit knocks the Raccoon back at, the way the car drives...
 const KNOCK_DECAY := 900.0  # ...slowing by this much each second
 
+# Score and Combo
+const EXIT_SCORE := 10  # points per car out, times the Combo multiplier
+const COMBO_STEP := 5  # the multiplier goes up 1 every this much Combo: ×1, then ×2 from 5, ×3 from 10...
+const TOW_BONUS := 5  # points for Wreckage towed off the road
+
 # Camera
 const FIT := 1.03  # zoom a touch past "fits everything", so the map edges bleed off
 

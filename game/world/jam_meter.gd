@@ -1,8 +1,8 @@
 class_name JamMeter
 extends Node2D
 ## The Jam meter, top centre of the screen: filled in its Jam-level's colour (Heavy flashes), with the
-## capacity lost to Dents as a hatched dark red tail and ticks where Busy and Heavy start. Greybox: the
-## HUD strip (#19 story 52, docs/sprites.md) replaces it. Lives on a CanvasLayer, so it ignores the camera.
+## capacity lost to Dents as a hatched dark red tail and ticks where Busy and Heavy start. It sits in the
+## middle of the HudStrip, which is its backing.
 
 const WIDTH := 440.0  # px across, at 100 Jam capacity before Dents
 const HEIGHT := 22.0
@@ -19,7 +19,6 @@ const LEVEL_COLORS := {
 const EMPTY := Color(0.16, 0.16, 0.16)
 const DENTED := Color(0.3, 0.04, 0.04)
 const HATCH := Color(0.6, 0.1, 0.1)
-const BACKING := Color(0, 0, 0, 0.55)
 const INK := Color("#1B2340")
 
 var traffic: Traffic
@@ -43,7 +42,6 @@ func _draw() -> void:
 	var col: Color = LEVEL_COLORS[level]
 	if level == Jam.Level.HEAVY and fmod(_clock * FLASH_HZ, 1.0) < 0.5:
 		col = col.lightened(0.45)
-	draw_rect(Rect2(x - 4.0, TOP - 4.0, WIDTH + 8.0, HEIGHT + 32.0), BACKING)
 	draw_rect(Rect2(x, TOP, cap_w, HEIGHT), EMPTY)
 	draw_rect(Rect2(x + cap_w, TOP, WIDTH - cap_w, HEIGHT), DENTED)
 	var hx := x + cap_w + 4.0
