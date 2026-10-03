@@ -1,7 +1,7 @@
 class_name HudStrip
 extends Node2D
-## The HUD strip along the top of the screen (#28, #19 story 73): stage and score on the left, the Jam
-## meter in the middle, Combo and its multiplier on the right. Greybox drawing on a sign_blue band.
+## The HUD strip along the top of the screen (#28, #29, #19 story 73): stage and Quota on the left, the Jam
+## meter in the middle, score, Combo and its multiplier on the right. Greybox drawing on a sign_blue band.
 ## Lives on a CanvasLayer, so it ignores the camera.
 
 const HEIGHT := 66.0  # px down from the top: room for the Jam meter and its caption
@@ -11,10 +11,12 @@ const BAND := Color("#1F5FAF", 0.85)  # sign_blue from docs/sprites.md, see-thro
 const INK := Color("#1B2340")
 
 var run: Run
+var traffic: Traffic
 
 
 func _init(r: Run, t: Traffic) -> void:
 	run = r
+	traffic = t
 	add_child(JamMeter.new(t))
 
 
@@ -26,8 +28,8 @@ func _draw() -> void:
 	var w := get_viewport_rect().size.x
 	draw_rect(Rect2(0, 0, w, HEIGHT), BAND)
 	var y := HEIGHT / 2.0 + TEXT_SIZE / 3.0
-	_text("STAGE %d    SCORE %d" % [run.stage, run.score], Vector2(SIDE, y), false)
-	_text("COMBO %d  ×%d" % [run.combo, run.multiplier()], Vector2(w - SIDE, y), true)
+	_text("STAGE %d   QUOTA %d/%d" % [run.stage, mini(traffic.cars_through, traffic.quota), traffic.quota], Vector2(SIDE, y), false)
+	_text("SCORE %d   COMBO %d  ×%d" % [run.score, run.combo, run.multiplier()], Vector2(w - SIDE, y), true)
 
 
 func _text(s: String, at: Vector2, right: bool) -> void:

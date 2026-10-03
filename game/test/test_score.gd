@@ -88,6 +88,27 @@ func test_the_stage_counts_its_crashes_and_best_combo() -> void:
 	check_eq(r.dents, 3, "a Dent per Crash")
 
 
+func test_the_next_stage_resets_its_stats_but_keeps_score_combo_and_dents() -> void:
+	var t := straight_traffic(1)
+	var r := _run_on(t)
+	_exits(t, 12)
+	_crash(t)
+	_exits(t, 7)  # best Combo 12, Combo 7
+	var score := r.score
+	r.next_stage()
+	check_eq(r.stage, 2, "the stage after")
+	check_eq(r.score, score, "the score carries over")
+	check_eq(r.combo, 7, "the Combo carries over")
+	check_eq(r.crashes, 0, "the new stage's Crashes")
+	check_eq(r.best_combo, 7, "the new stage's best Combo starts at the Combo carried over")
+	check_eq(r.stage_score(), 0, "nothing scored yet this stage")
+	var t2 := Traffic.new(2, r.dents)
+	r.attach(t2)
+	check_eq(r.dents, 1, "the Dents carry over")
+	_exits(t2, 1)
+	check_eq(r.stage_score(), 20, "this stage's score: Combo 8 scores ×2")
+
+
 func test_dents_come_from_the_stage_jam() -> void:
 	check_eq(Run.new().dents, 0, "a Run with no stage yet")
 	var r := _run_on(Traffic.new(1, 2))

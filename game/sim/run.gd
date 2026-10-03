@@ -8,12 +8,14 @@ signal combo_broken(lost: int)  # a Crash reset a Combo above 0: combo_break (do
 
 var score := 0
 var combo := 0  # cars out since the last Crash
-var stage := 1  # Stages (#29) moves it on
+var stage := 1
 var dents: int:  # Crashes this Run, earlier stages included. The stage's Jam keeps the count; hand it to the next stage's Traffic.
 	get:
 		return _traffic.jam.dents if _traffic != null else 0
 var crashes := 0  # this stage's Crashes: one per crashed signal, so a car into Wreckage is one more
 var best_combo := 0  # this stage's highest Combo
+
+var _stage_start_score := 0
 
 var _traffic: Traffic  # the current stage's
 
@@ -24,6 +26,19 @@ func attach(traffic: Traffic) -> void:
 	traffic.car_exited.connect(_on_car_exited)
 	traffic.crashed.connect(_on_crashed)
 	traffic.towed.connect(_on_towed)
+
+
+## On to the next stage: its stats start over, and the score, Combo and Dents carry on. Attach its Traffic next.
+func next_stage() -> void:
+	stage += 1
+	crashes = 0
+	best_combo = combo
+	_stage_start_score = score
+
+
+## Points scored this stage.
+func stage_score() -> int:
+	return score - _stage_start_score
 
 
 ## What each exit's score is multiplied by: 1, and 1 more each COMBO_STEP of Combo.

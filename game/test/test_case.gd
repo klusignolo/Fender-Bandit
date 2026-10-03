@@ -20,9 +20,13 @@ func check_near(got: float, want: float, tolerance: float, what: String) -> bool
 	return check(absf(got - want) <= tolerance, "%s: got %s, want %s ± %s" % [what, got, want, tolerance])
 
 
-## A Traffic with straight traffic only (no right turns or Turners) and no Swells, as before either existed.
+const NO_QUOTA := 1 << 30  # a Quota no test meets, for tests of a stage in full flow
+
+
+## A Traffic with straight traffic only (no right turns or Turners), no Swells and no Quota, as before any existed.
 func straight_traffic(seed_value: int) -> Traffic:
 	var t := Traffic.new(seed_value)
+	t.quota = NO_QUOTA
 	t.k_right = 0.0
 	t.k_turners = 0.0
 	t.k_swell = false

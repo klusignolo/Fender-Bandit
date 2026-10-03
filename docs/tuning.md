@@ -16,15 +16,26 @@ The difficulty curves. Each is fixed for a whole Stage and steps up between Stag
 | Turner share | Share of drivers who turn left (Turners) and may hold up their lane. It breaks the plain N/S ↔ E/W rhythm. Zero before stage 3. | 10% at stage 3 → 20% at stage 9 → 25% | `K_TURNERS` | #17, #24 | #17: 15% → 30% felt like too many. The dev wants it to "stay lower". |
 | Ease past 9 | How fast knobs close in on their far limit after stage 9 (the share of the gap left each stage). | 0.85 | `K_EASE` | #7 | Expert Runs should become impossible somewhere around stages 15–20. |
 
-**Open question: Debuts hold the knobs, but the Opening is almost all Debuts.** Stages 3, 4, 5, 7, 8 and 9 are Debuts, so "Debuts hold the knobs still" and "the knobs reach their stage-9 values by stage 9" can't both be true. For now, a Debut stage uses the previous stage's values, and the next stage jumps to its own values. Decide this in the build or in a later tuning pass.
+**Open question: Debuts hold the knobs, but the Opening is almost all Debuts.** Stages 3, 4, 5, 7, 8 and 9 are Debuts, so "Debuts hold the knobs still" and "the knobs reach their stage-9 values by stage 9" can't both be true. For now, a Debut stage uses the previous stage's values, and the next stage jumps to its own values. #29 built this interim answer: a Debut stage (3, 4, 5, 7, 8 and 9, counting the crossings at 4 and 9) takes stage n-1's values, so stage 9 plays at stage 8's and stage 10 jumps to its eased value. The feature a stage debuts starts at its own first value, so stage 3 has a 10% Turner share, not stage 2's zero. Revisit in a tuning pass.
 
 ## Stage length and Quota
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Target stage length | How long a stage should last if traffic flows. The Quota is derived from it. | 45s at stage 1 → 75s at stage 9, then flat | `TARGET_LEN` | #7 | Stage 6 comes out at a Quota of about 210 with two crossings. Check whether that drags. |
-| Quota | Cars that must leave the map to clear the stage. | target length ÷ spawn gap × entry roads | `_quota()` | #7, #15 | #16 counted cars leaving the map. |
-| Drain phase | After the Quota: spawning stops and traffic drains, up to this long. | 12s | `DRAIN_MAX` | #16 | |
+| Quota | Cars that must leave the map to clear the stage. Counts the entry roads the map really has, so it stays right before crossing growth is built. | target length ÷ spawn gap × entry roads, rounded | `_quota()` (inline in `Traffic._init` since #29) | #7, #15, #29 | #16 counted cars leaving the map. |
+| Drain phase | After the Quota: spawning stops and traffic drains, up to this long. The backlog is dropped, and the Jam is held: it neither fills nor drains, and can't Gridlock. Crashes still Dent it and break the Combo. It ends once no car is moving (Wreckage stays). | 12s | `DRAIN_MAX` | #16, #29 | |
+| Tally card | Seconds the Tally card shows over the frozen board before the next stage. | 3s | `TALLY_TIME` (new in #29) | #29 | |
+| Tally lock | A (Switch) skips the Tally card only after it has shown this long, so a Switch mashed during the drain doesn't skip it. | 0.5s | `TALLY_LOCK` (new in #29) | #29 | |
+
+## The generator, past stage 9
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Feature floor | The fewest features a generated stage turns on, drawn from those the Opening unlocked. The count is drawn from the floor up to all of them. | 2 at stage 10, +1 every 4 stages (3 at 14, 4 at 18), all five from 22 | `FLOOR_START`, `FLOOR_EVERY` (new in #29) | #29 | Story 65 said "2, 3, then all"; the dev chose a step every 4 stages, in step with the crossings. |
+| Crossing growth | A crossing attaches every this many stages after stage 9, up to a cap. Scheduled in #29, built in the City tickets. | every 4 (13, 17, 21), up to 6 | `CROSSING_EVERY`, `CROSSINGS_MAX` (new in #29) | #29 | |
+
+The Opening's schedule (which stage debuts what, and the crossings at 4 and 9) is design content, not a knob: it lives in `Stages.DEBUTS` and `Stages.GROWS`, with the Opening ending at `Stages.OPENING` (9). Past the Opening, a generated stage may turn off a feature stage 9 had on (Turners or Blowing the red at stage 10, say). The dev chose that variety over "never fewer features"; the knobs still step up, so difficulty doesn't drop overall.
 
 ## Traffic shape
 
@@ -180,7 +191,8 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | Right blinker | Flashes 2×/s at the front and back right corners from spawn until the car is through its turn | #13, #24 | `Vehicle.BLINK_HZ`; `blinker` colour from docs/sprites.md. |
 | BONK! | Over the Raccoon for as long as it's stunned | #23 | Stands in for the greybox's floating "BONK" until the juice pass (#19 story 47). |
 | Blowing-the-red warning | The car flashes "!!" for its last 3s of Patience, once Blowing the red has debuted. Blowing the red, the car is outlined red until it leaves | #14, #25 | `BLOW_WARN`; `Vehicle.WARN_HZ`, `WARN_SIZE` (on-screen px). |
-| HUD strip | A sign_blue band along the top: stage and score on the left, the Jam meter in the middle, Combo and its multiplier on the right, in white with an ink outline | #19 (story 73), #28 | Greybox drawing: `HudStrip.HEIGHT`, `SIDE`, `TEXT_SIZE`. `EntryCues.INSET` keeps the N road's cues below it. |
+| HUD strip | A sign_blue band along the top: stage and Quota progress on the left, the Jam meter in the middle, score, Combo and its multiplier on the right, in white with an ink outline. Score moved right in #29: a 3-digit Quota ran into the Jam meter | #19 (story 73), #28, #29 | Greybox drawing: `HudStrip.HEIGHT`, `SIDE`, `TEXT_SIZE`. `EntryCues.INSET` keeps the N road's cues below it. |
+| Tally card | Between stages, over the dimmed, frozen board: a sign_blue card with the stage cleared, cars through, score gained and a "NEW: <feature>!" line for each thing the next stage debuts, and "A: skip" | #19 (stories 59–60), #29 | Greybox drawing: `TallyCard.WIDTH`, `GAP`, `DIM`; Main puts it on canvas layer 2, over the HUD strip. Stands in for the stinger (#37 hooks `Traffic.stage_cleared`). |
 | Reveal | 2.5s pull-back when a crossing attaches | #16 | `REVEAL_TIME` |
 | Camera fit | Zoom 1.03× past "the whole map fits", so the map edges bleed off screen | #16 | `FIT` |
 

@@ -40,6 +40,10 @@ _Avoid_: Level, round, wave, shift
 The number of cars a stage needs to get through before it is cleared.
 _Avoid_: Target, goal, car count
 
+**Tally**:
+The card between stages: the stage cleared, its cars through and score, and what the next stage debuts.
+_Avoid_: Stage summary, interstitial, scorecard
+
 **Opening**:
 The fixed first stages of every run, identical each time, before stages are generated.
 _Avoid_: Tutorial, campaign, intro

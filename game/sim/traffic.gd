@@ -15,6 +15,7 @@ signal blew_red(car: Car)  # a front driver out of Patience is Blowing the red
 signal jam_level_changed(level: Jam.Level)  # the Jam moved into another Jam-level, up or down
 signal gridlocked  # the Jam is full: the Run is over
 signal swell_flagged(next: int)  # the Swell moves to road `next` in SHIFT_WARN seconds
+signal stage_cleared  # the Quota was met and the drain is over: Traffic stops. Audio's stinger hooks here (#37)
 
 const TICK_HZ := 60
 const DT := 1.0 / TICK_HZ
@@ -32,14 +33,18 @@ var raccoon_knock := Vector2.ZERO  # world px/s the Raccoon is being knocked bac
 var swell := 0  # the Swell road: the entry approach spawning at SWELL_HEAVY, the rest at SWELL_LIGHT
 var swell_next := 0  # the road the Swell moves to next
 var swell_left := 0.0  # seconds until the Swell moves to swell_next
+var quota := 0  # cars this stage needs to get off the map: its target length over k_gap, for each entry
+var cars_through := 0  # cars off the map this stage
+var draining := false  # the Quota is met: nothing spawns, the Jam is held, and the cars on the map drain
+var cleared := false  # the drain is over; step() does nothing more
 
-# Stage knobs; Stages (#29) sets these per stage. Stage 1 until then.
-var k_gap: float = Tuning.K_GAP[0]
-var k_speed: float = Tuning.K_SPEED[0]
-var k_turners := 0.0  # Turner share: none before stage 3
+# Stage knobs, from the StageDef. Tests may set them.
+var k_gap := 0.0
+var k_speed := 1.0
+var k_turners := 0.0  # Turner share: zero while Turners are off
 var k_right := Tuning.RIGHT_SHARE  # flat from stage 1; a knob so tests can turn right turns off
-var k_patience: float = Tuning.K_PATIENCE[0]
-var blowing_unlocked := false  # Blowing the red: its Debut is stage 7. Until then, drivers out of Patience only Honk.
+var k_patience := 0.0
+var blowing_unlocked := false  # Blowing the red. While it's off, drivers out of Patience only Honk.
 var k_swell := true  # Swells on; a knob so tests can keep every entry at k_gap
 
 var _rng := RandomNumberGenerator.new()
@@ -52,10 +57,19 @@ var _wreckage: Array[Car] = []  # this tick's Wreckage, towed or not
 var _by_route: Array[Array] = []  # this tick's moving cars, by route id
 var _tow_hold := Vector2.ZERO  # where the towed Wreckage trails, from the Raccoon
 var _jam_level := Jam.Level.CLEAR  # the Jam-level last signalled
+var _drain_left := 0.0  # seconds the drain has left before it gives up
 
 
-## A stage's traffic. The Run hands it the Dents from its earlier stages.
-func _init(seed_value: int, dents := 0) -> void:
+## A stage's traffic, set up by its StageDef (stage 1 without one). The Run hands it the Dents from its earlier stages.
+func _init(seed_value: int, dents := 0, stage: StageDef = null) -> void:
+	if stage == null:
+		stage = Stages.def(1, seed_value)
+	k_gap = stage.gap
+	k_speed = stage.speed
+	k_patience = stage.patience
+	if stage.features.has(Stages.Feature.TURNERS):
+		k_turners = stage.turners
+	blowing_unlocked = stage.features.has(Stages.Feature.BLOWING)
 	_rng.seed = seed_value
 	_patience_rng.seed = seed_value
 	_swell_rng.seed = seed_value
@@ -67,6 +81,7 @@ func _init(seed_value: int, dents := 0) -> void:
 		_spawn_left.append(_rng.randf_range(Tuning.FIRST_SPAWN[0], Tuning.FIRST_SPAWN[1]))
 		_due.append(0)
 	var entries := _entries()
+	quota = roundi(stage.target_len / k_gap * entries.size())
 	swell = entries[_swell_rng.randi_range(0, entries.size() - 1)]
 	_draw_swell()
 
@@ -74,6 +89,11 @@ func _init(seed_value: int, dents := 0) -> void:
 ## Whether the Swell's move to swell_next is flagged: it moves within SHIFT_WARN seconds.
 func swell_warning() -> bool:
 	return swell_left <= Tuning.SHIFT_WARN
+
+
+## Count the Quota as met now: the drain starts next tick. For the --quota-at agent flag.
+func meet_quota() -> void:
+	cars_through = maxi(cars_through, quota)
 
 
 ## Cars due at entry `i` that haven't found room on its road yet: its backlog.
@@ -134,6 +154,8 @@ func tow(reach: float) -> void:
 
 
 func step() -> void:
+	if cleared:
+		return
 	time += DT
 	raccoon_stun = maxf(raccoon_stun - DT, 0.0)
 	raccoon_knock = raccoon_knock.move_toward(Vector2.ZERO, Tuning.KNOCK_DECAY * DT)
@@ -143,14 +165,20 @@ func step() -> void:
 			if l.yellow_left <= 0.0:
 				l.state = Light.State.RED
 				light_changed.emit(l)
-	_move_swell()
+	if not draining:
+		_move_swell()
 	_haul()  # before cars drive, so they brake for where towed Wreckage is now
-	_spawn()
+	if not draining:
+		_spawn()
 	_drive()
-	jam.step(_spend_patience() + Tuning.JAM_BACKLOG * _backlog_total(), DT)
+	var honking := _spend_patience()
+	if not draining:
+		jam.step(honking + Tuning.JAM_BACKLOG * _backlog_total(), DT)
 	_check_crashes()
 	_check_hit()
-	_check_jam()
+	if not draining:
+		_check_jam()
+	_check_quota()
 
 
 # Every car that's due joins its entry's queue, then drives on as soon as the road has room.
@@ -277,7 +305,9 @@ func _drive() -> void:
 			c.speed = maxf(target, c.speed - Tuning.DECEL * Tuning.HARD_BRAKE * DT)
 		c.s += c.speed * DT
 		if c.s >= c.route.length:
-			jam.exit()
+			cars_through += 1
+			if not draining:
+				jam.exit()
 			car_exited.emit(c)
 			continue
 		_place(c)
@@ -519,6 +549,21 @@ func _check_crashes() -> void:
 			if not c.wreckage and c.transform.origin.distance_to(w.transform.origin) < c.radius() + w.radius() \
 					and w.overlaps(c, Tuning.CRASH_INSET):
 				_crash(w, c)
+
+
+# The Quota: once it's met, the backlog is dropped and the drain starts. The drain ends when no car is moving
+# (Wreckage stays), or after DRAIN_MAX seconds.
+func _check_quota() -> void:
+	if not draining:
+		if cars_through >= quota:
+			draining = true
+			_drain_left = Tuning.DRAIN_MAX
+			_due.fill(0)
+		return
+	_drain_left -= DT
+	if _drain_left <= 0.0 or cars.all(func(c: Car) -> bool: return c.wreckage):
+		cleared = true
+		stage_cleared.emit()
 
 
 # Signal the Jam-level when it changes. A full Jam is Gridlock; Jam stays full from then on.

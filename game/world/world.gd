@@ -1,6 +1,7 @@
 class_name World
 extends Node2D
-## One Run's world (#13 §2): owns the Run and its Traffic simulation, steps the Traffic at a fixed 60 Hz, and draws it.
+## One stage's world (#13 §2, #29): builds the stage's Traffic simulation for the Run, steps it at a fixed 60 Hz, and
+## draws it. Main builds a fresh World for each stage.
 ## Greybox: roads are drawn here from the RoadNet curves; cars are pooled Vehicle nodes keyed by
 ## car id; each Light has a LightPole; each Crash gets a CrashMarker; the HudStrip sits on a HUD
 ## layer; EntryCues marks the Swell and backlog at each entry. Nothing here decides a rule.
@@ -20,9 +21,9 @@ var _pool: Array[Vehicle] = []
 var _vehicle_layer := Node2D.new()
 
 
-func _init(seed_value: int) -> void:
-	run = Run.new()
-	traffic = Traffic.new(seed_value, run.dents)
+func _init(r: Run, stage: StageDef, seed_value: int) -> void:
+	run = r
+	traffic = Traffic.new(seed_value, run.dents, stage)  # before attach: run.dents is the last stage's until then
 	run.attach(traffic)
 
 

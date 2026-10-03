@@ -9,6 +9,7 @@ const E := 3
 
 func _traffic(seed_value: int, right: float, turners: float) -> Traffic:
 	var t := Traffic.new(seed_value)
+	t.quota = NO_QUOTA
 	t.k_right = right
 	t.k_turners = turners
 	t.k_swell = false
@@ -247,6 +248,7 @@ func test_the_knobs_set_the_mix_of_movements() -> void:
 		check_eq(got.keys(), [want], "movements with k_right %.0f, k_turners %.0f" % knobs)
 	# The defaults, stage 1: a flat share turning right, no Turners.
 	var t := Traffic.new(4)
+	t.quota = NO_QUOTA
 	t.k_gap = 0.3
 	var got := {}
 	t.car_spawned.connect(func(c: Car) -> void: got[c.movement] = got.get(c.movement, 0) + 1)

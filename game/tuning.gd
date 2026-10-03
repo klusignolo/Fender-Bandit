@@ -2,11 +2,24 @@ class_name Tuning
 ## Every tuning number from docs/tuning.md, under the register's constant names.
 ## Grows ticket by ticket; keep it in step with the register.
 
-# Stage knobs: [stage 1, stage 9, far limit]. Only the stage-1 values are used until Stages (#29).
+# Stage knobs: [stage 1, stage 9, far limit]. Stages (#29) reads them.
 const K_GAP: Array[float] = [3.2, 1.0, 0.6]  # spawn gap per entry, seconds
 const K_SPEED: Array[float] = [1.0, 1.4, 2.0]  # car speed multiplier
 const K_TURNERS: Array[float] = [0.10, 0.20, 0.25]  # Turner share; unlike the others its first value is stage 3, and before that it is zero
 const K_PATIENCE: Array[float] = [15.0, 12.0, 7.0]  # seconds a front driver waits at red before it's out of Patience
+const K_EASE := 0.85  # per stage past 9, the share of the gap to the far limit left
+
+# Stage length and Quota
+const TARGET_LEN: Array[float] = [45.0, 75.0]  # seconds a stage should last if traffic flows, stage 1 to 9, then flat
+const DRAIN_MAX := 12.0  # seconds the drain after the Quota lasts at most
+const TALLY_TIME := 3.0  # seconds the Tally card shows before the next stage...
+const TALLY_LOCK := 0.5  # ...and A skips it only after this long, so a Switch mashed during the drain doesn't
+
+# The generator, past stage 9
+const FLOOR_START := 2  # features a generated stage turns on at least, at stage 10...
+const FLOOR_EVERY := 4  # ...and 1 more every this many stages, up to all of them
+const CROSSING_EVERY := 4  # a crossing attaches every this many stages after stage 9...
+const CROSSINGS_MAX := 6  # ...up to this many
 
 # Spawning
 const FIRST_SPAWN: Array[float] = [2.5, 4.5]  # seconds before each entry's first car, drawn per entry
