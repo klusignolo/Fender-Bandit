@@ -23,7 +23,7 @@ The difficulty curves. Each is fixed for a whole Stage and steps up between Stag
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Target stage length | How long a stage should last if traffic flows. The Quota is derived from it. | 45s at stage 1 → 75s at stage 9, then flat | `TARGET_LEN` | #7 | Stage 6 comes out at a Quota of about 210 with two crossings. Check whether that drags. Since #31 the Quota counts the real entries (6 with two crossings, 10 with six), so late stages run high: stage 21 is 1142. |
-| Quota | Cars that must leave the map to clear the stage. Counts the entry roads the map really has: 4 with one crossing, 6 with two (#31). | target length ÷ spawn gap × entry roads, rounded | `_quota()` (inline in `Traffic._init` since #29) | #7, #15, #29 | #16 counted cars leaving the map. |
+| Quota | Cars that must leave the map to clear the stage. Counts the entry roads the map really has: 4 with one crossing, 6 with two (#31), 7 at stage 9 (the T has no south road, #32). | target length ÷ spawn gap × entry roads, rounded | `_quota()` (inline in `Traffic._init` since #29) | #7, #15, #29 | #16 counted cars leaving the map. |
 | Drain phase | After the Quota: spawning stops and traffic drains, up to this long. The backlog is dropped, and the Jam is held: it neither fills nor drains, and can't Gridlock. Crashes still Dent it and break the Combo. It ends once no car is moving (Wreckage stays). | 12s | `DRAIN_MAX` | #16, #29 | |
 | Tally card | Seconds the Tally card shows over the frozen board before the next stage. | 3s | `TALLY_TIME` (new in #29) | #29 | |
 | Tally lock | A (Switch) skips the Tally card only after it has shown this long, so a Switch mashed during the drain doesn't skip it. | 0.5s | `TALLY_LOCK` (new in #29) | #29 | |
@@ -33,9 +33,9 @@ The difficulty curves. Each is fixed for a whole Stage and steps up between Stag
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Feature floor | The fewest features a generated stage turns on, drawn from those the Opening unlocked. The count is drawn from the floor up to all of them. | 2 at stage 10, +1 every 4 stages (3 at 14, 4 at 18), all five from 22 | `FLOOR_START`, `FLOOR_EVERY` (new in #29) | #29 | Story 65 said "2, 3, then all"; the dev chose a step every 4 stages, in step with the crossings. |
-| Crossing growth | A crossing attaches every this many stages after stage 9, up to a cap. Scheduled in #29; built as 4-ways in #31, with the T and 5-way in #32. | every 4 (13, 17, 21), up to 6 | `CROSSING_EVERY`, `CROSSINGS_MAX` (new in #29) | #29, #31 | |
+| Crossing growth | A crossing attaches every this many stages after stage 9, up to a cap. Scheduled in #29; built as 4-ways in #31, with the T (stage 9) and 5-way (stage 17) from #32. | every 4 (13, 17, 21), up to 6 | `CROSSING_EVERY`, `CROSSINGS_MAX` (new in #29) | #29, #31 | |
 
-The Opening's schedule (which stage debuts what, and the crossings at 4 and 9) is design content, not a knob: it lives in `Stages.DEBUTS` and `Stages.GROWS`, with the Opening ending at `Stages.OPENING` (9). So is the City plan (#31): where each crossing attaches, its kind and its links, in `City`. Six crossings on a 3×2 grid, every neighbour linked; at each crossing a car is a fresh driver and rolls its movement again, so it can circle a block. Past the Opening, a generated stage may turn off a feature stage 9 had on (Turners or Blowing the red at stage 10, say). The dev chose that variety over "never fewer features"; the knobs still step up, so difficulty doesn't drop overall.
+The Opening's schedule (which stage debuts what, and the crossings at 4 and 9) is design content, not a knob: it lives in `Stages.DEBUTS` and `Stages.GROWS`, with the Opening ending at `Stages.OPENING` (9). So is the City plan (#31): where each crossing attaches, its kind and its links, in `City`. Six crossings on a 3×2 grid, every neighbour linked; at each crossing a car is a fresh driver and rolls its movement again, so it can circle a block. Past the Opening, a generated stage may turn off a feature stage 9 had on (Turners or Blowing the red at stage 10, say). Not T-junctions and 5-ways, though: they're part of the City plan, so the T and the 5-way are built whether or not the generator draws that feature (#32). Drawing it or not only counts toward the feature floor. The dev chose that variety over "never fewer features"; the knobs still step up, so difficulty doesn't drop overall.
 
 ## Traffic shape
 
@@ -94,7 +94,7 @@ How cars move, follow and stop. Distances are measured along the car's route.
 
 ## Right turns
 
-Right turns happen everywhere, for natural-looking traffic ([#13](https://github.com/klusignolo/GameJam2026/issues/13)). They aren't a difficulty lever: a right-turning car obeys its Light (no turning on red), never waits for a gap, never holds up its lane, and signals with its right blinker. Where geometry leaves no straight exit (the T, some 5-way approaches), the route picker chooses among the movements the approach actually has.
+Right turns happen everywhere, for natural-looking traffic ([#13](https://github.com/klusignolo/GameJam2026/issues/13)). They aren't a difficulty lever: a right-turning car obeys its Light (no turning on red), never waits for a gap, never holds up its lane, and signals with its right blinker. Where geometry leaves no straight exit (the T, some 5-way approaches), the route picker chooses among the movements the approach actually has. Since #32 the share of a movement an approach lacks goes straight on (a T's side road has no right or no left), or, with no straight exit (the T's stem, the 5-way's diagonal road), is split evenly between the movements it has. Where an approach has two routes making the same movement (a 5-way's second right or left), each gets half. A left turn whose road has no oncoming road (the T's stem, the diagonal) is still a Turner with an arrow, but never holds for a gap: there's no oncoming flow to wait for. While Turners are off (stages 1–2, or a generated stage that drew them off), left turns aren't offered at all: the T's stem all turns right.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -147,7 +147,7 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | Link | Centre to centre between two linked crossings of the City plan, across and down. One lane each way, shared: one crossing's way out is the next one's way in. | 720 | `LINK` | #16, #31 | At six crossings the map is 2720 × 1530, about 0.49 zoom. |
 | Map aspect | The map grows its short side to this around its crossings' arms, so entry roads run to the edge of the frame. | 16:9 | inline (`hy` in `_build`); `MAP_ASPECT` since #31 | #16, #31 | |
 | Lane width | Each road is two lanes wide. | 30 | `LW` | #5 | |
-| Stop line | From the crossing centre to the stop line. | 48 | `STOP_D` | #5 | |
+| Stop line | From the crossing centre to the stop line. On an arm whose neighbour is less than a quarter turn away (the 5-way's diagonal and the two arms beside it), the stop line moves out until the two roads have parted as they do on a 4-way: by LW / tan(half the angle) − LW, so about 90 at 45°. Derived from `STOP_D` and `LW`, not a knob of its own. | 48 | `STOP_D`; `RoadNet.stop_distance()` since #32 | #5, #32 | |
 | Pole position | Where a Light's pole stands: back from its stop line, and out past the kerb. The Raccoon targets this point. | 10 back, 14 out | `POLE_BACK`, `POLE_OUT` (inline) | #21 | |
 | Exit margin | How far past the map edge a car drives before it leaves. | 60 | `EXIT_MARGIN` (inline) | #21 | |
 

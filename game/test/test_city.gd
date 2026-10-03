@@ -1,7 +1,7 @@
 extends TestCase
 ## The city plan and crossings linked by roads (#31), black-box through Traffic and its RoadNet.
 
-# Light indices: each crossing's four, in attach order, by RoadNet.SIDE_NAMES (N, S, W, E). An approach is named
+# Light indices: each 4-way's four, in attach order, by RoadNet.ARM_ORDER (N, S, W, E). An approach is named
 # for the side its cars come in from: A_W's cars come in from the west and drive east, toward B.
 const A_S := 1
 const A_W := 2
@@ -41,7 +41,10 @@ func test_the_map_has_the_stages_crossings_from_the_plan_in_attach_order() -> vo
 		var t := straight_traffic(1, stage)
 		var want := Stages.def(stage, 1).crossings
 		check_eq(t.net.crossings.size(), want, "crossings at stage %d" % stage)
-		check_eq(t.lights.size(), want * 4, "four Lights per crossing at stage %d" % stage)
+		var arms := 0
+		for k in want:
+			arms += City.ARMS[k].size()
+		check_eq(t.lights.size(), arms, "a Light per arm at stage %d" % stage)
 		for k in t.net.crossings.size():
 			check_eq(t.net.crossings[k], City.centre(k), "crossing %d at stage %d is where the plan puts it" % [k, stage])
 
@@ -51,8 +54,8 @@ func test_the_second_crossing_attaches_east_of_the_first_linked_by_one_road() ->
 	check_eq(net.crossings[1], Vector2(Tuning.LINK, 0.0), "the second crossing is one LINK east")
 	check(not net.approaches[B_W].entry and not net.approaches[A_E].entry, "the approaches along the link aren't fed from the map edge")
 	check_eq(net.approaches.filter(func(a: RoadNet.Approach) -> bool: return a.entry).size(), 6, "six entry roads")
-	check_eq(net.approaches[A_W].outgoing, net.approaches[B_W].incoming, "eastbound: the first crossing's way out is the second's way in")
-	check_eq(net.approaches[B_E].outgoing, net.approaches[A_E].incoming, "westbound: the second crossing's way out is the first's way in")
+	check_eq(net.approaches[A_E].outgoing, net.approaches[B_W].incoming, "eastbound: the first crossing's way out east is the second's way in from the west")
+	check_eq(net.approaches[B_W].outgoing, net.approaches[A_E].incoming, "westbound: the second crossing's way out west is the first's way in from the east")
 
 
 func test_the_map_is_16_by_9_so_every_entry_road_runs_to_the_frame_edge() -> void:

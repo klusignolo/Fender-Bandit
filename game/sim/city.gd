@@ -6,7 +6,7 @@ class_name City
 ##     │     │     │        D: stage 13   E: stage 17 (a 5-way: a fifth arm off to the north-west)
 ##     F ─── C ─── D        F: stage 21
 ##
-## For now RoadNet builds every crossing as a plain 4-way from the axis arms; the T and the 5-way come in #32.
+## RoadNet builds each crossing from its arms (#32), so the T and the 5-way are as playable as a 4-way.
 
 ## Each crossing's centre, in LINKs from the first, in attach order: A, B, C, D, E, F.
 const CENTRES: Array[Vector2] = [Vector2(0, 0), Vector2(1, 0), Vector2(0, 1), Vector2(1, 1), Vector2(-1, 0), Vector2(-1, 1)]

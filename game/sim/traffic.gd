@@ -210,7 +210,7 @@ func _spawn() -> void:
 # gets one as it spawns, and again each time it drives on to another crossing.
 func _new_driver(c: Car, i: int) -> void:
 	c.light = lights[i]
-	c.route = net.approaches[i].routes[_pick_movement()]
+	c.route = _pick_route(net.approaches[i])
 	if c.movement == RoadNet.Movement.LEFT:
 		c.turn_gap = _rng.randf_range(Tuning.TURNER_GAP[0], Tuning.TURNER_GAP[1])
 	c.patience = k_patience * _patience_rng.randf_range(Tuning.PATIENCE_JITTER[0], Tuning.PATIENCE_JITTER[1])
@@ -270,17 +270,46 @@ func _swell_rate(i: int) -> float:
 	return Tuning.SWELL_HEAVY if i == swell else Tuning.SWELL_LIGHT
 
 
-# A new driver's movement: Turner at the k_turners share, right at k_right, otherwise straight. With
-# both knobs at zero it draws nothing, so the run is the same as before turns existed.
-func _pick_movement() -> RoadNet.Movement:
-	if k_turners + k_right <= 0.0:
+# A new driver's route at approach a: its movement drawn by _pick_movement, then, where the approach has more than
+# one route making it (a 5-way), one of those at even odds. A 4-way has one of each, so it draws nothing more there.
+func _pick_route(a: RoadNet.Approach) -> RoadNet.Route:
+	var m := _pick_movement(a)
+	var options := a.routes.filter(func(r: RoadNet.Route) -> bool: return r.movement == m)
+	if options.size() == 1:
+		return options[0]
+	return options[_rng.randi_range(0, options.size() - 1)]
+
+
+# A new driver's movement: Turner at the k_turners share, right at k_right, otherwise straight. A movement it can't
+# make hands its share on: one the approach has no route for (on a T, or a 5-way's diagonal road), or a left turn
+# while Turners are off. The share goes straight on, or, with no straight exit, is split evenly between the
+# movements it can make. With both knobs at zero and a straight exit it draws nothing, so the run is the same as
+# before turns existed.
+func _pick_movement(a: RoadNet.Approach) -> RoadNet.Movement:
+	if k_turners + k_right <= 0.0 and a.has(RoadNet.Movement.STRAIGHT):
 		return RoadNet.Movement.STRAIGHT
+	var odds: Dictionary[RoadNet.Movement, float] = {
+		RoadNet.Movement.LEFT: k_turners,
+		RoadNet.Movement.RIGHT: k_right,
+		RoadNet.Movement.STRAIGHT: maxf(1.0 - k_turners - k_right, 0.0),
+	}
+	var can := odds.keys().filter(func(m: RoadNet.Movement) -> bool:
+		return a.has(m) and (m != RoadNet.Movement.LEFT or k_turners > 0.0))
+	var heirs := [RoadNet.Movement.STRAIGHT] if can.has(RoadNet.Movement.STRAIGHT) else can  # who takes the spare share
+	var spare := 0.0
+	for m: RoadNet.Movement in odds:
+		if not can.has(m):
+			spare += odds[m]
+			odds[m] = 0.0
+	for m: RoadNet.Movement in heirs:
+		odds[m] += spare / heirs.size()
 	var r := _rng.randf()
-	if r < k_turners:
-		return RoadNet.Movement.LEFT
-	if r < k_turners + k_right:
-		return RoadNet.Movement.RIGHT
-	return RoadNet.Movement.STRAIGHT
+	var below := 0.0  # r below this picks the movement
+	for m: RoadNet.Movement in [RoadNet.Movement.LEFT, RoadNet.Movement.RIGHT]:
+		below += odds[m]
+		if r < below:
+			return m
+	return heirs[heirs.size() - 1]  # straight, or the last turn when rounding leaves r just short of 1
 
 
 # Room for the new car: the last car in is far enough along, and no Wreckage lies within its stopping

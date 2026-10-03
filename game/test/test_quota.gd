@@ -2,7 +2,7 @@ extends TestCase
 ## The Quota and the drain (#29), black-box on Traffic: a stage's Traffic built from its StageDef, stepped
 ## until its Quota is met, then drained until stage_cleared.
 
-const N := 0  # Light indices follow RoadNet.SIDE_NAMES: N, S, W, E
+const N := 0  # Light indices follow RoadNet.ARM_ORDER: N, S, W, E
 const S := 1
 const W := 2
 const E := 3

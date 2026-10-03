@@ -2,7 +2,7 @@ extends TestCase
 ## The Jam, Dents and a bare Gridlock (#26), black-box through Traffic (step, switch, the crashed, car_exited,
 ## jam_level_changed and gridlocked signals) and, for what one crossing can't show, Jam itself.
 
-const N := 0  # Light indices follow RoadNet.SIDE_NAMES: N, S, W, E
+const N := 0  # Light indices follow RoadNet.ARM_ORDER: N, S, W, E
 const S := 1
 const W := 2
 const E := 3

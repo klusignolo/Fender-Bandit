@@ -2,7 +2,7 @@ extends TestCase
 ## Score and Combo (#28): a Run driven by its Traffic's signals. Most tests emit the signals directly, so
 ## each Combo value is exact; the last steps real traffic to show the Run is wired to it.
 
-const N := 0  # Light indices follow RoadNet.SIDE_NAMES: N, S, W, E
+const N := 0  # Light indices follow RoadNet.ARM_ORDER: N, S, W, E
 const S := 1
 
 

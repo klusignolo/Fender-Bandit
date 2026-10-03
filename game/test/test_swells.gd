@@ -2,7 +2,7 @@ extends TestCase
 ## Swells and entry backlog (#27), black-box through Traffic (step, switch, swell, swell_next, swell_left,
 ## swell_warning(), backlog(), and the car_spawned and swell_flagged signals).
 
-const N := 0  # Light indices follow RoadNet.SIDE_NAMES: N, S, W, E
+const N := 0  # Light indices follow RoadNet.ARM_ORDER: N, S, W, E
 const S := 1
 const W := 2
 const E := 3
@@ -112,7 +112,7 @@ func test_cars_that_cant_get_onto_a_full_entry_road_wait_in_its_backlog() -> voi
 	while t.time < 90.0:
 		t.step()
 		for i in [N, S]:
-			if not check_eq(t.backlog(i), 0, "backlog on green road %s at %.2fs" % [RoadNet.SIDE_NAMES[i], t.time]):
+			if not check_eq(t.backlog(i), 0, "backlog on green road %s at %.2fs" % [t.net.approaches[i].label, t.time]):
 				return
 		if full_at < 0.0 and t.backlog(W) > 0:
 			full_at = t.time

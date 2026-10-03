@@ -129,7 +129,7 @@ func _draw() -> void:
 # Turner will go; quiet on the way in, then bigger and pulsing amber while it holds.
 func _draw_arrow() -> void:
 	_upright()
-	var to := RoadNet.left_of(car.light.direction)
+	var to := car.route.heading_out
 	var pulse := 0.5 + 0.5 * sin(_traffic.time * PULSE_SPEED)
 	var r := ARROW_R + (3.0 * pulse if car.holding else 0.0)
 	var at := Vector2(0.0, -ARROW_LIFT - r)

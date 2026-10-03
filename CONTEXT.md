@@ -90,6 +90,10 @@ _Avoid_: Streak, chain, multiplier (as a noun for the mechanic)
 The one hand-authored layout of up to six crossings that a Run's map grows into, one crossing at a time, in a fixed order.
 _Avoid_: Level, map layout, grid
 
+**Arm**:
+One road leaving a crossing, at the angle the City plan gives it; each arm has a lane in (its approach) and a lane out. A 4-way has four, a T three and a 5-way five.
+_Avoid_: Leg, side, spoke
+
 **Link**:
 The road joining two neighbouring crossings: a car leaving one crossing that way arrives at the other.
 _Avoid_: Connector (a movement through one crossing's box), street

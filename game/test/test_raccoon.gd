@@ -1,7 +1,7 @@
 extends TestCase
 ## Dash, Yield and the Raccoon getting hit (#23), black-box through Traffic: set_raccoon, switch, tow, step.
 
-const N := 0  # Light indices follow RoadNet.SIDE_NAMES: N, S, W, E
+const N := 0  # Light indices follow RoadNet.ARM_ORDER: N, S, W, E
 const W := 2
 const E := 3
 const E_LANE := -Tuning.LW / 2.0  # y of E's incoming lane; its cars drive toward -x

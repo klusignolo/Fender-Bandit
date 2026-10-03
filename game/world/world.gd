@@ -89,6 +89,8 @@ func _draw() -> void:
 	draw_rect(b.grow(Tuning.EXIT_MARGIN), GRASS)
 	for seg in traffic.net.segments:
 		draw_polyline(seg.curve.get_baked_points(), ROAD, Tuning.LW)
+	for x in traffic.net.crossings.size():
+		draw_colored_polygon(traffic.net.box(x), ROAD)
 	# The double centre line runs down the driver's left of every incoming lane.
 	for a in traffic.net.approaches:
 		var lane := traffic.net.segments[a.incoming].curve

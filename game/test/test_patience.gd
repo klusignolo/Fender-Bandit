@@ -2,7 +2,7 @@ extends TestCase
 ## Patience, Honks and Blowing the red (#25), black-box through Traffic: the blowing_unlocked flag,
 ## the k_patience knob, Switch, step, and the honked and blew_red signals.
 
-const N := 0  # Light indices follow RoadNet.SIDE_NAMES: N, S, W, E
+const N := 0  # Light indices follow RoadNet.ARM_ORDER: N, S, W, E
 const S := 1
 const W := 2
 const E := 3

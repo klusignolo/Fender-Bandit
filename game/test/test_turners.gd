@@ -1,7 +1,7 @@
 extends TestCase
 ## Right turns and Turners (#24), black-box through Traffic: the k_right and k_turners knobs, Switch, step.
 
-const N := 0  # Light indices follow RoadNet.SIDE_NAMES: N, S, W, E
+const N := 0  # Light indices follow RoadNet.ARM_ORDER: N, S, W, E
 const S := 1
 const W := 2
 const E := 3

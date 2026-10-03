@@ -1,7 +1,7 @@
 extends TestCase
 ## Crashes, Wreckage and Tow (#22), black-box through Traffic: Switch, set_raccoon, tow, step.
 
-const N := 0  # Light indices follow RoadNet.SIDE_NAMES: N, S, W, E
+const N := 0  # Light indices follow RoadNet.ARM_ORDER: N, S, W, E
 const S := 1
 const W := 2
 const E := 3

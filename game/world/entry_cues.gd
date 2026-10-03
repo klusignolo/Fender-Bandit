@@ -46,8 +46,11 @@ func _draw() -> void:
 		var at := edge + d * inset
 		var waiting := _traffic.backlog(i)
 		if waiting > 0 and heavy:  # an outline, as the lane under it is full of cars
-			var lane := Rect2(edge, Vector2.ZERO).expand(edge + d * PULSE_LENGTH).grow(Tuning.LW / 2.0 + 2.0)
-			draw_rect(lane, Color(HEAVY_RED, 0.35 + 0.65 * pulse), false, 2.0 + 3.0 * pulse)
+			var across := right * (Tuning.LW / 2.0 + 2.0)
+			var back := edge - d * 2.0
+			var front := edge + d * (PULSE_LENGTH + 2.0)
+			var lane := PackedVector2Array([back + across, front + across, front - across, back - across, back + across])
+			draw_polyline(lane, Color(HEAVY_RED, 0.35 + 0.65 * pulse), 2.0 + 3.0 * pulse)
 		if _traffic.k_swell and i == _traffic.swell:
 			_chevrons(at + right * CHEVRON_OUT, d)
 		if waiting > 0:
