@@ -3,7 +3,8 @@ extends RefCounted
 ## The road geometry, as Curve2D segments (#13 §5): for each approach, the incoming lane up to its
 ## stop line, one connector per movement through the crossing box, and the outgoing lane to the map
 ## edge. Cars hold a Route of segments and a distance along it. Road drawing uses the same curves.
-## For now: one plain 4-way crossing at the origin.
+## Crossings come from the City plan; a road linking two is one lane each way, shared: one crossing's outgoing lane is
+## the next one's incoming lane, so a car's Route ends on it and Traffic hands the car on to the next crossing's Route.
 
 ## Sides of a crossing, and the way cars on that side's incoming lane travel.
 const SIDE_NAMES: Array[String] = ["N", "S", "W", "E"]
@@ -38,6 +39,7 @@ class Route:
 	var stop_s := 0.0  # where the stop line is: the end of the first stretch, the incoming lane
 	var id: int  # index into RoadNet.routes
 	var movement: Movement
+	var next := -1  # the approach whose incoming lane this route ends on, at the next crossing; -1 if it leaves the map
 	var sharing: PackedInt32Array  # ids of the routes with a segment in common with this one, itself included
 	var _curves: Array[Curve2D] = []  # not the RoadNet itself: it holds this Route, so that would be a cycle
 
@@ -48,6 +50,10 @@ class Route:
 			length += net.segments[seg].length
 			_curves.append(net.segments[seg].curve)
 		stop_s = net.segments[ids[0]].length
+
+	## Where its last stretch starts: the outgoing lane, or the road linked to the next crossing.
+	func last_start() -> float:
+		return starts[starts.size() - 1]
 
 	## Index into `segments` of the stretch that distance s along the route is on.
 	func index_at(s: float) -> int:
@@ -95,11 +101,15 @@ var bounds := Rect2()  # the map; entries start just outside it
 var conflicts: Dictionary[int, PackedInt32Array] = {}
 
 
-func _init() -> void:
-	crossings.append(Vector2.ZERO)
-	bounds = Rect2(-Tuning.ARM_X, -Tuning.ARM_Y, Tuning.ARM_X * 2.0, Tuning.ARM_Y * 2.0)
-	for side in 4:
-		_add_approach(0, side)
+func _init(crossing_count := 1) -> void:
+	for k in crossing_count:
+		crossings.append(City.centre(k))
+	bounds = _map_bounds()
+	for x in crossing_count:
+		for side in 4:
+			_add_approach(x, side)
+	for a in approaches:
+		_add_straight(a)
 	for a in approaches:
 		_add_turns(a)
 		var o := _approach_toward(a.crossing, -a.direction)
@@ -151,12 +161,36 @@ func _paths_touch(a: Curve2D, b: Curve2D) -> bool:
 	return false
 
 
+# The map: an arm's length of road around every crossing, its short side widened to MAP_ASPECT.
+func _map_bounds() -> Rect2:
+	var r := Rect2(crossings[0], Vector2.ZERO)
+	for c in crossings:
+		r = r.expand(c)
+	r = r.grow_individual(Tuning.ARM_X, Tuning.ARM_Y, Tuning.ARM_X, Tuning.ARM_Y)
+	if r.size.x / r.size.y > Tuning.MAP_ASPECT:
+		var pad_y := (r.size.x / Tuning.MAP_ASPECT - r.size.y) / 2.0
+		return r.grow_individual(0.0, pad_y, 0.0, pad_y)
+	var pad_x := (r.size.y * Tuning.MAP_ASPECT - r.size.x) / 2.0
+	return r.grow_individual(pad_x, 0.0, pad_x, 0.0)
+
+
+# How far it is from point p to the map edge, going the way `dir` points (along an axis).
+func _reach(p: Vector2, dir: Vector2) -> float:
+	if dir.x > 0.5:
+		return bounds.end.x - p.x
+	if dir.x < -0.5:
+		return p.x - bounds.position.x
+	if dir.y > 0.5:
+		return bounds.end.y - p.y
+	return p.y - bounds.position.y
+
+
+# An approach and its incoming lane: from the map edge, or from the far side of the crossing linked behind it.
 func _add_approach(x: int, side: int) -> void:
 	var c := crossings[x]
 	var d := SIDE_DIR[side]
 	var right := right_of(d)
 	var off := right * Tuning.LW * 0.5
-	var reach := Tuning.ARM_Y if absf(d.y) > 0.5 else Tuning.ARM_X
 	var a := Approach.new()
 	var i := approaches.size()
 	a.label = SIDE_NAMES[side]
@@ -164,14 +198,31 @@ func _add_approach(x: int, side: int) -> void:
 	a.direction = d
 	a.stop_point = c - d * Tuning.STOP_D + off
 	a.pole = a.stop_point - d * Tuning.POLE_BACK + right * (Tuning.LW / 2.0 + Tuning.POLE_OUT)
-	var spawn := c - d * (reach + Tuning.SPAWN_BACK) + off
-	var far_line := c + d * Tuning.STOP_D + off
-	var gone := c + d * (reach + Tuning.EXIT_MARGIN) + off
-	a.incoming = _add_segment(Segment.Kind.INCOMING, i, _line(spawn, a.stop_point))
-	var straight := _add_segment(Segment.Kind.CONNECTOR, i, _line(a.stop_point, far_line))
-	a.outgoing = _add_segment(Segment.Kind.OUTGOING, i, _line(far_line, gone))
-	_add_route(a, Movement.STRAIGHT, PackedInt32Array([a.incoming, straight, a.outgoing]))
+	var behind := City.linked(x, -d, crossings.size())
+	a.entry = behind < 0
+	var start := c - d * (_reach(c, -d) + Tuning.SPAWN_BACK) + off
+	if not a.entry:
+		start = crossings[behind] + d * Tuning.STOP_D + off
+	a.incoming = _add_segment(Segment.Kind.INCOMING, i, _line(start, a.stop_point))
 	approaches.append(a)
+
+
+# The straight movement, and the lane leaving the crossing that way: the next crossing's incoming lane where a
+# road links them, otherwise a lane out past the map edge. Needs every approach added first.
+func _add_straight(a: Approach) -> void:
+	var i := approaches.find(a)
+	var c := crossings[a.crossing]
+	var d := a.direction
+	var off := right_of(d) * Tuning.LW * 0.5
+	var far_line := c + d * Tuning.STOP_D + off
+	var straight := _add_segment(Segment.Kind.CONNECTOR, i, _line(a.stop_point, far_line))
+	var ahead := City.linked(a.crossing, d, crossings.size())
+	if ahead >= 0:
+		a.outgoing = _approach_toward(ahead, d).incoming
+	else:
+		var gone := c + d * (_reach(c, d) + Tuning.EXIT_MARGIN) + off
+		a.outgoing = _add_segment(Segment.Kind.OUTGOING, i, _line(far_line, gone))
+	_add_route(a, Movement.STRAIGHT, PackedInt32Array([a.incoming, straight, a.outgoing]))
 
 
 # The right and left turns: a quarter circle from the stop line onto the outgoing lane that leaves
@@ -230,5 +281,8 @@ func _add_route(a: Approach, m: Movement, ids: PackedInt32Array) -> void:
 	var r := Route.new(self, ids)
 	r.id = routes.size()
 	r.movement = m
+	for k in approaches.size():
+		if approaches[k].incoming == ids[ids.size() - 1]:
+			r.next = k
 	routes.append(r)
 	a.routes.append(r)

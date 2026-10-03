@@ -38,6 +38,8 @@ const SHIFT_WARN := 1.0  # seconds before the Swell moves that its next road is 
 # Roads (world px)
 const ARM_X := 640.0  # entry arm length, centre to map edge, horizontal
 const ARM_Y := 360.0  # ...vertical
+const LINK := 720.0  # centre to centre, between linked crossings in the City plan
+const MAP_ASPECT := 16.0 / 9.0  # the map widens its short side to this, so entry roads run to the edge of the frame
 const LW := 30.0  # lane width; each road is two lanes, out | in
 const STOP_D := 48.0  # crossing centre to stop line
 const POLE_BACK := 10.0  # a Light hangs this far back from its stop line...

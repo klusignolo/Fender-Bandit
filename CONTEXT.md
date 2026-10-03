@@ -86,6 +86,18 @@ _Avoid_: Streak, chain, multiplier (as a noun for the mechanic)
 
 ### Traffic
 
+**City plan**:
+The one hand-authored layout of up to six crossings that a Run's map grows into, one crossing at a time, in a fixed order.
+_Avoid_: Level, map layout, grid
+
+**Link**:
+The road joining two neighbouring crossings: a car leaving one crossing that way arrives at the other.
+_Avoid_: Connector (a movement through one crossing's box), street
+
+**Entry**:
+A road coming in from the map edge, where new cars appear; the Quota counts them.
+_Avoid_: Spawn, source
+
 **Swell**:
 One road carrying a heavy share of the traffic for part of a stage, then shifting to another road, announced by a whistle a moment before it moves and marked at the road edge while it lasts.
 _Avoid_: Wave, rush (Rush hour is the escalation), surge

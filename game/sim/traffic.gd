@@ -73,7 +73,7 @@ func _init(seed_value: int, dents := 0, stage: StageDef = null) -> void:
 	_rng.seed = seed_value
 	_patience_rng.seed = seed_value
 	_swell_rng.seed = seed_value
-	net = RoadNet.new()
+	net = RoadNet.new(stage.crossings)
 	jam = Jam.new(net.crossings.size(), dents)
 	raccoon_position = net.crossings[0] + Tuning.RACCOON_START
 	for i in net.approaches.size():
@@ -199,14 +199,30 @@ func _spawn() -> void:
 			continue
 		_due[i] -= 1
 		_next_id += 1
-		c.route = a.routes[_pick_movement()]
-		if c.movement == RoadNet.Movement.LEFT:
-			c.turn_gap = _rng.randf_range(Tuning.TURNER_GAP[0], Tuning.TURNER_GAP[1])
+		_new_driver(c, i)
 		c.speed = Tuning.BASE_SPEED * Tuning.SPAWN_SPEED
 		c.tint = Color.from_hsv(_rng.randf(), 0.65, 0.95)
-		c.patience = k_patience * _patience_rng.randf_range(Tuning.PATIENCE_JITTER[0], Tuning.PATIENCE_JITTER[1])
 		cars.append(c)
 		car_spawned.emit(c)
+
+
+# A fresh driver for approach i's Light: it rolls its movement, and draws its Turner gap and Patience. Every car
+# gets one as it spawns, and again each time it drives on to another crossing.
+func _new_driver(c: Car, i: int) -> void:
+	c.light = lights[i]
+	c.route = net.approaches[i].routes[_pick_movement()]
+	if c.movement == RoadNet.Movement.LEFT:
+		c.turn_gap = _rng.randf_range(Tuning.TURNER_GAP[0], Tuning.TURNER_GAP[1])
+	c.patience = k_patience * _patience_rng.randf_range(Tuning.PATIENCE_JITTER[0], Tuning.PATIENCE_JITTER[1])
+
+
+# A car whose back has cleared the box onto a road linked to the next crossing drives on as that crossing's car:
+# along one of its Routes from the same point on the road, with a fresh driver. _by_route still files it under its
+# old Route until next tick; that's safe, as the old Route ends on the same road, so cars behind still follow it.
+func _hand_off(c: Car) -> void:
+	c.s -= c.route.last_start()
+	c.reset_driver()
+	_new_driver(c, c.route.next)
 
 
 # Cars waiting in every entry's backlog.
@@ -304,6 +320,8 @@ func _drive() -> void:
 		else:
 			c.speed = maxf(target, c.speed - Tuning.DECEL * Tuning.HARD_BRAKE * DT)
 		c.s += c.speed * DT
+		if c.route.next >= 0 and c.out_of_box():
+			_hand_off(c)
 		if c.s >= c.route.length:
 			cars_through += 1
 			if not draining:

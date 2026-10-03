@@ -35,6 +35,19 @@ func _init(car_id: int, r: RoadNet.Route, l: Light) -> void:
 	light = l
 
 
+## Forget everything about the crossing it just drove through: it's a fresh driver at the next one.
+func reset_driver() -> void:
+	boosted = false
+	passed_line = false
+	holding = false
+	hold_time = 0.0
+	committed = false
+	wait = 0.0
+	honks = 0
+	blowing = false
+	blow_warning = false
+
+
 ## Whether its centre is past the box, off the connector it takes through the crossing.
 func past_box() -> bool:
 	return route.index_at(s) > 1

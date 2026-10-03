@@ -24,8 +24,9 @@ const NO_QUOTA := 1 << 30  # a Quota no test meets, for tests of a stage in full
 
 
 ## A Traffic with straight traffic only (no right turns or Turners), no Swells and no Quota, as before any existed.
-func straight_traffic(seed_value: int) -> Traffic:
-	var t := Traffic.new(seed_value)
+## It's stage 1's map and knobs, or `stage`'s.
+func straight_traffic(seed_value: int, stage := 1) -> Traffic:
+	var t := Traffic.new(seed_value, 0, Stages.def(stage, seed_value))
 	t.quota = NO_QUOTA
 	t.k_right = 0.0
 	t.k_turners = 0.0
