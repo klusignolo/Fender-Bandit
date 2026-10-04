@@ -4,7 +4,8 @@ extends Node2D
 ## draws it. Main builds a fresh World for each stage.
 ## Greybox: roads are drawn here from the RoadNet curves; cars are pooled Vehicle nodes keyed by
 ## car id; each Light has a LightPole; each Crash gets a CrashMarker; the HudStrip sits on a HUD
-## layer; EntryCues marks the Swell and backlog at each entry. Nothing here decides a rule.
+## layer; EntryCues marks the Swell and backlog at each entry. The camera copies Framing (#33) each tick,
+## and hands its zoom to the Raccoon. Nothing here decides a rule.
 
 const GRASS := Color(0.2, 0.36, 0.2)
 const GRASS_FAR := Color(0.12, 0.2, 0.12)
@@ -15,14 +16,19 @@ const DASH_STEP := 16.0  # px between samples when offsetting a curve for a mark
 var run: Run
 var traffic: Traffic
 var raccoon: Raccoon
+var framing: Framing  # where the camera looks (#33)
 
 var _vehicles: Dictionary[int, Vehicle] = {}
 var _pool: Array[Vehicle] = []
 var _vehicle_layer := Node2D.new()
+var _cam := Camera2D.new()
+var _reveal_from := Rect2()  # the map before this stage's crossing attached, or empty when none did
 
 
 func _init(r: Run, stage: StageDef, seed_value: int) -> void:
 	run = r
+	if stage.grows:
+		_reveal_from = RoadNet.new(stage.crossings - 1).bounds
 	traffic = Traffic.new(seed_value, run.dents, stage)  # before attach: run.dents is the last stage's until then
 	run.attach(traffic)
 
@@ -40,21 +46,25 @@ func _ready() -> void:
 	raccoon = Raccoon.new(traffic)
 	raccoon.position = traffic.raccoon_position  # its start
 	add_child(raccoon)
-	var cam := Camera2D.new()
-	var b := traffic.net.bounds
-	var view := get_viewport_rect().size
-	var z := minf(view.x / b.size.x, view.y / b.size.y) * Tuning.FIT
-	cam.position = b.get_center()
-	cam.zoom = Vector2(z, z)
-	add_child(cam)
-	cam.make_current()
+	framing = Framing.new(traffic.net.bounds, get_viewport_rect().size, raccoon.position, _reveal_from)
+	_aim_camera()
+	add_child(_cam)
+	_cam.make_current()
 	var hud := CanvasLayer.new()
 	hud.add_child(HudStrip.new(run, traffic))
 	add_child(hud)
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	traffic.step()
+	framing.step(delta, get_viewport_rect().size, raccoon.position)
+	_aim_camera()
+
+
+func _aim_camera() -> void:
+	_cam.position = framing.centre
+	_cam.zoom = Vector2(framing.zoom, framing.zoom)
+	raccoon.cam_zoom = framing.zoom
 
 
 func _on_car_spawned(car: Car) -> void:

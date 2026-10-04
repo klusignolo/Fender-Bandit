@@ -130,6 +130,10 @@ const TOW_BONUS := 5  # points for Wreckage towed off the road
 
 # Camera
 const FIT := 1.03  # zoom a touch past "fits everything", so the map edges bleed off
+const READ_FLOOR := 0.45  # the camera never zooms out past this; a map that would need more is followed instead
+const DRIFT := 0.06  # while fitting, the view drifts toward the Raccoon by this share of its offset from the map centre
+const CAM_RATE := 3.0  # per second: how fast the view eases toward where it should be (exponential)
+const REVEAL_TIME := 2.5  # seconds the pull-back takes when a crossing attaches
 
 # Audio
 const MUSIC_PITCH: Array[float] = [1.0, 1.06, 1.12]  # groove pitch_scale at Clear, Busy, Heavy

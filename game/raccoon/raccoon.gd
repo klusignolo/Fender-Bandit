@@ -18,6 +18,7 @@ const BONK_SIZE := 22
 var traffic: Traffic
 var facing := Vector2.UP
 var target: Light  # the Light a Switch would hit now, or null
+var cam_zoom := 1.0  # the camera zoom, which World sets each tick: speeds and ranges scale with 1/zoom
 
 var _dash_left := 0.0  # seconds left in the current Dash
 var _dash_cooldown := 0.0  # seconds until the next Dash can start
@@ -30,7 +31,7 @@ func _init(t: Traffic) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var world_per_px := _world_per_screen()
+	var world_per_px := 1.0 / cam_zoom  # world px per on-screen px
 	_dash_cooldown = maxf(_dash_cooldown - delta, 0.0)
 	var dashing := false
 	if traffic.raccoon_stun > 0.0:
@@ -82,12 +83,6 @@ func _pick_target(world_per_px: float) -> Light:
 			best_score = score
 			best = l
 	return best
-
-
-## World px per on-screen px, so speed and range stay the same on screen at any zoom.
-func _world_per_screen() -> float:
-	var cam := get_viewport().get_camera_2d()
-	return 1.0 / cam.zoom.x if cam else 1.0
 
 
 func _draw() -> void:

@@ -106,6 +106,14 @@ _Avoid_: Spawn, source
 One road carrying a heavy share of the traffic for part of a stage, then shifting to another road, announced by a whistle a moment before it moves and marked at the road edge while it lasts.
 _Avoid_: Wave, rush (Rush hour is the escalation), surge
 
+**Reveal**:
+The camera pulling back from the old map to the grown one as a stage opens with a new crossing attached.
+_Avoid_: Zoom-out, intro, transition
+
+**Readability floor**:
+The furthest the camera will zoom out; a map that would need more is followed around the Raccoon instead of fitted.
+_Avoid_: Min zoom, zoom limit
+
 ### Drivers
 
 **Patience**:
