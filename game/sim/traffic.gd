@@ -209,7 +209,7 @@ func _spawn() -> void:
 		_next_id += 1
 		_new_driver(c, i)
 		c.speed = _entry_speed(c)
-		c.tint = Color.from_hsv(_rng.randf(), 0.65, 0.95)
+		c.tint = Car.TINTS[mini(int(_rng.randf() * Car.TINTS.size()), Car.TINTS.size() - 1)]  # randf, as for the hue it replaced: seeded streams stay put
 		cars.append(c)
 		car_spawned.emit(c)
 

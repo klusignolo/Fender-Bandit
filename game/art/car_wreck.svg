@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="84" height="48" viewBox="0 0 84 48">
+  <defs><clipPath id="b"><rect x="4" y="4" width="76" height="40" rx="9"/></clipPath></defs>
+  <rect x="4" y="4" width="76" height="40" fill="#1B2340" fill-opacity="0.38" clip-path="url(#b)"/>
+  <rect x="4" y="35" width="76" height="10" fill="#1B2340" fill-opacity="0.22" clip-path="url(#b)"/>
+  <polygon points="25,10 50,8 57,38 27,39" fill="#FFFFFF" fill-opacity="0.18" stroke="#1B2340" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="58,9 72,13 69,37 56,40" fill="#FFFFFF" fill-opacity="0.22" stroke="#1B2340" stroke-width="2" stroke-linejoin="round"/>
+  <polyline points="62,12 66,20 61,26 67,33" fill="none" stroke="#1B2340" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="16,10 23,12 23,36 16,38" fill="#8796B4" stroke="#1B2340" stroke-width="2" stroke-linejoin="round"/>
+  <polyline points="17,14 21,22 18,27 22,34" fill="none" stroke="#1B2340" stroke-width="1.5"/>
+  <polyline points="74,5 77,12 72,18 78,24 72,30 77,36 74,43" fill="none" stroke="#1B2340" stroke-width="3" stroke-linejoin="round"/>
+  <polyline points="34,4 37,9 41,4" fill="none" stroke="#1B2340" stroke-width="2.5" stroke-linejoin="round"/>
+  <polyline points="40,44 44,38 48,44" fill="none" stroke="#1B2340" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="4" y="4" width="76" height="40" rx="9" fill="none" stroke="#1B2340" stroke-width="4"/>
+</svg>

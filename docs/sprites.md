@@ -4,7 +4,7 @@ The game's look: the fixed rules every sprite obeys (the **style sheet**) and on
 
 Like `docs/tuning.md`, this is a living register: when a proof or playtest changes a rule or a sprite, update its entry and add a note. Sizes that are gameplay (vehicle footprints) also live in `docs/tuning.md`.
 
-**Not yet proven.** The legibility rules below (outline, shadow, mipmaps at 0.45× zoom) are untested. The pipeline-proof ticket that follows #6 tests them; its fallbacks are noted inline.
+**Not yet proven.** The legibility rules below (outline, shadow, mipmaps at 0.45× zoom) are not yet signed off. The first-pass sprites are in the game, and the [stage-9 reference](#reference) shows them at the real zoom ([#39](https://github.com/klusignolo/GameJam2026/issues/39)). The sprite proof ([#18](https://github.com/klusignolo/GameJam2026/issues/18)) still decides the fallbacks noted inline.
 
 ## Style sheet
 
@@ -72,7 +72,7 @@ Hex values are first guesses; tune them in the proof, keeping the reservation ru
 | Motorcycle | 22 × 10 | Rider's helmet in a safe bright tint |
 | Semi | 84 × 24 | Cab 24 + trailer 60, **one rigid sprite** |
 | Raccoon | 28 wide; sprite ~28 × 38 | Taller than its footprint in ¾ view |
-| Light pole | ~10 × 34 | Head overhangs the kerb |
+| Light pole | 14 × 42 | Head overhangs the kerb. Grown from ~10 × 34 in #39 so the lit lamp is 5 world px across |
 
 ## Sprite list
 
@@ -81,6 +81,8 @@ Canvas sizes are @2× and include the outline margin. "Tint" means a white layer
 ### Raccoon
 
 Cutout rig: head, body with vest, tail, 2 arms, 2 legs, drawn for **3 facings: front (moving down), back (moving up), side (mirrored for left)**. Diagonal movement shows the side view. Facing always follows the joystick.
+
+**First pass (#39):** one whole sprite per facing, `raccoon_front`, `raccoon_back` and `raccoon_side` (64 × 84, feet at (32, 80)), swapped by `Raccoon.view_of` with no animation. The part sets and the six animations come in #41.
 
 | ID | Shows | Canvas @2× | Anchor | Notes |
 |---|---|---|---|---|
@@ -107,38 +109,38 @@ Every vehicle is stacked layers: **body** (tint, one of the 6 safe colours), **d
 
 | ID | Shows | Canvas @2× | Anchor | Notes |
 |---|---|---|---|---|
-| `car_body`, `car_details`, `car_lamps_brake`, `car_lamps_blink_l/r`, `car_shadow` | Car | 84 × 48 | Centre | Nose points +X |
-| `car_wreck_details` | Crumpled car | 84 × 48 | Centre | Swapped in for details; body keeps its tint |
-| `moto_*` (same layers) | Motorcycle and rider | 52 × 28 | Centre | Rider's helmet tinted separately |
-| `moto_wreck_details` | Bike on its side, rider sprawled | 52 × 36 | Centre | |
-| `semi_*` (same layers) | Semi, cab + trailer, rigid | 176 × 56 | Centre | Trailer is the tinted body; cab details fixed |
-| `semi_wreck_details` | Jack-knifed look, drawn rigid | 176 × 56 | Centre | |
+| `car_body`, `car_details`, `car_lamps_brake`, `car_lamps_blink_l/r`, `car_shadow` | Car | 84 × 48 | Centre | Nose points +X. First pass: the lamps are drawn in code |
+| `car_wreck` | Crumpled car | 84 × 48 | Centre | Swapped in for details; body keeps its tint, under a soot wash |
+| `moto_*` (same layers) | Motorcycle and rider | 52 × 28 | Centre | The body layer is the rider's helmet, so the helmet takes the tint |
+| `moto_wreck` | Bike on its side, rider sprawled | 52 × 28 | Centre | Kept to the footprint canvas, like every vehicle layer |
+| `semi_*` (same layers) | Semi, cab + trailer, rigid | 176 × 56 | Centre | Trailer is the tinted body; the cab is in the details, `#C9CED8` |
+| `semi_wreck` | Jack-knifed look, drawn rigid | 176 × 56 | Centre | The cab is drawn turned 22° on the rigid footprint |
 | `ambulance_*` | *Stretch.* Ambulance | 88 × 48 | Centre | Light bar **blue and white**, not red |
 
 ### Floating cues (upright, never rotate)
 
 | ID | Shows | Canvas @2× | Notes |
 |---|---|---|---|
-| `cue_turner` | A Turner waiting for a gap | 32 × 32 | Left-arrow icon, pulses once the Turner is stuck (#17) |
-| `cue_honk` | A Honk | 40 × 32 | Burst "HONK" shape above the car |
+| `cue_turner`, `cue_turner_arrow` | A Turner waiting for a gap | 36 × 36 each | A white bubble (tinted `signal_yellow` while stuck) and an arrow pointing +X, turned in code to the way the Turner leaves; pulses once the Turner is stuck (#17) |
+| `cue_honk` | A Honk | 96 × 48 | A white burst, stretched in code to fit "HONK!" or "HONK HONK!" drawn on it in ink |
 | `cue_patience_ring` | Patience | drawn in code | Shown only after the first Honk (#17). Pips: yellow, yellow, red |
-| `cue_blow` | Blowing-the-red warning | 32 × 32 | "!!" flashing for the last 3s of Patience (#14) |
-| `cue_swell` | Swell tell at the road edge | 48 × 48 | Triple chevrons (#14) |
+| `cue_blow` | Blowing-the-red warning | 32 × 40 | "!!" in signal red, flashing for the last 3s of Patience (#14) |
+| `cue_swell` | Swell tell at the road edge | 28 × 44 | **One** chevron, pointing +X; code draws three in a row so each can light in turn as a marquee (#14, #27) |
 
 ### Lights
 
 | ID | Shows | Canvas @2× | Anchor | Notes |
 |---|---|---|---|---|
-| `light_pole` | Pole + 3-lamp head, ¾ view | ~20 × 68 | Base | One per approach, 4 per crossing |
-| `light_lamp_red/yellow/green` | The lit lamp | overlay | — | Only the active lamp is lit |
-| `stop_line` | Stop bar across the lane | decal, 4 × 30 | Centre | **Tinted the Light's colour**: the main cue at 0.45× |
+| `light_pole` | Pole + 3-lamp head, ¾ view | 28 × 84 | Base | One per approach. The lamps are drawn unlit |
+| `light_lamp_red/yellow/green` | The lit lamp | drawn in code | — | Only the active lamp is lit: a disc in its signal colour with a 35% halo |
+| `stop_line` | Stop bar across the lane | drawn in code, 4 × 30 | Centre | **Tinted the Light's colour**, over a 12 px halo: the main cue at 0.45× |
 
 ### Crashes and Wreckage
 
 | ID | Shows | Canvas @2× | Notes |
 |---|---|---|---|
 | `crash_burst` | Comic starburst | 160 × 120 | White, `ink` outline, upright; one word in Bungee |
-| Burst words | KRUNCH!, BONK!, SKRRT-BAM!, … (~5) | text | Picked at random, never in signal colours |
+| Burst words | KRUNCH!, BONK!, SKRRT-BAM!, WHAM!, KA-CHUNK! | text | Picked by a hash of the Crash's position, so a seeded run repeats; in `ink`, never in signal colours |
 | `debris_bits` | Bumper, hubcap, glass shards | 8–16 each | CPUParticles2D textures |
 | `smoke_puff` | Smoke | 32 × 32 | Burst puffs, and a looping wisp on Wreckage until Towed |
 
@@ -151,12 +153,12 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 | ID | Shows | Notes |
 |---|---|---|
 | Asphalt | Road surface | Code-drawn shapes, subtle noise texture |
-| `decal_centre_dash` | Dashed centre line | White |
-| `decal_crosswalk` | Crosswalk stripes | White |
-| `decal_kerb` | Kerb edge | `pavement`, light top edge |
+| `decal_centre_dash` | Dashed centre line | White, drawn in code: 10 on, 10 off, 1 world px |
+| `decal_crosswalk` | Crosswalk stripes | White at 85%, drawn in code across both lanes just past each stop line |
+| `decal_kerb` | Kerb edge | Drawn in code: 3 world px of `#8691A6` along each road edge |
 | `decal_manhole` | Manhole cover | Scatter |
 | Blocks | Pavement shape with a kerb outline | Code-drawn |
-| `roof_*` | ~5 building tops, AC units | Scatter; nothing looks taller than a car's shadow suggests |
+| `roof_a`…`roof_e` | 5 building tops: parapet, AC units, skylights | Scatter (`Ground`); muted slates close to `pavement`, so they never compete with the car tints. Each casts a flat 3 px shadow |
 | Weather overlay | *Stretch* | TBD |
 
 ### Flow and UI
@@ -173,6 +175,27 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 | HUD strip | Score, Combo, Jam meter, stage/Quota | Sign panel |
 | Pause, results, initials picker, High-score table | Screens | Sign panels + Bungee |
 
-## Deferred
 
-- **Reference mockup** (a full stage-9 screen at base resolution): moved to the build phase as the first art ticket.
+## Reference
+
+![Stage-9 reference](art/stage9-reference.png)
+
+`docs/art/stage9-reference.png` is the yardstick every art pass is judged against ([#39](https://github.com/klusignolo/GameJam2026/issues/39)). It's the real game at the real camera zoom (about 0.5× at stage 9), not a mockup: three crossings, queues, Turners, semis, motorcycles, Honks, "!!", Patience rings, the Swell chevrons, a backlog, Wreckage from three Crashes and a fresh burst from a fourth, and the Raccoon with its Switch target.
+
+**Reproduce it:** `game/tools/reference_shot.sh` (pass a directory to write the shot somewhere else and compare). It runs stage 9 from seed 1, turns the north–south Lights green at 1s with the `--switch` agent flag, so the east–west roads queue up, Blow the red and Crash, and shoots at 31.4s. When an art pass changes what's on screen, re-shoot and commit the new reference with it. If a sim change moves the Crashes, re-time `--at` so a burst is fresh.
+
+## Recipes
+
+How the first-pass sprites (#39) are made. Later passes keep these rules unless a proof changes them.
+
+- **Files:** `game/art/*.svg`, hand-written SVG. `Art` (`game/world/art.gd`) preloads every texture and holds the anchors and draw-order constants.
+- **Canvas:** 2× world size. A vehicle's canvas is its footprint × 2 plus a 4 px margin on every side for the outline, so the art inside the margin is exactly the sim's footprint (`test_art.gd` checks it). The nose points +X.
+- **Import:** each `.svg.import` has `mipmaps/generate=true`, and World draws with a Linear Mipmap filter (`texture_filter`), inherited by everything under it. Sprites are drawn at scale 0.5.
+- **Outline and shading:** a 4 px `ink` stroke around every silhouette, 2 px for interior lines. The one shade tone is `ink` at 22% along the bottom edge, away from the top-left light. Glass is `#2B3A55` with a 45% white glint. Wreckage adds a 38% `ink` soot wash, crumple zig-zags and cracked glass, over the same tint.
+- **Vehicle layers:** `*_body` is plain white, tinted in Godot with one of `Car.TINTS`. `*_details` is never tinted. `*_wreck` replaces the details on Wreckage. `*_shadow` is a white silhouette drawn in `shadow` on the shadow layer, offset so it always falls 3 px down-right, however the vehicle turns. Body, details and shadow draw behind the node's own `_draw`, so blinkers and the Blowing outline go on top.
+- **Uprights:** the Raccoon (feet at (32, 80)) and the Light pole (base at (14, 80); lamps at y 11, 24 and 37) are anchored at the ground and Y-sorted together. The Raccoon's shadow is a 24 × 10 ellipse. The pole is drawn unlit, and code lights one lamp.
+- **Cues:** drawn on a top-level child at the cue layer, so they never rotate and float over the uprights. Honk and "!!" are sized in on-screen px and hold at any zoom; the Turner bubble is in world px.
+- **Ground:** drawn in code (`Ground`) from the RoadNet curves: pavement, then roof shadows and roofs, kerbs, asphalt, crosswalks and dashes. Roads at the map edge run on past it, for wide windows.
+- **Draw order:** `Art.Z_GROUND` < `Z_DECAL` (stop lines) < `Z_SHADOW` < `Z_VEHICLE` < `Z_UPRIGHT` < `Z_CUE` < `Z_BURST`, then the HUD's CanvasLayer.
+- **Text:** the fallback font for now. Bungee arrives with the UI pass (#42).
+- **Still drawn in code, owned by later passes:** the HUD strip and Jam meter (the `ui_sign_panel` 9-patch, #42); the backlog "+N" tag, the Switch target ring and line, the Dash cooldown ring, the Blowing outline and the Patience ring (#41); BONK! (greybox yellow, close to `signal_yellow`) and boost speed lines (#41, #43).

@@ -4,13 +4,16 @@ extends Node2D
 ## on-screen speed, Dashes the way it faces, Switches the nearest Light in range (biased toward the way it
 ## faces), Tows Wreckage, and feeds its position and Dash to Traffic every tick. Grab, drop, the slower walk,
 ## getting hit and the stun are Traffic rules: while stunned it only drifts with Traffic's knockback.
-## Greybox look until the rig (#41).
+## First-pass look (#39): one whole sprite per view, picked from its facing, until the cutout rig (#41).
 
-const FUR := Color(0.55, 0.55, 0.58)
-const MASK := Color(0.1, 0.1, 0.1)
-const VEST := Color(1, 0.6, 0.1)
-const TARGET := Color(1, 1, 0)
-const ROPE := Color(0.8, 0.6, 0.3)
+## Which way it shows: the front moving down, the back moving up, and the side (mirrored for left) on any diagonal.
+enum View { FRONT, BACK, RIGHT, LEFT }
+
+const SIDE_FROM := 0.38  # the side view shows once the facing is this far across (sin 22.5°): every diagonal
+const TARGET := Color("#FF7A1A")  # raccoon_orange: the Switch target is a Raccoon UI moment
+const ROPE := Art.INK
+const ROPE_CORE := Color("#C9CED8")
+const SHADOW_R := Vector2(12, 5)  # world px: the shadow ellipse under its feet
 const COOLDOWN := Color(0.4, 0.8, 1.0)
 const BONK := Color(1, 0.85, 0.1)
 const BONK_SIZE := 22
@@ -23,11 +26,22 @@ var cam_zoom := 1.0  # the camera zoom, which World sets each tick: speeds and r
 var _dash_left := 0.0  # seconds left in the current Dash
 var _dash_cooldown := 0.0  # seconds until the next Dash can start
 var _dash_dir := Vector2.UP
+var _sprite := Art.sprite(Art.RACCOON_FRONT)
+var _shadow := Node2D.new()
 
 
 func _init(t: Traffic) -> void:
 	traffic = t
 	process_physics_priority = -1  # move and feed Traffic before World steps it
+	_sprite.offset = Art.RACCOON_FRONT.get_size() / 2.0 - Art.RACCOON_FEET  # feet on its position
+	_sprite.show_behind_parent = true  # under the rope, target and rings it draws
+	add_child(_sprite)
+	_shadow.z_as_relative = false
+	_shadow.z_index = Art.Z_SHADOW
+	_shadow.draw.connect(func() -> void:
+		_shadow.draw_set_transform(Art.SHADOW_FALL, 0.0, SHADOW_R / SHADOW_R.x)
+		_shadow.draw_circle(Vector2.ZERO, SHADOW_R.x, Art.SHADOW))
+	add_child(_shadow)
 
 
 func _physics_process(delta: float) -> void:
@@ -43,6 +57,7 @@ func _physics_process(delta: float) -> void:
 	position = position.clamp(traffic.net.bounds.position + Vector2(r, r), traffic.net.bounds.end - Vector2(r, r))
 	traffic.set_raccoon(position, dashing)
 	target = _pick_target(world_per_px) if traffic.raccoon_stun <= 0.0 else null
+	_show_view()
 	if target != null and Input.is_action_just_pressed(&"switch"):
 		traffic.switch(target)
 	if Input.is_action_just_pressed(&"tow"):
@@ -70,6 +85,19 @@ func _move(delta: float, world_per_px: float) -> bool:
 	return dashing
 
 
+## Its view for a facing: the side on any diagonal, else the front or back.
+static func view_of(f: Vector2) -> View:
+	if absf(f.x) >= SIDE_FROM:
+		return View.RIGHT if f.x > 0.0 else View.LEFT
+	return View.FRONT if f.y > 0.0 else View.BACK
+
+
+func _show_view() -> void:
+	var v := view_of(facing)
+	_sprite.texture = [Art.RACCOON_FRONT, Art.RACCOON_BACK, Art.RACCOON_SIDE, Art.RACCOON_SIDE][v]
+	_sprite.flip_h = v == View.LEFT
+
+
 ## The nearest Light pole in range, with Lights the Raccoon faces counting as nearer.
 func _pick_target(world_per_px: float) -> Light:
 	var best: Light = null
@@ -87,22 +115,14 @@ func _pick_target(world_per_px: float) -> Light:
 
 func _draw() -> void:
 	if traffic.towing != null:
-		draw_line(Vector2.ZERO, to_local(traffic.towing.transform.origin), ROPE, 3.0)
+		var wreck := to_local(traffic.towing.transform.origin)
+		draw_line(Vector2.ZERO, wreck, ROPE, 4.0)
+		draw_line(Vector2.ZERO, wreck, ROPE_CORE, 1.5)
 	if target != null:
 		var at := to_local(target.pole)
 		draw_arc(at, 14.0, 0, TAU, 24, TARGET, 3.0)
 		draw_dashed_line(Vector2.ZERO, at, Color(TARGET, 0.5), 2.0, 6.0)
 	var r := Tuning.RACCOON_R
-	var tail := -facing * 18.0
-	draw_circle(tail, 8.0, FUR)
-	draw_arc(tail, 5.0, 0, TAU, 12, MASK, 3.0)
-	draw_circle(Vector2.ZERO, r, FUR)
-	var side := Vector2(-facing.y, facing.x)
-	draw_line(facing * 5 + side * 10, facing * 5 - side * 10, MASK, 6.0)
-	draw_circle(facing * 5 + side * 5, 2.0, Color.WHITE)
-	draw_circle(facing * 5 - side * 5, 2.0, Color.WHITE)
-	draw_circle(facing * 14.0, 3.0, MASK)
-	draw_arc(Vector2.ZERO, r + 3.0, 0, TAU, 24, VEST, 2.0)
 	# Dash cooldown: a ring that fills back up; gone once a Dash is ready.
 	if _dash_cooldown > 0.0:
 		var filled := 1.0 - _dash_cooldown / Tuning.DASH_COOLDOWN
@@ -110,6 +130,6 @@ func _draw() -> void:
 	if traffic.raccoon_stun > 0.0:
 		var font := ThemeDB.fallback_font
 		var w := font.get_string_size("BONK!", HORIZONTAL_ALIGNMENT_LEFT, -1, BONK_SIZE).x
-		var at := Vector2(-w / 2.0, -r - 12.0)
+		var at := Vector2(-w / 2.0, -Art.RACCOON_FEET.y * Art.SCALE - 6.0)  # over its head
 		draw_string_outline(font, at, "BONK!", HORIZONTAL_ALIGNMENT_LEFT, -1, BONK_SIZE, 5, Color.BLACK)
 		draw_string(font, at, "BONK!", HORIZONTAL_ALIGNMENT_LEFT, -1, BONK_SIZE, BONK)

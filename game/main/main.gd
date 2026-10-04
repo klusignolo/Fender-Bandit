@@ -8,12 +8,15 @@ extends Node
 ##   --shot=<path>   save a PNG of the screen after --at seconds of simulated time, then quit
 ##   --at=S          when --shot fires, in seconds of simulated time across stages (default 15, as in the greybox)
 ##   --quota-at=S    meet the current stage's Quota at S seconds of simulated time, to see the drain and Tally
+##   --switch=S:L,M  Switch Lights L, M, ... (indices into Traffic.lights) at S seconds of simulated time, as the Raccoon
+##                   would; repeat it for more. It stages a scene, e.g. the stage-9 art reference (game/tools/reference_shot.sh)
 
 var run: Run
 
 var _shot_path := ""
 var _shot_at := 15.0
 var _quota_at := -1.0  # from --quota-at; negative never
+var _switches: Array[Array] = []  # from --switch: [seconds, PackedInt32Array of Light indices]
 var _start_stage := 1
 var _clock := 0.0  # seconds simulated since boot, across stages and Runs
 var _world: World
@@ -38,6 +41,9 @@ func _ready() -> void:
 			_shot_at = float(a.substr(5))
 		elif a.begins_with("--quota-at="):
 			_quota_at = float(a.substr(11))
+		elif a.begins_with("--switch="):
+			var parts := a.substr(9).split(":")
+			_switches.append([float(parts[0]), PackedInt32Array(Array(parts[1].split(",")).map(func(s: String) -> int: return int(s)))])
 	print("Fender Bandit booted, window mode %d, seed %d" % [DisplayServer.window_get_mode(), _seed])
 	_start_run()
 
@@ -89,6 +95,11 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 	if was < _quota_at and _clock >= _quota_at:
 		_world.traffic.meet_quota()
+	for s: Array in _switches:
+		if was < s[0] and _clock >= s[0]:
+			for i: int in s[1]:
+				if i < _world.traffic.lights.size():  # a later stage may have more Lights, an earlier one fewer
+					_world.traffic.switch(_world.traffic.lights[i])
 	if _shot_path != "" and _clock >= _shot_at:
 		var path := _shot_path
 		_shot_path = ""

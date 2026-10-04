@@ -3,7 +3,7 @@ extends Node2D
 ## At each map entry (#27): triple chevrons on the Swell road, lighting up one after another
 ## toward the crossing like a marquee while the Swell is on it;
 ## and, when cars are waiting to get on, its backlog as "+N", with the lane pulsing red while the Jam is Heavy
-## (story 52). Greybox: the cue_swell sprite (docs/sprites.md) replaces the drawn chevrons.
+## (story 52). The chevrons are the first-pass cue_swell sprite (#39).
 
 const INSET := 110.0  # on-screen px in from the map edge, along the lane, where the cues sit: clear of the HUD strip at the top at any zoom
 const CHEVRON_OUT := 34.0  # world px from the lane's centre out past the kerb to the chevrons...
@@ -11,6 +11,7 @@ const TAG_OUT := 74.0  # ...and to the "+N"
 const PULSE_LENGTH := 160.0  # world px of lane, in from the map edge, that pulses under a backlog
 const MARQUEE_HZ := 1.0  # times a second the light runs along the chevrons, back to front
 const MARQUEE_DIM := 0.2  # an unlit chevron's opacity
+const CHEVRON_TIP := Vector2(21, 22)  # texture px of the tip of the cue_swell chevron
 const PULSE_HZ := 1.6
 const TAG_SIZE := 26
 const MARKING := Color("#EEF1F6")  # the chevrons and "+N": white, like a road marking (palette in docs/sprites.md)
@@ -23,7 +24,8 @@ var _clock := 0.0
 
 func _init(traffic: Traffic) -> void:
 	_traffic = traffic
-	z_index = 5
+	z_as_relative = false
+	z_index = Art.Z_CUE
 
 
 func _process(delta: float) -> void:
@@ -60,14 +62,12 @@ func _draw() -> void:
 # Three chevrons along the lane, pointing the way its cars drive, lit in turn from the back one to the front one:
 # each brightens and fades smoothly, a third of a cycle after the one behind it.
 func _chevrons(at: Vector2, d: Vector2) -> void:
-	var side := RoadNet.right_of(d)
 	for k in 3:
 		var lit := 0.5 + 0.5 * cos(TAU * (_clock * MARQUEE_HZ - k / 3.0))
 		var alpha := lerpf(MARQUEE_DIM, 1.0, lit * lit)
-		var tip := at + d * (k - 1) * 12.0
-		var arm := PackedVector2Array([tip - d * 7.0 + side * 11.0, tip, tip - d * 7.0 - side * 11.0])
-		draw_polyline(arm, Color(INK, alpha), 7.0)
-		draw_polyline(arm, Color(MARKING, alpha), 4.0)
+		draw_set_transform(at + d * (k - 1) * 12.0, d.angle(), Vector2(Art.SCALE, Art.SCALE))
+		draw_texture(Art.CUE_SWELL, -CHEVRON_TIP, Color(1, 1, 1, alpha))
+	draw_set_transform(Vector2.ZERO)
 
 
 func _tag(text: String, centre: Vector2, col: Color) -> void:

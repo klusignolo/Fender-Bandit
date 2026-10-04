@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="176" height="56" viewBox="0 0 176 56">
+  <rect x="4" y="4" width="118" height="48" rx="3" fill="#1B2340" fill-opacity="0.38"/>
+  <rect x="5" y="43" width="116" height="8" fill="#1B2340" fill-opacity="0.22"/>
+  <polyline points="70,4 74,14 66,24 75,34 68,44 72,52" fill="none" stroke="#1B2340" stroke-width="3" stroke-linejoin="round"/>
+  <polyline points="30,8 40,20 34,30" fill="none" stroke="#1B2340" stroke-opacity="0.6" stroke-width="2"/>
+  <polyline points="96,40 104,30 112,36" fill="none" stroke="#1B2340" stroke-opacity="0.6" stroke-width="2"/>
+  <rect x="4" y="4" width="118" height="48" rx="3" fill="none" stroke="#1B2340" stroke-width="4"/>
+  <g transform="rotate(22 146 28)">
+    <rect x="129" y="11" width="34" height="34" rx="6" fill="#8D94A4" stroke="#1B2340" stroke-width="4"/>
+    <polygon points="151,15 158,13 158,43 151,41" fill="#8796B4" stroke="#1B2340" stroke-width="2" stroke-linejoin="round"/>
+    <polyline points="152,18 156,26 152,32 156,40" fill="none" stroke="#1B2340" stroke-width="1.5"/>
+    <rect x="133" y="16" width="13" height="24" rx="3" fill="#FFFFFF" fill-opacity="0.25" stroke="#1B2340" stroke-width="2"/>
+  </g>
+</svg>

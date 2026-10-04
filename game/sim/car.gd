@@ -4,6 +4,8 @@ extends RefCounted
 ## Whatever its kind, its footprint is one rigid rectangle centred on its route, so a long one cuts its turns.
 
 enum Kind { CAR, MOTORCYCLE, SEMI }
+## The six safe body tints (docs/sprites.md): saturated red, yellow, green and orange are reserved for game signals and the Raccoon.
+const TINTS: Array[Color] = [Color("#3A7BD5"), Color("#5BC0EB"), Color("#8E5BD6"), Color("#F27BB5"), Color("#EEF1F6"), Color("#4A5060")]
 
 var id: int
 var kind := Kind.CAR

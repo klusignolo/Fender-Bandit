@@ -32,6 +32,7 @@ The Godot project lives in `game/`. Run these from the repo root in Git Bash:
 - **Serve the web build:** `node game/tools/serve_web.mjs`, then open http://localhost:8060. Stop it by its PID, never by killing every `node.exe` (godot-mcp runs on Node too).
 - **Run the tests:** `game/tools/test.sh` (add `--only=<part of file:test name>` to filter). It runs every `game/test/test_*.gd` headless and exits non-zero on any failure or logged error.
 - **Screenshot a run:** `<godot console exe> --path game -- --seed=1 --shot=<png> --at=<sim seconds>`. A seed makes the run repeat exactly. It needs a window, so don't pass `--headless`.
+- **Art reference shot:** `game/tools/reference_shot.sh` re-shoots `docs/art/stage9-reference.png`, the stage-9 frame every art pass is judged against (`docs/sprites.md` "Reference"). `--switch=S:L,M` switches Lights at S seconds, to stage a scene.
 - **Headless boot check of the exe:** `game/build/windows/FenderBandit.exe --quit-after 90 --log-file <file>`. Exported Windows builds go exclusive fullscreen.
 
 ## Build mode (phase 1)
