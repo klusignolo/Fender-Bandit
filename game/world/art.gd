@@ -26,18 +26,24 @@ const _VEHICLES := {
 		"details": preload("res://art/car_details.svg"),
 		"wreck": preload("res://art/car_wreck.svg"),
 		"shadow": preload("res://art/car_shadow.svg"),
+		"brake": preload("res://art/car_lamps_brake.svg"),
+		"blink": preload("res://art/car_lamps_blink.svg"),  # the right-hand blinkers; mirrored for a left turn
 	},
 	Car.Kind.MOTORCYCLE: {
 		"body": preload("res://art/moto_body.svg"),  # the rider's helmet
 		"details": preload("res://art/moto_details.svg"),
 		"wreck": preload("res://art/moto_wreck.svg"),
 		"shadow": preload("res://art/moto_shadow.svg"),
+		"brake": preload("res://art/moto_lamps_brake.svg"),
+		"blink": preload("res://art/moto_lamps_blink.svg"),
 	},
 	Car.Kind.SEMI: {
 		"body": preload("res://art/semi_body.svg"),  # the trailer; the cab is in the details
 		"details": preload("res://art/semi_details.svg"),
 		"wreck": preload("res://art/semi_wreck.svg"),
 		"shadow": preload("res://art/semi_shadow.svg"),
+		"brake": preload("res://art/semi_lamps_brake.svg"),
+		"blink": preload("res://art/semi_lamps_blink.svg"),
 	},
 }
 
@@ -57,6 +63,8 @@ const CUE_HONK := preload("res://art/cue_honk.svg")
 const CUE_BLOW := preload("res://art/cue_blow.svg")
 const CUE_SWELL := preload("res://art/cue_swell.svg")  # one chevron, pointing +x
 const CRASH_BURST := preload("res://art/crash_burst.svg")
+const SMOKE_PUFF := preload("res://art/smoke_puff.svg")
+const MANHOLE := preload("res://art/decal_manhole.svg")
 
 const ROOFS: Array[Texture2D] = [
 	preload("res://art/roof_a.svg"),
@@ -68,7 +76,7 @@ const ROOFS: Array[Texture2D] = [
 
 
 ## A vehicle kind's layers: "body" (white, tinted in Godot), "details" (never tinted), "wreck" (the details as Wreckage)
-## and "shadow" (its silhouette, drawn in SHADOW).
+## "shadow" (its silhouette, drawn in SHADOW), and the lamp overlays "brake" and "blink" (the right-hand blinkers).
 static func vehicle(kind: Car.Kind) -> Dictionary:
 	return _VEHICLES[kind]
 

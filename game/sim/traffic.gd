@@ -375,10 +375,12 @@ func _drive() -> void:
 		if yielding and not c.yielding and c.speed >= Tuning.YIELD_SQUEAL_SPEED:
 			yielded.emit(c)
 		c.yielding = yielding
+		var was := c.speed
 		if c.speed < target:
 			c.speed = minf(target, c.speed + Tuning.ACCEL * DT)
 		else:
 			c.speed = maxf(target, c.speed - Tuning.DECEL * Tuning.HARD_BRAKE * DT)
+		c.braking = c.speed < was or (c.speed == was and c.speed < Tuning.WAIT_SPEED)  # slowing, or held at a crawl
 		c.s += c.speed * DT
 		if c.route.next >= 0 and c.out_of_box():
 			_hand_off(c)
@@ -709,6 +711,7 @@ func _conflict(x: PackedInt32Array, y: PackedInt32Array) -> bool:
 func _crash(a: Car, b: Car) -> void:
 	for c: Car in [a, b]:
 		c.wreckage = true
+		c.braking = false
 		c.speed = 0.0
 		c.boosted = false
 		c.holding = false

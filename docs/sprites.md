@@ -42,7 +42,7 @@ Saturated red, yellow and green are **reserved for game signals** (Lights, stop 
 | `blinker` | `#FFE3A3` | Blinkers only: pale amber, tiny, flashing |
 | `brake` | `#C4242B` | Brake lights only: tiny, at the rear |
 | Car bodies | blue `#3A7BD5`, sky `#5BC0EB`, purple `#8E5BD6`, pink `#F27BB5`, white `#EEF1F6`, charcoal `#4A5060` | The 6 safe body tints |
-| `asphalt` | `#3B4252` | Road surface (subtle noise) |
+| `asphalt` | `#3B4252` | Road surface, worn with darker tar patches |
 | `pavement` | `#5E6A80` | City blocks, kerbs |
 | Rooftops | cool blues, slates, muted purples | Block scatter. **No trees** (green is reserved) |
 | `sign_blue` | `#1F5FAF` | UI sign panels |
@@ -109,7 +109,7 @@ Every vehicle is stacked layers: **body** (tint, one of the 6 safe colours), **d
 
 | ID | Shows | Canvas @2× | Anchor | Notes |
 |---|---|---|---|---|
-| `car_body`, `car_details`, `car_lamps_brake`, `car_lamps_blink_l/r`, `car_shadow` | Car | 84 × 48 | Centre | Nose points +X. First pass: the lamps are drawn in code |
+| `car_body`, `car_details`, `car_lamps_brake`, `car_lamps_blink`, `car_shadow` | Car | 84 × 48 | Centre | Nose points +X. `*_lamps_blink` holds the right-hand (+y) blinkers, mirrored in Godot for a left turn (#40) |
 | `car_wreck` | Crumpled car | 84 × 48 | Centre | Swapped in for details; body keeps its tint, under a soot wash |
 | `moto_*` (same layers) | Motorcycle and rider | 52 × 28 | Centre | The body layer is the rider's helmet, so the helmet takes the tint |
 | `moto_wreck` | Bike on its side, rider sprawled | 52 × 28 | Centre | Kept to the footprint canvas, like every vehicle layer |
@@ -142,7 +142,7 @@ Every vehicle is stacked layers: **body** (tint, one of the 6 safe colours), **d
 | `crash_burst` | Comic starburst | 160 × 120 | White, `ink` outline, upright; one word in Bungee |
 | Burst words | KRUNCH!, BONK!, SKRRT-BAM!, WHAM!, KA-CHUNK! | text | Picked by a hash of the Crash's position, so a seeded run repeats; in `ink`, never in signal colours |
 | `debris_bits` | Bumper, hubcap, glass shards | 8–16 each | CPUParticles2D textures |
-| `smoke_puff` | Smoke | 32 × 32 | Burst puffs, and a looping wisp on Wreckage until Towed |
+| `smoke_puff` | Smoke | 64 × 64 | A grey three-lobed cloud with an `ink` outline and a shade along the bottom. The looping wisp on Wreckage until Towed (#40); the juice pass (#43) reuses it for burst puffs |
 
 Juice: a 60 ms freeze and a small camera shake per Crash. The Gridlock sequence reuses the bursts in bulk.
 
@@ -152,11 +152,11 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 
 | ID | Shows | Notes |
 |---|---|---|
-| Asphalt | Road surface | Code-drawn shapes, subtle noise texture |
+| Asphalt | Road surface | Code-drawn shapes, worn with dark tar patches (`#343A48`) along the lanes. The register first said "subtle noise", but speck noise is under a pixel at 0.45×, so #40 used patches |
 | `decal_centre_dash` | Dashed centre line | White, drawn in code: 10 on, 10 off, 1 world px |
 | `decal_crosswalk` | Crosswalk stripes | White at 85%, drawn in code across both lanes just past each stop line |
 | `decal_kerb` | Kerb edge | Drawn in code: 3 world px of `#8691A6` along each road edge |
-| `decal_manhole` | Manhole cover | Scatter |
+| `decal_manhole` | Manhole cover, 32 × 32 @2× | Scattered in the lanes, clear of the crossing boxes. Dark, with no `ink` outline, so it never reads as a car or a cue |
 | Blocks | Pavement shape with a kerb outline | Code-drawn |
 | `roof_a`…`roof_e` | 5 building tops: parapet, AC units, skylights | Scatter (`Ground`); muted slates close to `pavement`, so they never compete with the car tints. Each casts a flat 3 px shadow |
 | Weather overlay | *Stretch* | TBD |
@@ -186,16 +186,16 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 
 ## Recipes
 
-How the first-pass sprites (#39) are made. Later passes keep these rules unless a proof changes them.
+How the sprites are made: the first pass (#39), plus the lamps, smoke wisp and road wear of the world art pass (#40). Later passes keep these rules unless a proof changes them.
 
 - **Files:** `game/art/*.svg`, hand-written SVG. `Art` (`game/world/art.gd`) preloads every texture and holds the anchors and draw-order constants.
 - **Canvas:** 2× world size. A vehicle's canvas is its footprint × 2 plus a 4 px margin on every side for the outline, so the art inside the margin is exactly the sim's footprint (`test_art.gd` checks it). The nose points +X.
 - **Import:** each `.svg.import` has `mipmaps/generate=true`, and World draws with a Linear Mipmap filter (`texture_filter`), inherited by everything under it. Sprites are drawn at scale 0.5.
 - **Outline and shading:** a 4 px `ink` stroke around every silhouette, 2 px for interior lines. The one shade tone is `ink` at 22% along the bottom edge, away from the top-left light. Glass is `#2B3A55` with a 45% white glint. Wreckage adds a 38% `ink` soot wash, crumple zig-zags and cracked glass, over the same tint.
-- **Vehicle layers:** `*_body` is plain white, tinted in Godot with one of `Car.TINTS`. `*_details` is never tinted. `*_wreck` replaces the details on Wreckage. `*_shadow` is a white silhouette drawn in `shadow` on the shadow layer, offset so it always falls 3 px down-right, however the vehicle turns. Body, details and shadow draw behind the node's own `_draw`, so blinkers and the Blowing outline go on top.
+- **Vehicle layers:** `*_body` is plain white, tinted in Godot with one of `Car.TINTS`. `*_details` is never tinted. `*_wreck` replaces the details on Wreckage. `*_shadow` is a white silhouette drawn in `shadow` on the shadow layer, offset so it always falls 3 px down-right, however the vehicle turns. `*_lamps_brake` shows while the vehicle brakes or waits (`Car.braking`), and `*_lamps_blink` while a blinker flashes on. Each lamp has a 35–40% halo of its colour, spreading past the outline but staying inside the 4 px margin. Every layer draws behind the node's own `_draw`, so the speed lines and the Blowing outline go on top. Wreckage shows no lamps. Instead it trails an upright `smoke_puff` wisp, on a top-level node, until it's Towed.
 - **Uprights:** the Raccoon (feet at (32, 80)) and the Light pole (base at (14, 80); lamps at y 11, 24 and 37) are anchored at the ground and Y-sorted together. The Raccoon's shadow is a 24 × 10 ellipse. The pole is drawn unlit, and code lights one lamp.
 - **Cues:** drawn on a top-level child at the cue layer, so they never rotate and float over the uprights. Honk and "!!" are sized in on-screen px and hold at any zoom; the Turner bubble is in world px.
-- **Ground:** drawn in code (`Ground`) from the RoadNet curves: pavement, then roof shadows and roofs, kerbs, asphalt, crosswalks and dashes. Roads at the map edge run on past it, for wide windows.
-- **Draw order:** `Art.Z_GROUND` < `Z_DECAL` (stop lines) < `Z_SHADOW` < `Z_VEHICLE` < `Z_UPRIGHT` < `Z_CUE` < `Z_BURST`, then the HUD's CanvasLayer.
+- **Ground:** drawn in code (`Ground`) from the RoadNet curves: pavement, then roof shadows and roofs, kerbs, asphalt, tar patches and manholes (on their own seeded RNG, kept off the boxes), crosswalks and dashes. Roads at the map edge run on past it, for wide windows.
+- **Draw order:** `Art.Z_GROUND` < `Z_DECAL` (stop lines) < `Z_SHADOW` < `Z_VEHICLE` (vehicles and the Wreckage smoke wisps, in tree order, so a wisp may pass under a later vehicle) < `Z_UPRIGHT` < `Z_CUE` < `Z_BURST`, then the HUD's CanvasLayer.
 - **Text:** the fallback font for now. Bungee arrives with the UI pass (#42).
 - **Still drawn in code, owned by later passes:** the HUD strip and Jam meter (the `ui_sign_panel` 9-patch, #42); the backlog "+N" tag, the Switch target ring and line, the Dash cooldown ring, the Blowing outline and the Patience ring (#41); BONK! (greybox yellow, close to `signal_yellow`) and boost speed lines (#41, #43).

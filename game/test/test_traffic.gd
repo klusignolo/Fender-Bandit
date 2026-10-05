@@ -152,3 +152,24 @@ func test_a_driver_far_from_the_line_on_yellow_stops() -> void:
 	_run(t, 4.0)
 	check(not c.passed_line and c.line_distance >= 0.0, "the driver stopped short of the line, %.1f px" % c.line_distance)
 	check(c.speed < 1.0, "and waits at the Red that follows")
+
+
+# --- brake lamps ------------------------------------------------------------------
+
+func test_brake_lamps_light_while_slowing_or_stopped_and_go_dark_on_pulling_away() -> void:
+	var t := straight_traffic(1)
+	var l := t.lights[0]
+	var was := {}  # car id → its speed last tick
+	for i in 14 * Traffic.TICK_HZ:  # all-Red: cars arrive, slow and queue
+		t.step()
+		for c in t.cars:
+			if was.has(c.id) and c.speed > was[c.id] and not check(not c.braking, "car %d is dark while it speeds up (%.2fs)" % [c.id, t.time]):
+				return
+			was[c.id] = c.speed
+	var front: Car = _cars_at(t, l)[0]
+	check(front.speed == 0.0 and front.braking, "the front car stopped at Red shows its brake lamps")
+	check(_cars_at(t, l).all(func(c: Car) -> bool: return c.speed > 0.0 or c.braking), "so does every car stopped behind it")
+	t.switch(l)
+	t.step()
+	check(front.speed > 0.0, "on Green it pulls away")
+	check(not front.braking, "and its brake lamps go dark at once, slow as it still is")

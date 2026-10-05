@@ -1,9 +1,9 @@
 class_name Ground
 extends Node2D
 ## The ground under one stage (#39, docs/sprites.md "Roads and ground"), drawn in code from the RoadNet curves so any
-## crossing angle works: pavement blocks with a scatter of rooftops, kerbed asphalt roads and crossing boxes, a white
-## dashed centre line down every road, and crosswalks across each approach just past its stop line. No green: it's
-## reserved for the Lights.
+## crossing angle works: pavement blocks with a scatter of rooftops, kerbed asphalt roads and crossing boxes worn with
+## tar patches and manholes, a white dashed centre line down every road, and crosswalks across each approach just past
+## its stop line. No green: it's reserved for the Lights.
 
 const PAVEMENT := Color("#5E6A80")  # `pavement`
 const KERB := Color("#8691A6")  # the kerb's light top edge
@@ -20,16 +20,31 @@ const ROOF_SKIP := 0.25  # share of grid points left as open lots, so the blocks
 const ROOF_GAP := 12.0  # world px of pavement kept between a roof and the kerb
 const ROOF_SPREAD := 480.0  # world px past the map edge the scatter reaches, for wide windows
 const RUN_ON := ROOF_SPREAD + 200.0  # world px a road at the map edge is drawn on past its lane's end, out of sight
+const WEAR_STEP := 90.0  # world px between the spots along a lane where a tar patch or manhole may go
+const PATCH_ODDS := 0.3  # share of those spots with a tar patch...
+const MANHOLE_ODDS := 0.12  # ...and with a manhole
+const PATCH_SIZE := Vector2(16.0, 44.0)  # world px: a patch's shortest and longest run along its lane
+const PATCH_WIDTH := Vector2(0.35, 0.75)  # its narrowest and widest, as shares of a lane
+const PATCH_TILT := 0.08  # radians a patch may lie off its lane's line, either way: laid by hand
+const PATCH := Color("#343A48")  # tar: a shade darker than `asphalt`
+const MANHOLE_R := 7.0  # world px: a manhole's radius on the road
+const MANHOLE_SPREAD := 0.5  # how far off its lane's centre a manhole may sit, as a share of the room to the kerb
+const MANHOLE_CLEAR := 36.0  # world px of road kept bare around each crossing box: its stop lines and crosswalks
 
 var _net: RoadNet
 var _lanes: Array[PackedVector2Array]
 var _roofs: Array  # of [Rect2, Texture2D]
+var _patches: Array[Transform2D]  # each maps a unit square onto a tar patch, along its lane
+var _manholes: Array[Vector2]
 
 
 func _init(net: RoadNet, seed_value: int) -> void:
 	_net = net
 	_lanes = lanes(net)
 	_roofs = _scatter(net, seed_value)
+	var wear := _wear(net, seed_value)
+	_patches.assign(wear[0])
+	_manholes.assign(wear[1])
 	z_as_relative = false
 	z_index = Art.Z_GROUND
 
@@ -111,6 +126,58 @@ static func _clear(net: RoadNet, boxes: Array[PackedVector2Array], r: Rect2) -> 
 	return true
 
 
+## The manholes' world centres for a map: in the lanes, clear of every crossing box by MANHOLE_CLEAR. The same seed
+## places the same manholes.
+static func manholes(net: RoadNet, seed_value: int) -> Array[Vector2]:
+	var out: Array[Vector2] = []
+	out.assign(_wear(net, seed_value)[1])
+	return out
+
+
+# The road wear: [the tar patches' transforms, the manholes' centres], at spots WEAR_STEP apart along every lane and
+# clear of every box. Its own RNG, so the roofs' scatter doesn't shift.
+static func _wear(net: RoadNet, seed_value: int) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([seed_value, "wear"])
+	var bare: Array[PackedVector2Array] = []
+	for x in net.crossings.size():
+		bare.append(Geometry2D.offset_polygon(net.box(x), MANHOLE_CLEAR)[0])
+	var patches: Array[Transform2D] = []
+	var holes: Array[Vector2] = []
+	for points in lanes(net):
+		var lane := Curve2D.new()
+		for p in points:
+			lane.add_point(p)
+		var s := rng.randf_range(0.0, WEAR_STEP)
+		while s < lane.get_baked_length():
+			var at := lane.sample_baked_with_rotation(s)
+			var roll := rng.randf()
+			var size := Vector2(rng.randf_range(PATCH_SIZE.x, PATCH_SIZE.y), rng.randf_range(PATCH_WIDTH.x, PATCH_WIDTH.y) * Tuning.LW)
+			var across := rng.randf_range(-1.0, 1.0)
+			var tilt := rng.randf_range(-PATCH_TILT, PATCH_TILT)
+			s += WEAR_STEP
+			if roll < MANHOLE_ODDS:
+				var p := at.origin + at.y * across * (Tuning.LW / 2.0 - MANHOLE_R - 2.0) * MANHOLE_SPREAD
+				if _bare(bare, p, MANHOLE_R):
+					holes.append(p)
+			elif roll < MANHOLE_ODDS + PATCH_ODDS:
+				var centre := at.origin + at.y * across * (Tuning.LW - size.y) / 2.0
+				if _bare(bare, centre, size.length() / 2.0):
+					patches.append(Transform2D(at.get_rotation() + tilt, size, 0.0, centre))
+	return [patches, holes]
+
+
+# Whether a circle at p of radius r stays off every bare zone around the boxes.
+static func _bare(bare: Array[PackedVector2Array], p: Vector2, r: float) -> bool:
+	for b in bare:
+		if Geometry2D.is_point_in_polygon(p, b):
+			return false
+		for i in b.size():
+			if Geometry2D.get_closest_point_to_segment(p, b[i], b[(i + 1) % b.size()]).distance_to(p) < r:
+				return false
+	return true
+
+
 func _draw() -> void:
 	draw_rect(_net.bounds.grow(3000.0), PAVEMENT)
 	for r: Array in _roofs:
@@ -125,6 +192,13 @@ func _draw() -> void:
 		draw_polyline(lane, ASPHALT, Tuning.LW)
 	for x in _net.crossings.size():
 		draw_colored_polygon(_net.box(x), ASPHALT)
+	for xf in _patches:
+		draw_set_transform_matrix(xf)
+		draw_rect(Rect2(-0.5, -0.5, 1.0, 1.0), PATCH)
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+	var hole := Art.MANHOLE.get_size() * Art.SCALE  # 16 world px, the rim MANHOLE_R out
+	for p in _manholes:
+		draw_texture_rect(Art.MANHOLE, Rect2(p - hole / 2.0, hole), false)
 	for a in _net.approaches:
 		_crosswalk(a)
 		var d := a.direction

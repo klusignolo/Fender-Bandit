@@ -35,6 +35,7 @@ var honks := 0  # Honks so far: 0, 1 or 2
 var blowing := false  # out of Patience: Blowing the red, it drives through its red Light regardless of cross traffic
 var raccoon_ahead := false  # the Raccoon is the nearest thing in its path this tick
 var yielding := false  # braking for the Raccoon: Yielding
+var braking := false  # slowing, or held still, this tick: its brake lamps are lit. Never on Wreckage
 var blow_warning := false  # its last BLOW_WARN seconds of Patience, once Blowing the red has debuted: it flashes "!!"
 
 
