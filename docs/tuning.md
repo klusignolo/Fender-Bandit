@@ -30,14 +30,18 @@ The difficulty curves. Each is fixed for a whole Stage and steps up between Stag
 
 ## The arcade loop
 
-The flow around a Run ([#35](https://github.com/klusignolo/GameJam2026/issues/35)): Attract → controls card → Run → Gridlock → results → Attract. Every screen moves on by itself, so the cabinet always returns to Attract (#19 story 12). Attract is the autopilot on stage 1 with a fresh seed, no HUD and a Quota it never meets, so it never leaves stage 1 and never records a score. A press of any key or pad button but Select and the guide leaves it. A (Switch) skips a card only after its lock, so a mashed press can't skip it too.
+The flow around a Run ([#35](https://github.com/klusignolo/GameJam2026/issues/35), [#36](https://github.com/klusignolo/GameJam2026/issues/36)): Attract → controls card → Run → Gridlock → results → Initials (top 10 only) → High-score table → Attract. Every screen moves on by itself, so the cabinet always returns to Attract (#19 story 12). Attract is the autopilot on stage 1 with a fresh seed, no HUD and a Quota it never meets, so it never leaves stage 1 and never records a score. A press of any key or pad button but Select and the guide leaves it. A (Switch) skips a card only after its lock, so a mashed press can't skip it too.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
 | Attract length | Seconds an Attract plays before a fresh one starts on a new seed. A Gridlock starts one sooner. | 60s | `ATTRACT_TIME` | #35 | |
 | Controls card | Seconds the controls card shows before the Run starts, and the lock before A closes it (the press that left Attract mustn't). | 6s, lock 0.5s | `CONTROLS_TIME`, `CONTROLS_LOCK` | #35 | |
 | Gridlock hold | Seconds from Gridlock to the results, with every input ignored (#19 story 55). A plain GRIDLOCK banner for now; it's the slot the death beat (#43) fills. | 2s | `GRIDLOCK_HOLD` | #35 | #43 sets it to the beat's length. |
-| Results card | Seconds the results show before Attract (the High-score screens, #36, will follow it), and the lock before A skips them. | 10s, lock 1.5s | `RESULTS_TIME`, `RESULTS_LOCK` | #35 | |
+| Results card | Seconds the results show before Initials (or the table, for a Run outside the top 10), and the lock before A skips them. | 10s, lock 1.5s | `RESULTS_TIME`, `RESULTS_LOCK` | #35, #36 | |
+| Attract pages | Seconds Attract shows its title, then the High-score table, and round again (#19 story 3: "every ~10s"). A fresh Attract starts on the title. | 6s title, 4s table: the table every 10s | `ATTRACT_TITLE`, `ATTRACT_TABLE` | #36 | |
+| Initials | Seconds to enter initials before they save as "RAC" (story 15). Partly entered initials are dropped too: a player who walked away left no name. The lock before A enters a letter, so A mashed through the results doesn't enter "AAA". | 30s, lock 0.75s | `INITIALS_TIME`, `INITIALS_LOCK` | #36 | |
+| Letter repeat | Holding up or down steps the letter once, then repeats after the delay, then every this often: about 2.5s to sweep the whole alphabet. | 0.4s, then every 0.1s | `REPEAT_DELAY`, `REPEAT_EVERY` | #36 | |
+| High-score table | Seconds the table shows after a Run, the new entry flashing, before Attract; and the lock before A skips it. | 8s, lock 1s | `SCORES_TIME`, `SCORES_LOCK` | #36 | |
 
 ## The generator, past stage 9
 

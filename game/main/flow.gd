@@ -1,17 +1,21 @@
 class_name Flow
 extends RefCounted
-## The arcade loop (#35, #19 "Flow"): Attract → Controls → Play (the Run's stages, with the Tally between) →
-## Gridlock → Results → Attract, with Pause over Play. It keeps the state, its clock and which inputs each state
-## takes; Main builds what each state shows and feeds it semantic inputs. The timings are Tuning's.
+## The arcade loop (#35, #36, #19 "Flow"): Attract → Controls → Play (the Run's stages, with the Tally between) →
+## Gridlock → Results → Initials (top 10 only) → Scores → Attract, with Pause over Play. Attract shows the title
+## and the High-score table in turn. It keeps the state, its clock and which inputs each state takes; Main builds
+## what each state shows and feeds it semantic inputs. The timings are Tuning's.
 
-enum State { ATTRACT, CONTROLS, PLAY, GRIDLOCK, RESULTS }
+enum State { ATTRACT, CONTROLS, PLAY, GRIDLOCK, RESULTS, INITIALS, SCORES }
 
-signal changed(state: State)  # entered `state`; ATTRACT again means a fresh Attract
+signal changed(state: State)  # entered `state`; ATTRACT again means a fresh Attract, on its title
 signal paused_changed(paused: bool)
+signal attract_table_changed(showing: bool)  # Attract turned to the High-score table, or back to its title
 
 var state := State.ATTRACT
 var paused := false  # Pause, over Play only
 var pad := false  # the press that left Attract came from a pad: the controls card shows the pad, else the keys
+var ranked := false  # the Run that gridlocked made the top 10, so Initials follow the results
+var attract_table := false  # Attract is showing the High-score table, not its title
 
 var _in_state := 0.0  # seconds in this state, not counting Pause
 var _away := false  # the window or tab has lost focus and not got it back
@@ -26,6 +30,9 @@ func step(dt: float) -> void:
 		State.ATTRACT:
 			if _in_state >= Tuning.ATTRACT_TIME:
 				_go(State.ATTRACT)
+			elif (fmod(_in_state, Tuning.ATTRACT_TITLE + Tuning.ATTRACT_TABLE) >= Tuning.ATTRACT_TITLE) != attract_table:
+				attract_table = not attract_table
+				attract_table_changed.emit(attract_table)
 		State.CONTROLS:
 			if _in_state >= Tuning.CONTROLS_TIME:
 				_go(State.PLAY)
@@ -34,6 +41,12 @@ func step(dt: float) -> void:
 				_go(State.RESULTS)
 		State.RESULTS:
 			if _in_state >= Tuning.RESULTS_TIME:
+				_after_results()
+		State.INITIALS:
+			if _in_state >= Tuning.INITIALS_TIME:
+				_go(State.SCORES)
+		State.SCORES:
+			if _in_state >= Tuning.SCORES_TIME:
 				_go(State.ATTRACT)
 
 
@@ -44,12 +57,25 @@ func press_start(from_pad: bool) -> void:
 		_go(State.CONTROLS)
 
 
-## A: closes the controls card or the results, once their lock is over.
+## A: closes the controls card, the results or the table, once their lock is over.
 func confirm() -> void:
 	if state == State.CONTROLS and _in_state >= Tuning.CONTROLS_LOCK:
 		_go(State.PLAY)
 	elif state == State.RESULTS and _in_state >= Tuning.RESULTS_LOCK:
+		_after_results()
+	elif state == State.SCORES and _in_state >= Tuning.SCORES_LOCK:
 		_go(State.ATTRACT)
+
+
+## Whether A may enter a letter of the initials: not until INITIALS_LOCK has gone by.
+func initials_unlocked() -> bool:
+	return state == State.INITIALS and _in_state >= Tuning.INITIALS_LOCK
+
+
+## The initials are in: on to the table.
+func initials_entered() -> void:
+	if state == State.INITIALS:
+		_go(State.SCORES)
 
 
 ## Start: Pause a Run, or resume it.
@@ -77,11 +103,12 @@ func quit_to_title() -> void:
 		_go(State.ATTRACT)
 
 
-## The Jam is full: a Run is over; an Attract starts afresh.
-func gridlocked() -> void:
+## The Jam is full: a Run is over, and `top_ten` says whether its score made the table; an Attract starts afresh.
+func gridlocked(top_ten := false) -> void:
 	if state == State.ATTRACT:
 		_go(State.ATTRACT)
 	elif state == State.PLAY:
+		ranked = top_ten
 		_go(State.GRIDLOCK)
 
 
@@ -95,9 +122,14 @@ func input_locked() -> bool:
 	return state == State.GRIDLOCK
 
 
+func _after_results() -> void:
+	_go(State.INITIALS if ranked else State.SCORES)
+
+
 func _go(s: State) -> void:
 	state = s
 	_in_state = 0.0
+	attract_table = false
 	changed.emit(s)
 	if s == State.PLAY and _away:
 		_set_paused(true)

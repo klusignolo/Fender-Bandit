@@ -49,3 +49,8 @@ func text_at(s: String, at: Vector2, size: int, colour := Color.WHITE) -> void:
 
 func text_width(s: String, size: int) -> float:
 	return ThemeDB.fallback_font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+
+
+## Whether a blink of `period` seconds is lit `clock` seconds in: on for the first two thirds of each.
+static func blink(clock: float, period: float) -> bool:
+	return fmod(clock, period) < period * 2.0 / 3.0

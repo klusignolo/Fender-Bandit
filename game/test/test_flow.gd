@@ -7,16 +7,20 @@ const C := Flow.State.CONTROLS
 const P := Flow.State.PLAY
 const G := Flow.State.GRIDLOCK
 const R := Flow.State.RESULTS
+const I := Flow.State.INITIALS
+const S := Flow.State.SCORES
 
 
 ## Records what Flow emits. Holds no reference to the Flow, so nothing leaks.
 class Log:
 	var states: Array[int] = []
 	var pauses: Array[bool] = []
+	var tables: Array[bool] = []
 
 	func _init(f: Flow) -> void:
 		f.changed.connect(func(s: Flow.State) -> void: states.append(s))
 		f.paused_changed.connect(func(p: bool) -> void: pauses.append(p))
+		f.attract_table_changed.connect(func(on: bool) -> void: tables.append(on))
 
 
 ## Step `f` for `seconds` of 60 Hz ticks.
@@ -35,13 +39,88 @@ func test_the_full_loop_runs_untouched_after_one_press() -> void:
 	check(f.pad, "the card shows the pad the press came from")
 	_wait(f, Tuning.CONTROLS_TIME + 0.1)
 	check_eq(f.state, P, "the card closes by itself")
-	f.gridlocked()
+	f.gridlocked(true)
 	check_eq(f.state, G, "Gridlock ends the Run")
 	_wait(f, Tuning.GRIDLOCK_HOLD + 0.1)
 	check_eq(f.state, R, "the results show after the Gridlock beat")
 	_wait(f, Tuning.RESULTS_TIME + 0.1)
-	check_eq(f.state, A, "the results move on to Attract by themselves")
-	check_eq(log.states, [C, P, G, R, A] as Array[int], "every state, once")
+	check_eq(f.state, I, "a top-10 Run moves on to Initials by itself")
+	_wait(f, Tuning.INITIALS_TIME + 0.1)
+	check_eq(f.state, S, "Initials save by themselves after their time")
+	_wait(f, Tuning.SCORES_TIME + 0.1)
+	check_eq(f.state, A, "the table moves on to Attract by itself")
+	check_eq(log.states, [C, P, G, R, I, S, A] as Array[int], "every state, once")
+
+
+func test_a_run_outside_the_top_ten_skips_initials() -> void:
+	var f := _playing()
+	var log := Log.new(f)
+	f.gridlocked(false)
+	_wait(f, Tuning.GRIDLOCK_HOLD + Tuning.RESULTS_TIME + 0.2)
+	check_eq(f.state, S, "straight to the table")
+	_wait(f, Tuning.SCORES_TIME + 0.1)
+	check_eq(log.states, [G, R, S, A] as Array[int], "no Initials")
+
+
+func test_entering_initials_moves_on_but_only_from_initials() -> void:
+	var f := _playing()
+	f.initials_entered()
+	check_eq(f.state, P, "not in a Run")
+	f.gridlocked(true)
+	_wait(f, Tuning.GRIDLOCK_HOLD + Tuning.RESULTS_TIME + 0.2)
+	check_eq(f.state, I, "Initials")
+	f.initials_entered()
+	check_eq(f.state, S, "on to the table")
+
+
+func test_initials_take_a_only_after_their_lock() -> void:
+	var f := _playing()
+	f.gridlocked(true)
+	_wait(f, Tuning.GRIDLOCK_HOLD + 0.1)
+	_wait(f, Tuning.RESULTS_LOCK + 0.1)
+	check(not f.initials_unlocked(), "not on the results")
+	f.confirm()
+	check_eq(f.state, I, "A skips the results to Initials")
+	check(not f.initials_unlocked(), "a mashed A can't enter a letter yet")
+	_wait(f, Tuning.INITIALS_LOCK + 0.1)
+	check(f.initials_unlocked(), "it can once the lock is over")
+
+
+func test_the_table_skips_on_a_press_only_after_its_lock() -> void:
+	var f := _playing()
+	f.gridlocked(false)
+	_wait(f, Tuning.GRIDLOCK_HOLD + Tuning.RESULTS_TIME + 0.2)
+	f.confirm()
+	check_eq(f.state, S, "a mashed press can't skip it")
+	_wait(f, Tuning.SCORES_LOCK + 0.1)
+	f.confirm()
+	check_eq(f.state, A, "A moves on once the lock is over")
+
+
+func test_attract_cycles_to_the_table_and_back() -> void:
+	var f := Flow.new()
+	var log := Log.new(f)
+	_wait(f, Tuning.ATTRACT_TITLE - 0.1)
+	check_eq(log.tables, [] as Array[bool], "the title first")
+	_wait(f, 0.2)
+	check_eq(log.tables, [true] as Array[bool], "then the table")
+	check(f.attract_table, "showing")
+	_wait(f, Tuning.ATTRACT_TABLE)
+	check_eq(log.tables, [true, false] as Array[bool], "then the title again")
+	_wait(f, Tuning.ATTRACT_TITLE)
+	check_eq(log.tables, [true, false, true] as Array[bool], "every cycle")
+	f.press_start(false)
+	check(not f.attract_table, "leaving Attract drops the table")
+	_wait(f, Tuning.ATTRACT_TITLE + 0.2)
+	check_eq(log.tables.size(), 3, "only Attract cycles")
+
+
+func test_a_fresh_attract_starts_on_the_title() -> void:
+	var f := Flow.new()
+	_wait(f, Tuning.ATTRACT_TITLE + 0.2)
+	f.gridlocked()
+	check_eq(f.state, A, "a fresh Attract")
+	check(not f.attract_table, "on the title")
 
 
 func test_a_keyboard_press_shows_the_keyboard_card() -> void:
@@ -82,7 +161,7 @@ func test_the_results_skip_on_a_press_only_after_their_lock() -> void:
 	check_eq(f.state, R, "a press mashed through the Gridlock can't skip the results")
 	_wait(f, Tuning.RESULTS_LOCK + 0.1)
 	f.confirm()
-	check_eq(f.state, A, "A moves on once the lock is over")
+	check_eq(f.state, S, "A moves on once the lock is over")
 
 
 func test_input_is_locked_from_gridlock_until_the_results_show() -> void:

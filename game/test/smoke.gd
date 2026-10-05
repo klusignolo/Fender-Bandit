@@ -5,7 +5,9 @@ extends SceneTree
 ## card closes by itself, and the Attract autopilot plays the Run until it reaches stage STAGES (or AUTO_FOR seconds
 ## pass), so stages clear and the Tally card runs. On the way it pauses and resumes once with Start. Then the Raccoon
 ## goes idle, and the Run must end in Gridlock within IDLE_FOR seconds: an idle Raccoon gridlocks in about 30s (#34).
-## A Gridlock while the autopilot plays counts too. The results must then give way to Attract by themselves.
+## A Gridlock while the autopilot plays counts too. The results must then give way to Initials (a fresh table always
+## ranks a Run that scored), which must save "RAC" by themselves, then the High-score table, then Attract, which must
+## turn to the table in time. It keeps its table in a scratch file, never the real one.
 ## It exits non-zero at the first engine or script error logged, or if any step doesn't come. Main prints the seed
 ## it booted with; pass it back with --seed to repeat a run exactly.
 
@@ -17,8 +19,9 @@ const PAUSE_FOR := 1.0  # ...for this long
 const AUTO_FOR := 300.0  # simulated seconds
 const IDLE_FOR := 45.0  # simulated seconds
 const STEP_LIMIT := 5.0  # simulated seconds each other step may take, beyond its own time
+const SCORES_PATH := "user://smoke_scores.cfg"
 
-enum Step { ATTRACT, CONTROLS, RUN, PAUSED, IDLE, OVER }
+enum Step { ATTRACT, CONTROLS, RUN, PAUSED, IDLE, OVER, INITIALS, TABLE, BACK }
 
 var _errors := Runner.ErrorCounter.new()
 var _main: Node
@@ -29,11 +32,15 @@ var _gridlock := ""  # what the Gridlock was, once it came
 var _paused_once := false
 var _start_ms := 0
 var _done := false
+var _scores: Node  # the Scores autoload
 
 
 func _initialize() -> void:
 	OS.add_logger(_errors)
 	_start_ms = Time.get_ticks_msec()
+	DirAccess.remove_absolute(SCORES_PATH)
+	_scores = root.get_node("Scores")
+	_scores.use(SCORES_PATH)
 	_main = load("res://main/main.tscn").instantiate()
 	_main.autopilot = true  # every Run's Raccoon gets the autopilot: Main isn't ready until the first frame
 	root.add_child(_main)
@@ -85,10 +92,30 @@ func _physics_process(delta: float) -> bool:
 			elif since > IDLE_FOR:
 				_finish("FAIL: no Gridlock within %.0fs of the Raccoon going idle" % IDLE_FOR)
 		Step.OVER:
-			if flow.state == Flow.State.ATTRACT:
-				_finish("%s; back in Attract %.1fs later" % [_gridlock, since])
+			if flow.state == Flow.State.INITIALS:
+				print("Smoke: %s; Initials %.1fs later" % [_gridlock, since])
+				_go(Step.INITIALS)
+			elif flow.state in [Flow.State.SCORES, Flow.State.ATTRACT]:
+				_finish("FAIL: %s, but the Run that scored skipped Initials" % _gridlock)
 			elif since > Tuning.GRIDLOCK_HOLD + Tuning.RESULTS_TIME + STEP_LIMIT:
-				_finish("FAIL: %s, but the results never gave way to Attract" % _gridlock)
+				_finish("FAIL: %s, but the results never gave way to Initials" % _gridlock)
+		Step.INITIALS:
+			if flow.state == Flow.State.SCORES:
+				var top: Dictionary = _scores.table.entries[0] if not _scores.table.entries.is_empty() else {}
+				_expect(top.get("initials") == "RAC" and top.get("score") == _main.run.score, "the Run saved as RAC at the top of the table")
+				_go(Step.TABLE)
+			elif since > Tuning.INITIALS_TIME + STEP_LIMIT:
+				_finish("FAIL: the initials never saved by themselves")
+		Step.TABLE:
+			if flow.state == Flow.State.ATTRACT:
+				_go(Step.BACK)
+			elif since > Tuning.SCORES_TIME + STEP_LIMIT:
+				_finish("FAIL: the High-score table never gave way to Attract")
+		Step.BACK:
+			if flow.attract_table and _main._ui.screen is ScoresScreen:
+				_finish("%s; the table showed and Attract turned to it %.1fs later" % [_gridlock, since])
+			elif since > Tuning.ATTRACT_TITLE + STEP_LIMIT:
+				_finish("FAIL: Attract never turned to the High-score table")
 	return false
 
 
@@ -120,6 +147,7 @@ func _finish(what: String) -> void:
 	if _done:
 		return
 	_done = true
+	DirAccess.remove_absolute(SCORES_PATH)
 	var ok := not what.begins_with("FAIL") and _errors.count == 0
 	if _errors.count > 0:
 		printerr("FAIL: %d error(s) logged; the last: %s" % [_errors.count, _errors.last])

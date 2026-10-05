@@ -1,10 +1,11 @@
 extends Node
-## Main (#35): the one persistent scene. Flow runs the arcade loop (Attract → Controls → Run → Gridlock → Results →
-## Attract, with Pause over the Run); Main builds what each state shows and turns presses into Flow's inputs.
+## Main (#35, #36): the one persistent scene. Flow runs the arcade loop (Attract → Controls → Run → Gridlock → Results
+## → Initials → Scores → Attract, with Pause over the Run); Main builds what each state shows and turns presses into
+## Flow's inputs.
 ## A Run steps through its Stages (#29): a fresh World for each stage, the Tally card between them over the frozen
 ## board. Attract is a World on stage 1 that the autopilot plays (#34), with no HUD and no score; the death beat
-## (#43) and the High-score table (#36) come later. Attract is muted (#19 story 80): Audio (#37) plays no SFX while
-## flow.state is ATTRACT.
+## (#43) comes later. Attract takes turns between its title and the High-score table, which the Scores autoload
+## keeps. Attract is muted (#19 story 80): Audio (#37) plays no SFX while flow.state is ATTRACT.
 ## Agent flags, after `--` on the command line (#13 §10, #19 story 87). Any but --seed skips Attract and the card:
 ##   --seed=N        seed the simulation, so a run repeats exactly (default: random)
 ##   --stage=N       start the Run at stage N (default 1)
@@ -34,6 +35,7 @@ var _clock := 0.0  # seconds simulated since boot, across stages and Runs, not c
 var _world: World
 var _tally: CanvasLayer  # the Tally card's layer, while it shows
 var _ui := UI.new()
+var _entry: InitialsEntry  # the initials being entered, until the table shows
 var _seed := 0  # the next Run's or Attract's; each takes the next one, so a seeded session repeats exactly
 var _run_seed := 0  # this Run's
 
@@ -67,6 +69,7 @@ func _ready() -> void:
 	get_window().focus_entered.connect(flow.focus_gained)
 	flow.changed.connect(_on_flow_changed)
 	flow.paused_changed.connect(_on_paused_changed)
+	flow.attract_table_changed.connect(_on_attract_table_changed)
 	if _direct:
 		flow.play_now()
 	else:
@@ -90,9 +93,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				if OS.has_feature("web"):  # only from an input handler: the browser wants a user gesture
 					DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 				flow.press_start(not (event is InputEventKey))
-		Flow.State.CONTROLS, Flow.State.RESULTS:
+		Flow.State.CONTROLS, Flow.State.RESULTS, Flow.State.SCORES:
 			if _is_confirm(event):
 				flow.confirm()
+		Flow.State.INITIALS:
+			if _is_confirm(event) and flow.initials_unlocked():
+				(_ui.screen as InitialsScreen).confirm()
 		Flow.State.PLAY:
 			if flow.paused:
 				_pause_input(event)
@@ -150,6 +156,30 @@ func _on_flow_changed(state: Flow.State) -> void:
 			run_over.emit(run)
 		Flow.State.RESULTS:
 			_ui.show_screen(ResultsCard.new(run))
+		Flow.State.INITIALS:
+			_entry = InitialsEntry.new()
+			var screen := InitialsScreen.new(_entry, run.score, Scores.table.rank_of(run.score))
+			screen.entered.connect(flow.initials_entered)
+			_ui.show_screen(screen)
+		Flow.State.SCORES:
+			_ui.show_screen(ScoresScreen.new(Scores.table.entries, _record()))
+
+
+## Put the Run in the table under the initials entered, or the default if nobody finished them; returns its rank.
+## A Run that skipped Initials has no entry, and isn't recorded.
+func _record() -> int:
+	if _entry == null:
+		return -1
+	var initials := _entry.text() if _entry.done else InitialsEntry.DEFAULT
+	_entry = null
+	var rank := Scores.table.add(initials, run.score)
+	print("High score: %s %d, rank %d" % [initials, run.score, rank + 1])
+	return rank
+
+
+## Attract turns to the High-score table, or back to its title.
+func _on_attract_table_changed(showing: bool) -> void:
+	_ui.show_screen(ScoresScreen.new(Scores.table.entries, -1, true) if showing else TitleScreen.new())
 
 
 func _on_paused_changed(paused: bool) -> void:
@@ -239,7 +269,7 @@ func _on_tally_done(card: TallyCard) -> void:
 # The Jam is full. A stale World's Gridlock (deferred past a change of board) is ignored.
 func _on_gridlocked(world: World) -> void:
 	if world == _world:
-		flow.gridlocked()
+		flow.gridlocked(Scores.table.ranks(run.score))
 
 
 func _physics_process(delta: float) -> void:

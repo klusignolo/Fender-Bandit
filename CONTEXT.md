@@ -64,6 +64,10 @@ _Avoid_: AI, bot, demo player
 The local list of the top ten initials and scores.
 _Avoid_: Leaderboard (the online kind is out of scope), scoreboard
 
+**Initials**:
+The three characters (A–Z, space or period) a top-ten Run is saved under in the High-score table. "RAC" if nobody enters them in time.
+_Avoid_: Name, tag, handle
+
 **Rush hour**:
 The escalation from stage to stage, with no ceiling.
 _Avoid_: Difficulty, wave, level

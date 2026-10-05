@@ -1,0 +1,75 @@
+class_name ScoreTable
+extends RefCounted
+## The High-score table (#36, #19 stories 17–18): the top SIZE initials and scores, best first, with the Music
+## On/Off setting (story 78) beside them, kept in a ConfigFile at `path`. A Run ranks if it scored and beats
+## tenth place; a tie goes below the score already there. The Scores autoload holds the game's one.
+
+const SIZE := 10
+
+var entries: Array[Dictionary] = []  # {initials: String, score: int}, best first
+var music := true
+var path := ""
+
+
+## The table saved at `path`, or an empty one. A file that won't read gives an empty table, with music on.
+func _init(p: String) -> void:
+	path = p
+	var cfg := ConfigFile.new()
+	if not FileAccess.file_exists(path) or cfg.load(path) != OK:
+		return
+	var m: Variant = cfg.get_value("settings", "music", true)
+	music = m if m is bool else true
+	var table: Variant = cfg.get_value("scores", "table", [])
+	if not table is Array:
+		return
+	for e: Variant in table:  # placed one by one, not sorted: sort_custom isn't stable, and a tie keeps its order
+		if e is Dictionary and e.get("initials") is String and e.get("score") is int and e.score > 0:
+			_place((e.initials as String).substr(0, InitialsEntry.SLOTS), e.score)
+
+
+## Where `score` would go in the table, or -1 if it doesn't make the top SIZE.
+func rank_of(score: int) -> int:
+	if score <= 0:
+		return -1
+	for i in entries.size():
+		if score > entries[i].score:
+			return i
+	return entries.size() if entries.size() < SIZE else -1
+
+
+func ranks(score: int) -> bool:
+	return rank_of(score) >= 0
+
+
+## Puts `initials` and `score` in the table and saves it; returns its rank, or -1 if it didn't make it.
+func add(initials: String, score: int) -> int:
+	var r := _place(initials, score)
+	if r >= 0:
+		save()
+	return r
+
+
+## Puts the entry in its place, below any tie, and drops what falls off the end; returns its rank, or -1.
+func _place(initials: String, score: int) -> int:
+	var r := rank_of(score)
+	if r >= 0:
+		entries.insert(r, {"initials": initials, "score": score})
+		entries.resize(mini(entries.size(), SIZE))
+	return r
+
+
+func set_music(on: bool) -> void:
+	music = on
+	save()
+
+
+## Best effort: a failed write is logged and the table plays on from memory.
+func save() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("scores", "table", entries)
+	cfg.set_value("settings", "music", music)
+	var err := cfg.save(path)
+	if err != OK:
+		push_warning("Couldn't save the High-score table to %s: %s" % [path, error_string(err)])
+	elif OS.has_feature("web"):
+		JavaScriptBridge.force_fs_sync()  # user:// is IndexedDB: write it through now, before the tab can close

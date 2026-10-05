@@ -19,5 +19,5 @@ func _draw() -> void:
 	frame(box)
 	text("FENDER BANDIT", Vector2(box.get_center().x, box.position.y + 110), 84)
 	text("Stop. Go. Oops.", Vector2(box.get_center().x, box.position.y + 160), 30)
-	if fmod(_clock, BLINK) < BLINK * 2.0 / 3.0:
+	if blink(_clock, BLINK):
 		text("PRESS ANY BUTTON", Vector2(view.x / 2.0, view.y * 0.8), 40)
