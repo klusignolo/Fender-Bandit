@@ -6,3 +6,6 @@
 
 # Export output
 game/build/
+
+# Placeholder music WAVs: rebuilt by game/tools/make_music.sh
+audio_src/*.wav

@@ -76,14 +76,14 @@ Import the OGG with `loop` on and `loop_offset` set; leave `bpm`/`beat_count` at
   7. Everything else
 
   The UI blips are "everything else": a menu never shares the board with much. A sound of the same priority never cuts another, except the player's own actions, which cut the oldest of theirs, so the newest Switch is always heard.
-- **Ducking:** the music dips under each Crash and under the stinger, but never under Honks (they're constant). Done with player volume, not bus effects.
-- **Player control:** a **Music: On / Off** row in the pause menu (between Resume and Quit to title), toggled with Switch and saved best-effort in `user://` next to the High-score table. SFX are always on, because Honks are how the player reads Patience.
+- **Ducking:** the music dips under each Crash and under the stinger, and sits at `DUCK_PAUSE` while paused, but never dips under Honks (they're constant). The deepest duck wins; they don't add. Done with player volume, not bus effects. `MusicMix` (`game/audio/music_mix.gd`) works out the level and the tempo glide; Audio applies them to its music player each frame.
+- **Player control:** a **Music: On / Off** row in the pause menu (between Resume and Quit to title), toggled with Switch and saved best-effort in `user://` next to the High-score table. Off, the music plays on silent, so turning it back on picks it up where it is. SFX are always on, because Honks are how the player reads Patience.
 
 ## Music cues
 
 | Screen / moment | Music |
 |---|---|
-| Attract, title, controls card | **Theme.** During Attract the autopilot's SFX are muted. On the web it can only start on the first press (the controls card). |
+| Attract, title, controls card | **Theme.** During Attract the autopilot's SFX are muted. On the web it can only start on the first press (the controls card). Audio holds music back until that press (`Audio.unlock()`), so the controls card starts it from the top. |
 | Stage 1 start → every Stage → tally cards | **Gameplay groove**, continuous. It doesn't restart per Stage. On the tally card it glides back to 1.0, since the Jam resets. |
 | Tally card opens | **Stage-clear stinger** over the groove, which is ducked under it |
 | Pause | Groove ducked |
@@ -98,9 +98,13 @@ Every sound starts as *not made*. Fill in **File** and **Recipe** as each one is
 
 | Sound | Use | Source | File | Recipe | Loop (loop_offset / loop end, in seconds) |
 |---|---|---|---|---|---|
-| `theme` | Attract, title, controls, results, initials, High-score table | Lyria | | Template, about 100 BPM, laid-back and sly, muted-trumpet lead | |
-| `groove` | Every Stage and tally card; glides with the jam-level | Lyria | | Template, about 112 BPM, driving and busy, brass-section lead | |
+| `theme` | Attract, title, controls, results, initials, High-score table | Lyria (placeholder: Procedural, `_theme` in `game/tools/make_music.gd`) | `audio/music/theme.ogg` | Template, about 100 BPM, laid-back and sly, muted-trumpet lead. Placeholder: 100 BPM, a one-bar bass pickup, then 8 bars of half-time walking bass, snaps, brushed hats, a vibes lead and brass answers | 2.4 / 21.6 |
+| `groove` | Every Stage and tally card; glides with the jam-level | Lyria (placeholder: Procedural, `_groove` in `game/tools/make_music.gd`) | `audio/music/groove.ogg` | Template, about 112 BPM, driving and busy, brass-section lead. Placeholder: 112 BPM, a one-bar drum-fill intro, then 8 bars of funk drums, walking bass, brass stabs and a muted-square lead | 2.142857 / 19.285714 |
 | `stinger` | Stage cleared (tally card opens) | Lyria (placeholder: Procedural, `_ta_da`) | `audio/sfx/stinger.wav`, until #38's Lyria cut | A short brass "ta-da!" hit, about 2s, no loop (trim the longest clean hit) | no loop |
+
+**The placeholder tracks** (#38) stand in for the Lyria cuts, so the music is wired and tested end to end. They're built the shape a Lyria cut will be: a one-bar intro, then an 8-bar loop the file ends on. `game/tools/make_music.sh [theme] [groove]` rebuilds them (both by default): `make_music.gd` (seeded, with `make_sfx.gd`'s building blocks) writes WAVs to `audio_src/` (gitignored), and ffmpeg encodes each to `game/audio/music/<name>.ogg`. Their imports have `loop` on and `loop_offset` at the intro's end. Every placeholder tempo has a whole number of samples per beat, so the loop is exactly 32 beats; the OGGs decode to exactly the loop end. All of them are in D minor, in the progression Dm Dm Gm Gm Dm Dm A7 A7, and anything ringing past the loop end is wrapped into the loop's start, so the seam is as it sounds when looping.
+
+**Swapping in a Lyria track:** cut and encode it to `game/audio/music/<name>.ogg` as in **Lyria loops**, set `loop_offset` in its `.ogg.import`, and fill its row. From then on, name only the other track to `make_music.sh`, or it writes the placeholder over the cut.
 
 ### Raccoon
 

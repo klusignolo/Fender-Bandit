@@ -1,5 +1,5 @@
 extends Node
-## The Audio autoload (#37, docs/audio.md "Playback rules"): a music player (#38 gives it the Theme and groove), a
+## The Audio autoload (#37, docs/audio.md "Playback rules"): a music player for the Theme and groove (#38), a
 ## stinger player, a Tow-scrape loop and a pool of SFX_VOICES SFX players booked by VoicePool. Main has it watch each
 ## stage's World: a BoardCues turns the board's signals into cues. An Attract board is muted (#19 story 80), so
 ## Attract has no SFX; the UI's own sounds still play. Ducking is done with player volume, never bus effects, and
@@ -7,6 +7,7 @@ extends Node
 ## nothing sounds until the first press, which is also the press that leaves Attract.
 
 signal played(sound: StringName)  # a sound started: the smoke test listens
+signal music_started(track: MusicMix.Track)  # the Theme or groove started from the top: the smoke test listens
 
 var _pool := VoicePool.new(Tuning.SFX_VOICES)
 var _voices: Array[AudioStreamPlayer] = []
@@ -14,11 +15,14 @@ var _streams: Dictionary[StringName, AudioStream] = {}
 var _music := AudioStreamPlayer.new()
 var _stinger := AudioStreamPlayer.new()
 var _scrape := AudioStreamPlayer.new()
+var _mix := MusicMix.new()
+var _tracks: Dictionary[MusicMix.Track, AudioStream] = {}
 var _cues: BoardCues  # the watched board's
 var _board_muted := false
 var _clock := 0.0  # seconds since boot, Pause included: VoicePool's time
 var _duck_db := 0.0  # how far the music is ducked, until _duck_until
 var _duck_until := 0.0
+var _unlocked := not OS.has_feature("web")  # the browser plays nothing until the first press: music waits for it
 
 
 func _ready() -> void:
@@ -29,6 +33,9 @@ func _ready() -> void:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_voices.append(p)
+	for t: MusicMix.Track in MusicMix.FILES:
+		_tracks[t] = load(MusicMix.path(t))
+	_music.volume_db = MusicMix.SILENT
 	add_child(_music)
 	_stinger.stream = _streams[&"stinger"]
 	_stinger.volume_db = Sfx.db(&"stinger")
@@ -43,12 +50,40 @@ func _ready() -> void:
 func silence() -> void:
 	for p: AudioStreamPlayer in _voices + [_music, _stinger, _scrape]:
 		p.stop()
+	_mix.stop()
 
 
 func _process(delta: float) -> void:
 	_clock += delta
 	_scrape.stream_paused = get_tree().paused
-	_music.volume_db = _duck_db if _clock < _duck_until else 0.0
+	_mix.step(delta)
+	_music.pitch_scale = _mix.pitch
+	_music.volume_db = _mix.volume_db(_duck_db if _clock < _duck_until else 0.0, get_tree().paused)
+
+
+## The first press: in the browser, audio can play from now on. Music asked for before it doesn't start until asked again.
+func unlock() -> void:
+	_unlocked = true
+
+
+## Music On/Off (Scores keeps the setting). Off, the music plays on silent, so On picks it up where it is.
+func set_music_on(on: bool) -> void:
+	_mix.on = on
+
+
+## Play the Theme or the groove, or stop the music (NONE). The track already playing plays on, from where it is.
+## `under_attract` puts the Theme at Attract's level.
+func music(track: MusicMix.Track, under_attract := false) -> void:
+	if not _unlocked:
+		return
+	if not _mix.play(track, under_attract):
+		if track == MusicMix.Track.NONE:
+			_music.stop()
+		return
+	_music.stream = _tracks[track]
+	_music.pitch_scale = _mix.pitch
+	_music.play()
+	music_started.emit(track)
 
 
 ## Play SFX `sound` (a name from Sfx.SOUNDS) at `pitch`, if VoicePool gives it a voice. Returns whether it plays.
@@ -82,6 +117,7 @@ func watch(world: World, muted: bool) -> void:
 	_cues = BoardCues.new(world.traffic, world.run, world.raccoon)
 	_cues.cue.connect(_on_cue)
 	_cues.scrape.connect(_on_scrape)
+	_cues.jam.connect(_on_jam)
 	if world.reveals():
 		_on_cue(&"reveal", 1.0)
 
@@ -89,7 +125,7 @@ func watch(world: World, muted: bool) -> void:
 ## Gridlock: the record scratch cuts the music dead under a chorus of horns, then the glass shatters.
 func gridlock() -> void:
 	_scrape.stop()
-	_music.stop()
+	music(MusicMix.Track.NONE)
 	play(&"gridlock_scratch")
 	play(&"gridlock_horns")
 	get_tree().create_timer(Tuning.SHATTER_DELAY, true, false, true).timeout.connect(play.bind(&"gridlock_shatter"))
@@ -103,6 +139,11 @@ func _duck(db: float, seconds: float) -> void:
 func _on_cue(sound: StringName, pitch: float) -> void:
 	if not _board_muted:
 		play(sound, pitch)
+
+
+func _on_jam(level: Jam.Level) -> void:
+	if not _board_muted:
+		_mix.set_level(level)
 
 
 func _on_scrape(on: bool) -> void:

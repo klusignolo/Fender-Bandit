@@ -6,6 +6,7 @@ extends RefCounted
 
 signal cue(sound: StringName, pitch: float)
 signal scrape(on: bool)  # the Tow scrape loops while Wreckage is towed
+signal jam(level: Jam.Level)  # the Jam-level changed, or the stage cleared (Clear): the groove's tempo follows it (#38)
 
 const GOLDEN := 0.618034
 const CRASHES: Array[StringName] = [&"crash_1", &"crash_2", &"crash_3"]
@@ -26,7 +27,7 @@ func _init(traffic: Traffic, run: Run, raccoon: Raccoon = null) -> void:
 	traffic.jam_level_changed.connect(_on_jam_level_changed)
 	traffic.tow_grabbed.connect(_on_tow_grabbed)
 	traffic.towed.connect(_on_towed)
-	traffic.stage_cleared.connect(_cue.bind(&"stinger"))
+	traffic.stage_cleared.connect(_on_stage_cleared)
 	run.combo_stepped.connect(_cue.bind(&"combo_up").unbind(1))
 	run.combo_broken.connect(_cue.bind(&"combo_break").unbind(1))
 	if raccoon != null:
@@ -66,6 +67,13 @@ func _on_jam_level_changed(level: Jam.Level) -> void:
 		elif level == Jam.Level.HEAVY:
 			_cue(&"jam_heavy")
 	_level = level
+	jam.emit(level)
+
+
+## The stinger, and the groove glides back to Clear: the next stage starts with an empty Jam.
+func _on_stage_cleared() -> void:
+	_cue(&"stinger")
+	jam.emit(Jam.Level.CLEAR)
 
 
 func _on_tow_grabbed(_car: Car) -> void:

@@ -6,6 +6,7 @@ extends Node
 ## board. Attract is a World on stage 1 that the autopilot plays (#34), with no HUD and no score; the death beat
 ## (#43) comes later. Attract takes turns between its title and the High-score table, which the Scores autoload
 ## keeps. Attract is muted (#19 story 80): Main has Audio (#37) watch each board, and an Attract board plays no SFX.
+## Main cues the music (#38): the Theme on Attract and the screens after a Run, the groove through the Run.
 ## Agent flags, after `--` on the command line (#13 §10, #19 story 87). Any but --seed skips Attract and the card:
 ##   --seed=N        seed the simulation, so a run repeats exactly (default: random)
 ##   --stage=N       start the Run at stage N (default 1)
@@ -64,6 +65,7 @@ func _ready() -> void:
 			_switches.append([float(parts[0]), PackedInt32Array(Array(parts[1].split(",")).map(func(s: String) -> int: return int(s)))])
 		_direct = _direct or RUN_FLAGS.any(func(f: String) -> bool: return a.begins_with(f))
 	print("Fender Bandit booted, window mode %d, seed %d" % [DisplayServer.window_get_mode(), _seed])
+	Audio.set_music_on(Scores.table.music)
 	add_child(_ui)
 	get_window().focus_exited.connect(flow.focus_lost)  # the web build's blur and a desktop window's
 	get_window().focus_entered.connect(flow.focus_gained)
@@ -92,6 +94,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if _is_button(event):
 				if OS.has_feature("web"):  # only from an input handler: the browser wants a user gesture
 					DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+				Audio.unlock()
 				flow.press_start(not (event is InputEventKey))
 				Audio.play(&"ui_confirm")  # in the browser, the first sound: this press unlocks audio
 		Flow.State.CONTROLS, Flow.State.RESULTS, Flow.State.SCORES:
@@ -137,6 +140,10 @@ func _pause_input(event: InputEvent) -> void:
 		Audio.play(&"ui_confirm")
 		if menu.row == PauseMenu.Row.QUIT:
 			flow.quit_to_title()
+		elif menu.row == PauseMenu.Row.MUSIC:
+			Scores.table.set_music(not Scores.table.music)
+			Audio.set_music_on(Scores.table.music)
+			menu.set_music(Scores.table.music)
 		else:
 			flow.pause_or_resume()
 	elif event.is_action_pressed(&"pause"):
@@ -151,12 +158,15 @@ func _on_flow_changed(state: Flow.State) -> void:
 			_clear_board()
 			_start_attract()
 			_ui.show_screen(TitleScreen.new())
+			Audio.music(MusicMix.Track.THEME, true)
 		Flow.State.CONTROLS:
+			Audio.music(MusicMix.Track.THEME, true)  # over Attract; in the browser, the Theme's first chance to start
 			_ui.show_screen(ControlsCard.new(flow.pad))  # over Attract, which plays on behind it
 		Flow.State.PLAY:
 			_clear_board()
 			_ui.clear()
 			_start_run()
+			Audio.music(MusicMix.Track.GROOVE)
 		Flow.State.GRIDLOCK:
 			_world.process_mode = Node.PROCESS_MODE_DISABLED  # the board freezes, and the Raccoon with it
 			_ui.show_screen(GridlockBanner.new())
@@ -164,6 +174,7 @@ func _on_flow_changed(state: Flow.State) -> void:
 			print("Gridlock at stage %d, score %d" % [run.stage, run.score])
 			run_over.emit(run)
 		Flow.State.RESULTS:
+			Audio.music(MusicMix.Track.THEME)
 			_ui.show_screen(ResultsCard.new(run))
 		Flow.State.INITIALS:
 			_entry = InitialsEntry.new()
@@ -195,7 +206,7 @@ func _on_attract_table_changed(showing: bool) -> void:
 func _on_paused_changed(paused: bool) -> void:
 	get_tree().paused = paused
 	if paused:
-		_ui.show_screen(PauseMenu.new())
+		_ui.show_screen(PauseMenu.new(Scores.table.music))
 	else:
 		_ui.clear()
 

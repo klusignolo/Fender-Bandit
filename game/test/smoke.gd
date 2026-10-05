@@ -9,6 +9,8 @@ extends SceneTree
 ## ranks a Run that scored), which must save "RAC" by themselves, then the High-score table, then Attract, which must
 ## turn to the table in time. It keeps its table in a scratch file, never the real one.
 ## By ear (#37): Attract and the controls card over it play no SFX but the UI's, and the Run plays HEARD.
+## The music (#38) starts as MUSIC says: the Theme on Attract, the groove for the Run, the Theme again at the results,
+## playing on through the table into the next Attract.
 ## It exits non-zero at the first engine or script error logged, or if any step doesn't come. Main prints the seed
 ## it booted with; pass it back with --seed to repeat a run exactly.
 
@@ -21,6 +23,8 @@ const AUTO_FOR := 300.0  # simulated seconds
 const IDLE_FOR := 45.0  # simulated seconds
 const STEP_LIMIT := 5.0  # simulated seconds each other step may take, beyond its own time
 const HEARD: Array[StringName] = [&"switch_green", &"honk_1", &"stinger", &"gridlock_scratch", &"gridlock_shatter"]
+const MUSIC := [[Flow.State.ATTRACT, MusicMix.Track.THEME], [Flow.State.PLAY, MusicMix.Track.GROOVE],
+		[Flow.State.RESULTS, MusicMix.Track.THEME]]  # [the state, the track started there], in order
 const SCORES_PATH := "user://smoke_scores.cfg"
 
 enum Step { ATTRACT, CONTROLS, RUN, PAUSED, IDLE, OVER, INITIALS, TABLE, BACK }
@@ -37,6 +41,7 @@ var _done := false
 var _scores: Node  # the Scores autoload
 var _heard: Dictionary[StringName, bool] = {}  # sounds played outside Attract
 var _attract_sfx: Array[StringName] = []  # SFX played in Attract or over it, but the UI's
+var _music: Array = []  # [the state, the track] for each start of the music
 
 
 func _initialize() -> void:
@@ -50,6 +55,7 @@ func _initialize() -> void:
 	root.add_child(_main)
 	_main.run_over.connect(_on_run_over)
 	root.get_node("Audio").played.connect(_on_played)
+	root.get_node("Audio").music_started.connect(func(t: MusicMix.Track) -> void: _music.append([_main.flow.state, t]))
 
 
 func _physics_process(delta: float) -> bool:
@@ -121,6 +127,7 @@ func _physics_process(delta: float) -> bool:
 				_expect(_attract_sfx.is_empty(), "Attract plays no SFX: it played %s" % [_attract_sfx])
 				for sound in HEARD:
 					_expect(_heard.has(sound), "the Run played %s" % sound)
+				_expect(_music == MUSIC, "the music started as %s: it went %s" % [MUSIC, _music])
 				_finish("%s; the table showed and Attract turned to it %.1fs later" % [_gridlock, since])
 			elif since > Tuning.ATTRACT_TITLE + STEP_LIMIT:
 				_finish("FAIL: Attract never turned to the High-score table")
