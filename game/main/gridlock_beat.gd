@@ -249,7 +249,7 @@ func _draw_banner() -> void:
 	_banner.draw_rect(band, SIGNAL_RED)
 	for y in [-BANNER_H / 2.0 + 12.0, BANNER_H / 2.0 - 15.0]:
 		_banner.draw_rect(Rect2(-w / 2.0, y, w, 3.0), Color.WHITE)
-	var font := ThemeDB.fallback_font
+	var font := Sign.FONT
 	var word := "GRIDLOCK!"
 	var at := Vector2(-font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, BANNER_TEXT).x / 2.0, BANNER_TEXT * 0.36)
 	_banner.draw_string_outline(font, at, word, HORIZONTAL_ALIGNMENT_LEFT, -1, BANNER_TEXT, 10, Card.INK)

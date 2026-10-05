@@ -97,7 +97,7 @@ func _draw() -> void:
 	var size := tex.get_size() * WIDE * per_px * (0.6 + 0.4 * pop) / tex.get_size().x
 	var centre := Vector2(0.0, -RISE * k * per_px)
 	draw_texture_rect(tex, Rect2(centre - size / 2.0, size), false, Color(1, 1, 1, alpha))
-	var font := ThemeDB.fallback_font
+	var font := Sign.FONT
 	var px := SIZE * per_px * (0.6 + 0.4 * pop)
 	var w := font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(px)).x
 	if w > size.x * FILL:

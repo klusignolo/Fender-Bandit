@@ -71,7 +71,7 @@ func _chevrons(at: Vector2, d: Vector2) -> void:
 
 
 func _tag(text: String, centre: Vector2, col: Color) -> void:
-	var font := ThemeDB.fallback_font
+	var font := Sign.FONT
 	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, TAG_SIZE)
 	var at := centre + Vector2(-size.x / 2.0, TAG_SIZE * 0.35)
 	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, TAG_SIZE, 6, INK)

@@ -253,7 +253,7 @@ func _draw_patience() -> void:
 
 # The Honk burst with its word in ink, `size` world px tall, its bottom left at `at`.
 func _honk(at: Vector2, size: int, alpha: float) -> void:
-	var font := ThemeDB.fallback_font
+	var font := Sign.FONT
 	var text_w := font.get_string_size(_honk_text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	var burst := Vector2(text_w * 1.4 + size, size * 2.2)  # the spikes eat into the sides
 	var centre := at + Vector2(text_w / 2.0, -size * 0.35)

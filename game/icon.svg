@@ -1,5 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <!-- Placeholder for the "Raccoon Crossing" diamond (#11). The real icon lands in the UI art pass. -->
-  <rect x="22" y="22" width="84" height="84" rx="10" transform="rotate(45 64 64)" fill="#ffc627" stroke="#1d2b53" stroke-width="7"/>
-  <circle cx="64" cy="64" r="16" fill="#1d2b53"/>
+  <!-- "Raccoon Crossing" (#11, #42): an orange construction diamond, navy border, a navy raccoon walking right:
+       hunched back, fat ringed tail, round ears, white brow and muzzle round its mask. -->
+  <rect x="22" y="22" width="84" height="84" rx="10" transform="rotate(45 64 64)" fill="#FF7A1A" stroke="#1B2340" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M42,74 C32,72 25,66 22,56" fill="none" stroke="#1B2340" stroke-width="15" stroke-linecap="round"/>
+  <path d="M42,74 C32,72 25,66 22,56" fill="none" stroke="#FF7A1A" stroke-width="15" stroke-dasharray="4.5 6" stroke-dashoffset="-7"/>
+  <g fill="#1B2340">
+    <path d="M36,80 C36,63 49,53 63,54 C75,55 83,61 85,70 L85,81 C70,85 50,85 36,80 Z"/>
+    <rect x="39" y="76" width="8" height="16" rx="3.5"/>
+    <rect x="51" y="78" width="8" height="14" rx="3.5"/>
+    <rect x="64" y="78" width="8" height="14" rx="3.5"/>
+    <rect x="76" y="76" width="8" height="16" rx="3.5"/>
+    <circle cx="89" cy="67" r="12"/>
+    <path d="M92,61 L106,70 Q104,74 98,75 L90,75 Z"/>
+    <circle cx="82" cy="56" r="5"/>
+    <circle cx="94" cy="55" r="5"/>
+  </g>
+  <path d="M82,61 Q91,56 99,63" fill="none" stroke="#EEF1F6" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M93,71 Q99,69 104,70.5 Q101,74 95,74 Z" fill="#EEF1F6"/>
+  <circle cx="92" cy="65.5" r="2.8" fill="#EEF1F6"/>
+  <circle cx="92.6" cy="65.5" r="1.4" fill="#1B2340"/>
 </svg>

@@ -163,7 +163,7 @@ func _draw() -> void:
 		var filled := 1.0 - _dash_cooldown / Tuning.DASH_COOLDOWN
 		draw_arc(Vector2.ZERO, r + 7.0, -PI / 2.0, -PI / 2.0 + TAU * filled, 32, COOLDOWN, 3.0)
 	if traffic.raccoon_stun > 0.0:
-		var font := ThemeDB.fallback_font
+		var font := Sign.FONT
 		var w := font.get_string_size("BONK!", HORIZONTAL_ALIGNMENT_LEFT, -1, BONK_SIZE).x
 		var at := Vector2(-w / 2.0, -Art.RACCOON_FEET.y * Art.SCALE - 6.0)  # over its head
 		draw_string_outline(font, at, "BONK!", HORIZONTAL_ALIGNMENT_LEFT, -1, BONK_SIZE, 5, Color.BLACK)

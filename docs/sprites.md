@@ -51,8 +51,8 @@ Hex values are first guesses; tune them in the proof, keeping the reservation ru
 
 ### Type and UI
 
-- **Font: Bungee** (OFL), for all UI and the Crash burst words.
-- **Panels:** blue road signs: rounded corners, white inset border, white text. One sign-panel SVG as a 9-patch (`NinePatchRect`) covers most screens.
+- **Font: Bungee** (OFL), for every word in the game: UI, Crash burst words, Honks, BONK!, tags. It's all capitals, so lower-case strings show as capitals.
+- **Panels:** blue road signs: rounded corners, ink edge, white inset rule, white text, a shadow down-right. Drawn in code as StyleBoxFlats (`Sign.panel`), not a 9-patch SVG: a 9-patch texture blurs when the window stretches the 1280×720 base, and a StyleBoxFlat stays crisp (#42).
 - **Raccoon moments** (the "NEW: …" badge, the name/logo lockup) use orange-and-navy construction stripes.
 - **GRIDLOCK banner** is the one full-red UI element.
 - **HUD:** a slim sign strip along the top: score, Combo, the Jam meter (filled in Jam-level colours) and stage/Quota.
@@ -165,15 +165,15 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 
 | ID | Shows | Notes |
 |---|---|---|
-| `logo` | Title logo over Attract: **FENDER BANDIT**, with the tagline **"Stop. Go. Oops."** in small Bungee underneath | Construction-stripe lockup in Bungee. One flourish, such as a raccoon mask or a crumpled bumper worked into a letter. Name and tagline from #11 |
-| `app_icon` | Window, web favicon and itch thumbnail | A "Raccoon Crossing" sign: an orange construction diamond with a navy raccoon silhouette and navy border. Must read at 16 px (#11) |
-| `ui_sign_panel` | Blue sign 9-patch | Most screens |
-| `ui_button_*` | Cabinet button glyphs for the controls card | A Switch, X Dash, Y Tow (#10, #17) |
-| `ui_new_badge` | "NEW: …" on the tally card | Construction stripes |
+| `logo` | Title logo over Attract: **FENDER BANDIT**, with the tagline **"Stop. Go. Oops."** in small Bungee underneath | Drawn in code (#42, `TitleScreen`): FENDER over BANDIT in 92 px white Bungee on a navy plate framed in construction stripes, the tagline on a small blue sign hung underneath. The flourish: the Raccoon (`raccoon_front`) peeking over the board's top edge, its paws gripping it. Name and tagline from #11 |
+| `app_icon` | Window, web favicon, exe and itch thumbnail | `game/icon.svg` (#42): an orange construction diamond with a navy border and a navy raccoon walking right, with a hunched back, a fat tail ringed in orange, round ears, and a white brow, eye and muzzle round its mask. At 16 px it reads as an orange diamond with a navy body. `config/icon` makes it the window icon and the web favicon; the Windows preset's `modify_resources` builds the exe's icon from it. The itch cover is `docs/art/itch-thumbnail.png` (630 × 500), rendered by `game/tools/make_thumbnail.sh` |
+| `ui_sign_panel` | Blue road sign | Drawn in code: `Sign.panel` (see "Type and UI") |
+| `ui_button_*` | Cabinet button glyphs for the controls card | Drawn in code (#42): pale buttons with an ink rim and the letter in ink: A Switch, X Dash, Y Tow (#10, #17); unbound buttons are faint discs |
+| `ui_new_badge` | "NEW: …" on the tally card | Drawn in code (#42): a navy plate with striped barricade caps at each end |
 | `ui_gridlock` | GRIDLOCK banner | Drawn in code (#43): a full-red band tilted −4°, ink-edged, with two white rules and GRIDLOCK! in white over an ink outline. It slams down over the cracked glass and falls away with it. Not a dark band, not serif or script type: it must never read as GTA's WASTED |
 | `shatter_shards` | Glass-shatter pieces | Drawn in code (#43): the screen captured, washed out (`main/wash.gdshader`) and cut into 14 pre-made Polygon2D shards (7 cracks from an impact point, plus one ring), with white crack lines. A headless run draws them flat grey |
-| HUD strip | Score, Combo, Jam meter, stage/Quota | Sign panel |
-| Pause, results, initials picker, High-score table | Screens | Sign panels + Bungee |
+| HUD strip | Score, Combo, Jam meter, stage/Quota | A sign hung from the top edge, so only its bottom edge and rule show (#42) |
+| Controls, Pause, Tally, results, initials picker, High-score table | Screens | Sign panels and Bungee, through `Card` (#42). Pause's chosen row is a white plate with sign-blue words |
 
 
 ## Reference
@@ -186,7 +186,7 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 
 ## Recipes
 
-How the sprites are made: the first pass (#39), plus the lamps, smoke wisp and road wear of the world art pass (#40). Later passes keep these rules unless a proof changes them.
+How the sprites are made: the first pass (#39), plus the lamps, smoke wisp and road wear of the world art pass (#40), and the type, signs and icon of the UI pass (#42). Later passes keep these rules unless a proof changes them.
 
 - **Files:** `game/art/*.svg`, hand-written SVG. `Art` (`game/world/art.gd`) preloads every texture and holds the anchors and draw-order constants.
 - **Canvas:** 2× world size. A vehicle's canvas is its footprint × 2 plus a 4 px margin on every side for the outline, so the art inside the margin is exactly the sim's footprint (`test_art.gd` checks it). The nose points +X.
@@ -197,5 +197,6 @@ How the sprites are made: the first pass (#39), plus the lamps, smoke wisp and r
 - **Cues:** drawn on a top-level child at the cue layer, so they never rotate and float over the uprights. Honk and "!!" are sized in on-screen px and hold at any zoom; the Turner bubble is in world px.
 - **Ground:** drawn in code (`Ground`) from the RoadNet curves: pavement, then roof shadows and roofs, kerbs, asphalt, tar patches and manholes (on their own seeded RNG, kept off the boxes), crosswalks and dashes. Roads at the map edge run on past it, for wide windows.
 - **Draw order:** `Art.Z_GROUND` < `Z_DECAL` (stop lines) < `Z_SHADOW` < `Z_VEHICLE` (vehicles and the Wreckage smoke wisps, in tree order, so a wisp may pass under a later vehicle) < `Z_UPRIGHT` < `Z_CUE` < `Z_BURST`, then the HUD's CanvasLayer.
-- **Text:** the fallback font for now. Bungee arrives with the UI pass (#42).
-- **Still drawn in code, owned by later passes:** the HUD strip and Jam meter (the `ui_sign_panel` 9-patch, #42); the backlog "+N" tag, the Switch target ring and line, the Dash cooldown ring, the Blowing outline and the Patience ring (#41); BONK! (greybox yellow, close to `signal_yellow`) and boost speed lines (#41, #43).
+- **Text:** Bungee (#42), `game/art/fonts/Bungee-Regular.ttf` from [google/fonts](https://github.com/google/fonts/tree/main/ofl/bungee) (the 2023 Bungee Project release), with its licence beside it in `OFL.txt`. `Sign.FONT` is the one font, and `test_ui.gd` fails any script that draws with `ThemeDB.fallback_font`. White words carry a 4 px `ink` outline.
+- **UI (#42):** `Sign` (`game/main/sign.gd`) is the kit: `panel` (drop shadow, `sign_blue` face with a 3 px ink edge and 16 px corners, a 3 px white rule 7 px in), `stripes` (orange bands 26 px across on ink, slanting up to the right, cut to the box), `plate`, `text`. Flow screens extend `Card`, which draws only through these, so `measure()` can lay a screen out headless for the tests.
+- **Still drawn in code, owned by later passes:** the backlog "+N" tag, the Switch target ring and line, the Dash cooldown ring, the Blowing outline and the Patience ring (#41); BONK! (greybox yellow, close to `signal_yellow`) and boost speed lines (#41, #43).

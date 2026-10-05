@@ -1,6 +1,6 @@
 class_name ResultsCard
 extends Card
-## The Run's results (#35, #19 story 13), over the frozen Gridlock board: stage reached, cars through, best
+## The Run's results (#35, #42, #19 story 13), over the frozen Gridlock board: stage reached, cars through, best
 ## Combo, most Crashes in one stage, Dents and the final score. Flow moves on after RESULTS_TIME, or on A
 ## once RESULTS_LOCK has gone by.
 

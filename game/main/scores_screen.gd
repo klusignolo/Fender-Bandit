@@ -1,6 +1,6 @@
 class_name ScoresScreen
 extends Card
-## The High-score table (#36, #19 stories 3 and 16): rank, initials and score for the top ScoreTable.SIZE, empty
+## The High-score table (#36, #42, #19 stories 3 and 16): rank, initials and score for the top ScoreTable.SIZE, empty
 ## places as dashes. After a Run it shows over the frozen board with the new entry flashing, and A skips it once
 ## Flow's lock is over. In Attract it takes turns with the title, over the autopilot's Run.
 
@@ -46,4 +46,4 @@ func _draw() -> void:
 	if not _attract:
 		hint(box, "SWITCH: continue")
 	elif blink(_clock, TitleScreen.BLINK):
-		text("PRESS ANY BUTTON", Vector2(mid, minf(box.end.y + 60, get_viewport_rect().size.y - 20)), 40)
+		text("PRESS ANY BUTTON", Vector2(mid, minf(box.end.y + 60, view().y - 20)), 40, Color.WHITE, true)

@@ -1,6 +1,6 @@
 class_name InitialsScreen
 extends Card
-## Initials entry (#36, #19 stories 14–15), over the frozen Gridlock board: the score, its place in the table and
+## Initials entry (#36, #42, #19 stories 14–15), over the frozen Gridlock board: the score, its place in the table and
 ## three letters, the slot being entered blinking. It feeds InitialsEntry the stick each frame; Main passes on A
 ## (confirm()) once Flow's lock is over. `entered` fires once the last slot is done. If nobody finishes, Flow moves
 ## on after INITIALS_TIME and Main saves InitialsEntry.DEFAULT.
@@ -70,7 +70,7 @@ func _draw() -> void:
 	text("#%d   %d" % [_rank + 1, _score], Vector2(mid, box.position.y + 112), 32)
 	var left := ceili(maxf(Tuning.INITIALS_TIME - _clock, 0.0))
 	var t := str(left)
-	text_at(t, Vector2(box.end.x - 24 - text_width(t, 24), box.position.y + 38), 24, MUTED)
+	text_at(t, Vector2(box.end.x - 34 - text_width(t, 24), box.position.y + 48), 24, MUTED)
 	var base := box.position.y + 250
 	var blink_on := blink(_clock, BLINK)
 	for i in InitialsEntry.SLOTS:
@@ -79,6 +79,6 @@ func _draw() -> void:
 		if not current or blink_on:
 			text(InitialsEntry.ALPHABET[entry.letters[i]], Vector2(x, base), LETTER_SIZE)
 		var line := Rect2(x - 32, base + 14, 64, 6)
-		draw_rect(line, Color.WHITE if current else MUTED)
+		bar(line, Color.WHITE if current else MUTED)
 	text("UP/DOWN: letter   RIGHT: next   LEFT: back", Vector2(mid, box.position.y + 320), 18)
 	hint(box, "SWITCH: next")
