@@ -56,6 +56,10 @@ _Avoid_: Unlock stage, feature stage
 The self-running intersection shown behind the title while no one is playing.
 _Avoid_: Demo mode, idle screen, splash
 
+**Autopilot**:
+Plays the Raccoon in Attract, and in the headless smoke test, with the same moves a player has. It tows nearby Wreckage off the road and Switches the busiest red Light, after taking crossing Greens to Yellow. It waits at a **post**: a spot off the road near each Light, so its own cars needn't Yield to it.
+_Avoid_: AI, bot, demo player
+
 **High-score table**:
 The local list of the top ten initials and scores.
 _Avoid_: Leaderboard (the online kind is out of scope), scoreboard

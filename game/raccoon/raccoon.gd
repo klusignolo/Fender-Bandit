@@ -9,6 +9,13 @@ extends Node2D
 ## Which way it shows: the front moving down, the back moving up, and the side (mirrored for left) on any diagonal.
 enum View { FRONT, BACK, RIGHT, LEFT }
 
+## What it's asked to do this tick: the player's input, or the autopilot's.
+class Intent:
+	var move := Vector2.ZERO  # as Input.get_vector: length up to 1
+	var dash := false
+	var switch := false
+	var tow := false
+
 const SIDE_FROM := 0.38  # the side view shows once the facing is this far across (sin 22.5°): every diagonal
 const TARGET := Color("#FF7A1A")  # raccoon_orange: the Switch target is a Raccoon UI moment
 const ROPE := Art.INK
@@ -22,6 +29,7 @@ var traffic: Traffic
 var facing := Vector2.UP
 var target: Light  # the Light a Switch would hit now, or null
 var cam_zoom := 1.0  # the camera zoom, which World sets each tick: speeds and ranges scale with 1/zoom
+var pilot: Autopilot  # plays it in Attract (#34); null reads the player's input
 
 var _dash_left := 0.0  # seconds left in the current Dash
 var _dash_cooldown := 0.0  # seconds until the next Dash can start
@@ -47,30 +55,41 @@ func _init(t: Traffic) -> void:
 func _physics_process(delta: float) -> void:
 	var world_per_px := 1.0 / cam_zoom  # world px per on-screen px
 	_dash_cooldown = maxf(_dash_cooldown - delta, 0.0)
+	var intent := pilot.decide(position, target, world_per_px) if pilot != null else _player_intent()
 	var dashing := false
 	if traffic.raccoon_stun > 0.0:
 		_dash_left = 0.0
 		position += traffic.raccoon_knock * delta
 	else:
-		dashing = _move(delta, world_per_px)
+		dashing = _move(intent, delta, world_per_px)
 	var r := Tuning.RACCOON_R
 	position = position.clamp(traffic.net.bounds.position + Vector2(r, r), traffic.net.bounds.end - Vector2(r, r))
 	traffic.set_raccoon(position, dashing)
 	target = _pick_target(world_per_px) if traffic.raccoon_stun <= 0.0 else null
 	_show_view()
-	if target != null and Input.is_action_just_pressed(&"switch"):
+	if target != null and intent.switch:
 		traffic.switch(target)
-	if Input.is_action_just_pressed(&"tow"):
+	if intent.tow:
 		traffic.tow(Tuning.TOW_RANGE * world_per_px)
 	queue_redraw()
 
 
-## Walk or Dash with the input; true while Dashing.
-func _move(delta: float, world_per_px: float) -> bool:
-	var input := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+## The player's intent this tick, from the InputMap.
+static func _player_intent() -> Intent:
+	var i := Intent.new()
+	i.move = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	i.dash = Input.is_action_just_pressed(&"dash")
+	i.switch = Input.is_action_just_pressed(&"switch")
+	i.tow = Input.is_action_just_pressed(&"tow")
+	return i
+
+
+## Walk or Dash as `intent` asks; true while Dashing.
+func _move(intent: Intent, delta: float, world_per_px: float) -> bool:
+	var input := intent.move
 	if input != Vector2.ZERO:  # the InputMap deadzone already filtered drift
 		facing = input.normalized()
-	if Input.is_action_just_pressed(&"dash") and _dash_cooldown <= 0.0:
+	if intent.dash and _dash_cooldown <= 0.0:
 		_dash_left = Tuning.DASH_TIME
 		_dash_cooldown = Tuning.DASH_COOLDOWN
 		_dash_dir = facing

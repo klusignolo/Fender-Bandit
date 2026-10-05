@@ -117,7 +117,7 @@ One meter for the whole city ([#15](https://github.com/klusignolo/GameJam2026/is
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
-| Fill from waiting | Per second, for each front driver (or Turner) that has Honked. | 0.5/s after one Honk, 1.0/s after two | `JAM_HONK` | #15 | |
+| Fill from waiting | Per second, for each front driver (or Turner) that has Honked. | 0.7/s after one Honk, 1.5/s after two | `JAM_HONK` | #15, #34 | #34: raised from 0.5 and 1.0 so an idle Raccoon gridlocks stage 1 in about 30s (#19). Over seeds 1–8 that went from 31–41s to 28–35s. The backlog fill barely moved it: at 1.0/s it only took about a second off. One Honk stays under the drain: two front drivers on their first Honk (1.4/s) can't beat one crossing's 1.5/s. |
 | Fill from backlog | Per second, for each car that can't get onto the map. | 0.6/s | `JAM_BACKLOG` | #15, #27 | |
 | Drain | Per second, always. **Scales with crossings** so a bigger map doesn't fill the Jam faster. | 1.5/s per crossing | `JAM_DRAIN` | #15, #16 | #16: with a flat 1.5/s, the Jam filled far too fast once the second crossing attached. Scaling by crossings was first tried in #17. |
 | Drain per exit | A bonus for each car that leaves the map. | 0.4 | `JAM_EXIT` | #16 | |
@@ -180,6 +180,19 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 | Stun | How long a hit Raccoon can't act. | 0.8s | `STUN_TIME` (`r_stun`) | #23 | |
 | Knockback | A hit knocks the Raccoon the way the car drives, slowing to a stop. | 420 world px/s, slowing by 900 px/s² | `KNOCK_SPEED`, `KNOCK_DECAY` (inline, on-screen px) | #23 | The greybox scaled these by 1/zoom; here they're world px, so the knockback shrinks on screen with the cars. |
 | Yellow | How long a Light stays Yellow before falling to Red. | 1.5s | `YELLOW_TIME` | #5 | |
+
+## Attract autopilot
+
+How the Attract autopilot ([#34](https://github.com/klusignolo/GameJam2026/issues/34)) plays the Raccoon. It tows Wreckage near it off the road. Otherwise it picks the red Light with the most demand: cars on its approach short of the line, plus its entry's backlog. Before giving that Light Green, it Switches any crossing Green to Yellow, waits for Yellow to fall and for the box to clear, then Switches the goal. It waits and Switches from a post: the nearest spot to each pole that is off the road, so its own cars needn't Yield to it. These knobs don't touch gameplay. With them it clears stage 1 (seeds 1–3, about 65s) with no Crashes and the Jam near 0%.
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Settle | It slows over this last stretch of a walk, so it settles instead of jittering. | 24 px | `AUTO_SETTLE` (no greybox autopilot) | #34 | |
+| Walk cost | How far a walk counts as one waiting car when it picks the next Light. | 300 px | `AUTO_WALK_COST` | #34 | Only matters on maps with more than one crossing. |
+| Shortest Green | A Green it turned on isn't cut short for a crossing Light sooner than this. | 4s | `AUTO_MIN_GREEN` | #34 | |
+| Longest busy Green | A Green whose road is still at least as busy as the waiting one runs at most this long. | 12s | `AUTO_MAX_GREEN` | #34 | Cycling every road evenly (no such hold) let the Swell road's backlog build up, and the autopilot gridlocked stage 1 at about 55–73s. |
+| Wreck reach | It tows Wreckage this close to it (on-screen px). | 360 px | `AUTO_WRECK_REACH` | #34 | |
+| Tow give-up | After this long towing, it drops the Wreckage where it is. | 8s | `AUTO_TOW_GIVE_UP` | #34 | A guard against towing forever; not seen in headless runs. |
 
 ## Score and Combo
 

@@ -94,7 +94,7 @@ const DENT := 2.0  # Jam capacity each Crash takes away for good
 const JAM_FLOOR := 10.0  # Dents never take the capacity below this
 const JAM_BUSY := 0.4  # the Jam is Busy from this share of the capacity left after Dents...
 const JAM_HEAVY := 0.7  # ...and Heavy from this share; full is Gridlock
-const JAM_HONK: Array[float] = [0.0, 0.5, 1.0]  # fill per second for each driver Honking, by its Honks so far
+const JAM_HONK: Array[float] = [0.0, 0.7, 1.5]  # fill per second for each driver Honking, by its Honks so far
 const JAM_BACKLOG := 0.6  # fill per second for each car waiting in an entry's backlog
 const JAM_DRAIN := 1.5  # drain per second, always, for each crossing on the map
 const JAM_EXIT := 0.4  # drain for each car that leaves the map
@@ -122,6 +122,14 @@ const HIT_MIN_SPEED := 30.0  # ...and the car is faster than this, world px/s
 const STUN_TIME := 0.8  # seconds a hit Raccoon is stunned
 const KNOCK_SPEED := 420.0  # world px/s a hit knocks the Raccoon back at, the way the car drives...
 const KNOCK_DECAY := 900.0  # ...slowing by this much each second
+
+# Attract autopilot (#34)
+const AUTO_SETTLE := 24.0  # world px: it slows over this last stretch to where it's walking, so it settles
+const AUTO_WALK_COST := 300.0  # world px of walk that count as one waiting car when it picks the next Light
+const AUTO_MIN_GREEN := 4.0  # seconds a Green it turned on runs before it will cut it short for a crossing Light
+const AUTO_MAX_GREEN := 12.0  # ...and runs at most this long while its road is still busier than the one waiting
+const AUTO_WRECK_REACH := 360.0  # on-screen px: it tows Wreckage this close to it
+const AUTO_TOW_GIVE_UP := 8.0  # seconds of towing before it drops the Wreckage wherever it is
 
 # Score and Combo
 const EXIT_SCORE := 10  # points per car out, times the Combo multiplier

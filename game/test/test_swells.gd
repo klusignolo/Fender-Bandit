@@ -133,8 +133,8 @@ func test_cars_that_cant_get_onto_a_full_entry_road_wait_in_its_backlog() -> voi
 
 
 func test_each_car_in_a_backlog_fills_the_jam_0_6_a_second() -> void:
-	# At four reds the four front drivers reach their second Honk by 25s: 4.0/s less the 1.5/s drain is
-	# 2.5/s. Once the queues reach the map edge, each car waiting to get on adds 0.6/s.
+	# At four reds the four front drivers reach their second Honk by 25s: 4 × JAM_HONK[2] less the 1.5/s drain.
+	# Once the queues reach the map edge, each car waiting to get on adds 0.6/s.
 	var t := straight_traffic(1)
 	_run(t, 25.0)
 	var backed_up := 0.0  # seconds with a backlog somewhere
@@ -151,5 +151,5 @@ func test_each_car_in_a_backlog_fills_the_jam_0_6_a_second() -> void:
 		var honks := t.cars.filter(func(c: Car) -> bool: return c.honks > 0).map(func(c: Car) -> int: return c.honks)
 		if not check_eq(honks, [2, 2, 2, 2], "Honks at %.2fs" % t.time):
 			return
-		check_near((t.jam.fill - before) / Traffic.DT, 2.5 + Tuning.JAM_BACKLOG * waiting, 0.001, "Jam fill a second at %.2fs, %d car(s) waiting" % [t.time, waiting])
+		check_near((t.jam.fill - before) / Traffic.DT, 4 * Tuning.JAM_HONK[2] - Tuning.JAM_DRAIN + Tuning.JAM_BACKLOG * waiting, 0.001, "Jam fill a second at %.2fs, %d car(s) waiting" % [t.time, waiting])
 	check(backed_up >= 3.0, "seconds with a backlog before Gridlock: %.2f, want 3+" % backed_up)

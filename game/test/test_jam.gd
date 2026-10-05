@@ -28,20 +28,20 @@ func test_nothing_fills_the_jam_until_a_driver_honks() -> void:
 		check_eq(t.jam.fill, 0.0, "Jam at %.2fs, before any Honk" % t.time)
 
 
-func test_four_drivers_on_their_second_honk_fill_the_jam_at_2_5_a_second() -> void:
-	# Four front drivers at 1.0/s each, less the drain of 1.5/s for the one crossing.
+func test_four_drivers_on_their_second_honk_fill_the_jam_at_4_5_a_second() -> void:
+	# Four front drivers at 1.5/s each, less the drain of 1.5/s for the one crossing.
 	var t := straight_traffic(1)
 	_run(t, 25.0)
 	check_eq(_honks(t), [2, 2, 2, 2] as Array[int], "Honks of the drivers Honking after 25s at four red Lights")
 	var before := t.jam.fill
 	_run(t, 1.0)
 	check_eq(_honks(t), [2, 2, 2, 2] as Array[int], "Honks of the drivers Honking a second later")
-	check_near(t.jam.fill - before, 2.5, 0.001, "Jam fill over that second")
+	check_near(t.jam.fill - before, 4.5, 0.001, "Jam fill over that second")
 
 
 func test_each_car_that_leaves_drains_0_4() -> void:
 	# Fill the Jam at four reds, then wave N and S on. W and E keep their two drivers on their second Honk,
-	# 2.0/s less the 1.5/s drain, so the Jam still rises 0.5/s, less 0.4 for each car that leaves.
+	# 3.0/s less the 1.5/s drain, so the Jam still rises 1.5/s, less 0.4 for each car that leaves.
 	var t := straight_traffic(1)
 	_run(t, 25.0)
 	t.switch(t.lights[N])
@@ -56,7 +56,7 @@ func test_each_car_that_leaves_drains_0_4() -> void:
 		if not check_eq(_honks(t), [2, 2] as Array[int], "Honks at %.2fs, with W and E still red" % t.time):
 			return
 		seen += exits[0]
-		check_near(t.jam.fill - before, 0.5 * Traffic.DT - 0.4 * exits[0], 0.0001, "Jam change in a tick %d car(s) left, at %.2fs" % [exits[0], t.time])
+		check_near(t.jam.fill - before, 1.5 * Traffic.DT - 0.4 * exits[0], 0.0001, "Jam change in a tick %d car(s) left, at %.2fs" % [exits[0], t.time])
 	check(seen >= 4, "cars that left: %d, want 4+" % seen)
 
 
@@ -156,7 +156,7 @@ class Levels:
 
 func test_the_jam_level_signal_fires_on_each_change_up_and_down() -> void:
 	# Four reds fill the Jam to Heavy. Then the Lights take turns, N/S then W/E, 6s of green each: a driver
-	# held at red Honks once at most (0.5/s), so two of them can't beat the drain and the Jam empties.
+	# held at red Honks once at most (0.7/s), so two of them can't beat the drain and the Jam empties.
 	var t := straight_traffic(1)
 	var levels := Levels.new(t)
 	while t.jam.level() != Jam.Level.HEAVY and t.time < 60.0:
@@ -176,7 +176,7 @@ func test_the_jam_level_signal_fires_on_each_change_up_and_down() -> void:
 
 
 func test_a_full_jam_reports_gridlock_once_and_stays_full() -> void:
-	# Four reds fill the Jam at 2.5/s once every front driver is on its second Honk.
+	# Four reds fill the Jam at 4.5/s once every front driver is on its second Honk.
 	var t := straight_traffic(1)
 	var levels := Levels.new(t)
 	while levels.gridlocks == 0 and t.time < 90.0:
@@ -193,3 +193,13 @@ func test_a_full_jam_reports_gridlock_once_and_stays_full() -> void:
 	check_eq(levels.gridlocks, 1, "Gridlocks 10s later")
 	check_eq(levels.heard.size(), heard, "levels signalled in those 10s")
 	check_eq(t.jam.fill, t.jam.capacity(), "Jam 10s after Gridlock")
+
+
+func test_an_idle_raccoon_gridlocks_stage_1_within_about_30s() -> void:
+	# #34: an unattended Run (nobody Switches anything) ends on its own soon, for Attract and the smoke test.
+	const ABOUT_30S := 36.0  # seeds 1–8 gridlock at 28–35s
+	for seed_value in [1, 2, 3, 4, 5, 6, 7, 8]:
+		var t := Traffic.new(seed_value, 0, Stages.def(1, seed_value))
+		while t.jam.level() != Jam.Level.GRIDLOCK and t.time < 60.0:
+			t.step()
+		check(t.time <= ABOUT_30S, "seed %d: an idle Run gridlocks within about 30s: %.1fs" % [seed_value, t.time])

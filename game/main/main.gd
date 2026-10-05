@@ -1,6 +1,6 @@
 extends Node
 ## Main. It owns the Run and steps it through its Stages (#29): a fresh World for each stage, the Tally card
-## between them over the frozen board, and a fresh Run when one ends in Gridlock (the death beat comes in #34);
+## between them over the frozen board, and a fresh Run when one ends in Gridlock (the death beat comes in #43);
 ## the flow state machine replaces this in #35.
 ## Agent flags, after `--` on the command line (#13 §10, #19 story 87):
 ##   --seed=N        seed the simulation, so a run repeats exactly (default: random)
@@ -10,8 +10,12 @@ extends Node
 ##   --quota-at=S    meet the current stage's Quota at S seconds of simulated time, to see the drain and Tally
 ##   --switch=S:L,M  Switch Lights L, M, ... (indices into Traffic.lights) at S seconds of simulated time, as the Raccoon
 ##                   would; repeat it for more. It stages a scene, e.g. the stage-9 art reference (game/tools/reference_shot.sh)
+##   --autopilot     the Attract autopilot (#34) plays the Raccoon, every stage of every Run
+
+signal run_over(run: Run)  # a Gridlock ended `run`; a fresh one has started. The smoke test (test/smoke.gd) listens.
 
 var run: Run
+var autopilot := false  # from --autopilot: each stage's Raccoon gets an Autopilot. Change it with set_autopilot().
 
 var _shot_path := ""
 var _shot_at := 15.0
@@ -41,6 +45,8 @@ func _ready() -> void:
 			_shot_at = float(a.substr(5))
 		elif a.begins_with("--quota-at="):
 			_quota_at = float(a.substr(11))
+		elif a == "--autopilot":
+			autopilot = true
 		elif a.begins_with("--switch="):
 			var parts := a.substr(9).split(":")
 			_switches.append([float(parts[0]), PackedInt32Array(Array(parts[1].split(",")).map(func(s: String) -> int: return int(s)))])
@@ -60,6 +66,15 @@ func _start_stage_world() -> void:
 	_world.traffic.gridlocked.connect(_on_gridlocked, CONNECT_DEFERRED)
 	_world.traffic.stage_cleared.connect(_on_stage_cleared)  # not deferred: the Tally starts on this tick, so a seeded run repeats exactly
 	add_child(_world)
+	if autopilot:
+		_world.raccoon.pilot = Autopilot.new(_world.traffic)
+
+
+## Hand the Raccoon to the autopilot, or take it back, from now on: this stage too.
+func set_autopilot(on: bool) -> void:
+	autopilot = on
+	if on != (_world.raccoon.pilot != null):  # keep a pilot already flying: it remembers the Greens it turned on
+		_world.raccoon.pilot = Autopilot.new(_world.traffic) if on else null
 
 
 # The stage is cleared: freeze the board and show the Tally card over it.
@@ -85,9 +100,11 @@ func _on_tally_done() -> void:
 # A bare Gridlock: the Run is over, and a fresh one starts.
 func _on_gridlocked() -> void:
 	_seed += 1
+	var over := run
 	print("Gridlock: a fresh Run, seed %d" % _seed)
 	_world.queue_free()
 	_start_run()
+	run_over.emit(over)
 
 
 func _physics_process(delta: float) -> void:
