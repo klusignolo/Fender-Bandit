@@ -162,7 +162,7 @@ func _screen_walk(zoom: float) -> float:
 	var start := r.position
 	Input.action_press(&"move_right")
 	for i in 30:
-		r._physics_process(TICK)
+		r.step(TICK)
 	Input.action_release(&"move_right")
 	var moved := (r.position - start).length() * zoom
 	r.free()

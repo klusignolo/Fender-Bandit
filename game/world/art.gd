@@ -17,6 +17,7 @@ const Z_DECAL := -9  # stop lines, over the roads
 const Z_SHADOW := -8  # vehicle and upright shadows
 const Z_VEHICLE := 0
 const Z_UPRIGHT := 1  # the Raccoon and the Light poles, Y-sorted
+const Z_DEBRIS := 2  # a Crash's flying bits (#43)
 const Z_CUE := 5  # floating cues: upright, never rotated with their vehicle
 const Z_BURST := 10  # Crash bursts
 
@@ -64,6 +65,11 @@ const CUE_BLOW := preload("res://art/cue_blow.svg")
 const CUE_SWELL := preload("res://art/cue_swell.svg")  # one chevron, pointing +x
 const CRASH_BURST := preload("res://art/crash_burst.svg")
 const SMOKE_PUFF := preload("res://art/smoke_puff.svg")
+const DEBRIS: Array[Texture2D] = [  # debris_bits: a bumper, a hubcap and a glass shard (#43)
+	preload("res://art/debris_bumper.svg"),
+	preload("res://art/debris_hubcap.svg"),
+	preload("res://art/debris_glass.svg"),
+]
 const MANHOLE := preload("res://art/decal_manhole.svg")
 
 const ROOFS: Array[Texture2D] = [

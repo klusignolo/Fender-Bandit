@@ -36,7 +36,7 @@ The flow around a Run ([#35](https://github.com/klusignolo/GameJam2026/issues/35
 |---|---|---|---|---|---|
 | Attract length | Seconds an Attract plays before a fresh one starts on a new seed. A Gridlock starts one sooner. | 60s | `ATTRACT_TIME` | #35 | |
 | Controls card | Seconds the controls card shows before the Run starts, and the lock before A closes it (the press that left Attract mustn't). | 6s, lock 0.5s | `CONTROLS_TIME`, `CONTROLS_LOCK` | #35 | |
-| Gridlock hold | Seconds from Gridlock to the results, with every input ignored (#19 story 55). A plain GRIDLOCK banner for now; it's the slot the death beat (#43) fills. | 2s | `GRIDLOCK_HOLD` | #35 | #43 sets it to the beat's length. |
+| Gridlock hold | Seconds from Gridlock to the results, with every input ignored (#19 story 55): the Gridlock beat up to its shards falling. The results show under the falling shards. | 2.8s | `GRIDLOCK_HOLD` | #35, #43 | The whole beat, fall included, is 3.8s. |
 | Results card | Seconds the results show before Initials (or the table, for a Run outside the top 10), and the lock before A skips them. | 10s, lock 1.5s | `RESULTS_TIME`, `RESULTS_LOCK` | #35, #36 | |
 | Attract pages | Seconds Attract shows its title, then the High-score table, and round again (#19 story 3: "every ~10s"). A fresh Attract starts on the title. | 6s title, 4s table: the table every 10s | `ATTRACT_TITLE`, `ATTRACT_TABLE` | #36 | |
 | Initials | Seconds to enter initials before they save as "RAC" (story 15). Partly entered initials are dropped too: a player who walked away left no name. The lock before A enters a letter, so A mashed through the results doesn't enter "AAA". | 30s, lock 0.75s | `INITIALS_TIME`, `INITIALS_LOCK` | #36 | |
@@ -97,6 +97,20 @@ How cars move, follow and stop. Distances are measured along the car's route.
 | Crash inset | Each footprint shrinks by this on every side before the Crash check, so a graze doesn't count. | 2 px | `CRASH_INSET` (inline `grow(-2.0)`) | #22 | |
 | Sight inset | A driver watches for Wreckage and the Raccoon across its own width, less this on each side. | 2 px | `SIGHT_INSET` (inline, `_strip`) | #22, #23 | |
 | Sight step | Spacing of the points along its route where a driver looks for Wreckage and the Raccoon. | 4 px | `SIGHT_STEP` (not in the greybox) | #22, #23 | The greybox checked a straight strip ahead instead; points along the route also follow turns. |
+
+## Crash juice and the Gridlock beat
+
+The comedic payoff ([#43](https://github.com/klusignolo/GameJam2026/issues/43), #19 stories 47, 54). `Juice` counts physics ticks: each tick it owes Traffic its steps (none while frozen, a share in slow-mo) and hands the engine its time scale, so the Raccoon, camera, bursts and debris freeze and slow with the board. A freeze only delays the fixed-step simulation: a seeded run reaches the same board, a few ticks later (`test_juice`), and the seeded smoke run still scores 21450. The Gridlock beat runs on real time from the Gridlock (`GridlockBeat`), and Flow's clock is real time too.
+
+| Knob | What it's for | Value | Greybox | Set by | Playtest notes |
+|---|---|---|---|---|---|
+| Crash freeze | Ticks the board freezes on each Crash (hit-stop). Crashes on one tick freeze once. | 4 ticks (about 60 ms) | `CRASH_FREEZE` | #43 | docs/sprites.md asks for 60 ms. |
+| Camera shake | On-screen px at full trauma; each Crash adds trauma, the shake goes as its square, and trauma decays per second. | 9 px, +0.55 a Crash, −2.0/s, 18 wobbles/s | `SHAKE_PX`, `SHAKE_CRASH`, `SHAKE_DECAY`, `SHAKE_HZ` | #43 | One Crash: about 2.7 px for a quarter second. The pile-up kicks it to full. |
+| Gridlock slow-mo | The engine time scale while traffic coasts on into the pile-up. Every car lurches on at least this fast, so a stopped queue noses into itself. | 0.25×, lurch 60 px/s | `GRIDLOCK_SLOWMO`, `GRIDLOCK_LURCH` | #43 | At Gridlock most queues have stopped; without the lurch the slow-mo showed nothing moving. |
+| Pile-up | Seconds into the beat when every car crashes at once (in the view only: the Run is over), with bursts on at most this many and three crunches. | 0.8s, 10 bursts | `GRIDLOCK_PILEUP_AT`, `GRIDLOCK_BURSTS` | #43 | |
+| Crack | Seconds into the beat when the frame freezes, washes out (75% grey, 22% toward white) and cracks into 14 shards, with a white flash and the glass shatter. | 1.4s | `GRIDLOCK_CRACK_AT`; `GridlockBeat.RAYS`, `RING`, `IMPACT`, `NUDGE`, `FLASH_TIME`, `FLASH_ALPHA` (0.7, fading over 0.25s); `main/wash.gdshader` | #43 | The impact sits up and right of centre, above the banner, so its star shows. |
+| Banner | Seconds into the beat when the GRIDLOCK banner slams down from 2.4× over 0.14s, jolting the glass. | 1.65s | `GRIDLOCK_BANNER_AT`; `GridlockBeat.BANNER_*`, `SLAM_FROM`, `JOLT_*` | #43 | |
+| Shard fall | The shards and the banner fall away from `GRIDLOCK_HOLD` over this long, in five waves 0.05s apart, down and away from the impact. | 1.0s | `GRIDLOCK_FALL_TIME`; `GridlockBeat.FALL_*`, `BANNER_LAG`, `BANNER_TIP` (the banner hangs 0.12s, then tips over) | #43 | `test_gridlock_beat` checks every shard is off screen by the end. |
 
 ## Turners
 
@@ -241,7 +255,8 @@ How the Attract autopilot ([#34](https://github.com/klusignolo/GameJam2026/issue
 | Camera fit | Zoom 1.03× past "the whole map fits", so the map edges bleed off screen. Refit every tick, so a resized or wider window works; the "expand" stretch only widens or heightens the 1280×720 view, and the extra shows more city (#39) | #16, #33 | `FIT` |
 | Readability floor | The camera never zooms out past 0.45; a map that would need more is followed instead, with the view held inside the map | #33 | `READ_FLOOR`. 0.45 is the zoom docs/sprites.md authors for. The whole plan fits above it (six crossings: about 0.485), so following is a safety net for now. Measured in the 1280×720 base view, not physical pixels: a small browser window shrinks everything further. |
 | Camera drift | While fitting, the view drifts toward the Raccoon by 6% of its offset from the map centre, easing at rate 3/s, but never past the map edge, where cars appear. At 16:9 that caps it at the FIT bleed: about 1.5% of the map each way | #33 | `DRIFT`, `CAM_RATE`. The edge cap binds before 6% does near the map edges, so the drift is a small nudge. Raise `FIT` for more room. Following uses the same easing. |
-| Crash burst | A `crash_burst` starburst with one word in ink (KRUNCH!, BONK!, SKRRT-BAM!, WHAM!, KA-CHUNK!), 110 on-screen px across at any zoom. It pops up from 60% size over 0.12s, then rises 30 px and fades over 1.2s. The same Crash always says the same word | #39 | `CrashMarker.LIFE`, `RISE`, `WIDE`, `POP`, `SIZE`, `FILL` (a long word shrinks to fit 60% of the burst). The juice pass (#43) adds the bits, smoke, freeze and shake. |
+| Crash burst | A `crash_burst` starburst with one word in ink (KRUNCH!, BONK!, SKRRT-BAM!, WHAM!, KA-CHUNK!), 110 on-screen px across at any zoom. It pops up from 60% size over 0.12s, then rises 30 px and fades over 1.2s. The same Crash always says the same word | #39 | `CrashMarker.LIFE`, `RISE`, `WIDE`, `POP`, `SIZE`, `FILL` (a long word shrinks to fit 60% of the burst). |
+| Crash debris and smoke | Each Crash throws 2 bumpers, 2 hubcaps and 7 glass shards (`debris_bits`, CPUParticles2D, one burst, seeded by where it happened) at 170–380 on-screen px/s, skidding to a stop and fading over 0.8s; 5 smoke puffs billow 66 px out from under the burst, growing from 30 to 64 px | #43 | `CrashMarker.BITS*`, `PUFF*`. Both are in on-screen px like the burst, so they read at any zoom: the first pass in world px stayed hidden under the burst. |
 | Ground markings | Kerbs 3 px along every road edge; white centre dashes 10 on, 10 off; crosswalk stripes 5 px across, every 8.5 px, from 3 to 11 px past each stop line | #39 | `Ground.KERB_W`, `DASH`, `STRIPE`, `STRIPE_STEP`, `CROSSWALK`. |
 | Uprights | The Raccoon shows its side view once its facing is 0.38 across (every diagonal), with a 24 × 10 shadow and an ink rope with a pale core; the lit lamp has a 6 px halo | #39 | `Raccoon.SIDE_FROM`, `SHADOW_R`, `ROPE_CORE`; `LightPole.GLOW_R`. |
 | Body tints | Each vehicle draws one of the six safe tints in docs/sprites.md at spawn, evenly | #6, #39 | `Car.TINTS`. Drawn with `randf`, like the random hue it replaced, so every seeded stream stays put. |
@@ -264,7 +279,6 @@ Mix and playback numbers for the `Audio` autoload ([#12](https://github.com/klus
 | Attract music | Theme level during Attract (no SFX in Attract). | 0 dB | `ATTRACT_MUSIC_DB` | #12, #38 | Turn down if HCSS wants a quieter cabinet. |
 | Pitch jitter | `pitch_scale` spread on Honks (fixed per car, from its id) and Crashes (random per Crash). | ±8% | `SFX_JITTER` | #12, #37 | First guess. |
 | Yield squeal | A driver braking for the Raccoon squeals only if it was going at least this fast, once per stop. | 90 px/s | `YIELD_SQUEAL_SPEED` | #37 | 60% of a car's base speed: a car pulling away from a standstill into the Raccoon reaches about 65 px/s before it brakes, and shouldn't squeal. |
-| Shatter delay | From the Gridlock record scratch to the glass shatter. | 0.5s | `SHATTER_DELAY` | #37 | A stand-in until the death beat (#43) times the shatter to its picture. |
 
 **Mix levels** (#37): each SFX's player volume in dB, in `Sfx.SOUNDS` (`game/audio/sfx.gd`) next to its priority. Every clip is normalised to the same peak, so these alone set the mix. First guesses, set by ear on laptop speakers; tune on the cabinet.
 

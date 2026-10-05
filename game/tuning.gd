@@ -19,9 +19,23 @@ const TALLY_LOCK := 0.5  # ...and A skips it only after this long, so a Switch m
 const ATTRACT_TIME := 60.0  # seconds an Attract plays before a fresh one starts (Gridlock starts one sooner)
 const CONTROLS_TIME := 6.0  # seconds the controls card shows before the Run starts...
 const CONTROLS_LOCK := 0.5  # ...and A closes it only after this long, so the press that left Attract doesn't
-const GRIDLOCK_HOLD := 2.0  # seconds from Gridlock to the results, with input locked: the death beat's slot (#43)
+const GRIDLOCK_HOLD := 2.8  # seconds from Gridlock to the results, with input locked: the Gridlock beat up to its shards falling (#43)
 const RESULTS_TIME := 10.0  # seconds the results card shows before Attract...
 const RESULTS_LOCK := 1.5  # ...and A skips it only after this long
+
+# Crash juice and the Gridlock beat (#43). The beat is timed in seconds of real time from the Gridlock.
+const CRASH_FREEZE := 4  # physics ticks the board freezes on each Crash: about 60 ms
+const SHAKE_PX := 9.0  # on-screen px the camera shakes at full trauma...
+const SHAKE_CRASH := 0.55  # ...the trauma each Crash adds, up to 1 (the shake goes as its square)...
+const SHAKE_DECAY := 2.0  # ...and the trauma lost per second
+const SHAKE_HZ := 18.0  # the shake's wobbles per second
+const GRIDLOCK_SLOWMO := 0.25  # the engine time scale as traffic coasts on into the pile-up...
+const GRIDLOCK_LURCH := 60.0  # ...every car, even one stopped in a queue, lurching on at least this many world px/s
+const GRIDLOCK_PILEUP_AT := 0.8  # every car crashes at once...
+const GRIDLOCK_BURSTS := 10  # ...with a burst on at most this many of them
+const GRIDLOCK_CRACK_AT := 1.4  # the frame freezes, washes out and cracks, with the glass shatter
+const GRIDLOCK_BANNER_AT := 1.65  # the GRIDLOCK banner slams in; the shards fall at GRIDLOCK_HOLD...
+const GRIDLOCK_FALL_TIME := 1.0  # ...and are gone this long after
 
 # The High-score table (#36)
 const ATTRACT_TITLE := 6.0  # seconds Attract shows the title...
@@ -173,4 +187,3 @@ const DUCK_PAUSE := -12.0  # dB the music sits at while paused
 const ATTRACT_MUSIC_DB := 0.0  # the Theme's level under Attract
 const SFX_JITTER := 0.08  # pitch_scale spread on Honks (per car) and Crashes (per Crash)
 const YIELD_SQUEAL_SPEED := 90.0  # px/s: a car braking for the Raccoon from at least this fast squeals
-const SHATTER_DELAY := 0.5  # seconds from the Gridlock record scratch to the glass shatter, until #43 times it

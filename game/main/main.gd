@@ -3,9 +3,9 @@ extends Node
 ## → Initials → Scores → Attract, with Pause over the Run); Main builds what each state shows and turns presses into
 ## Flow's inputs.
 ## A Run steps through its Stages (#29): a fresh World for each stage, the Tally card between them over the frozen
-## board. Attract is a World on stage 1 that the autopilot plays (#34), with no HUD and no score; the death beat
-## (#43) comes later. Attract takes turns between its title and the High-score table, which the Scores autoload
-## keeps. Attract is muted (#19 story 80): Main has Audio (#37) watch each board, and an Attract board plays no SFX.
+## board. Attract is a World on stage 1 that the autopilot plays (#34), with no HUD and no score; the Gridlock beat
+## (#43) plays over a Run's Gridlock. Attract takes turns between its title and the High-score table, which the
+## Scores autoload keeps. Attract is muted (#19 story 80): Main has Audio (#37) watch each board, and an Attract board plays no SFX.
 ## Main cues the music (#38): the Theme on Attract and the screens after a Run, the groove through the Run.
 ## Agent flags, after `--` on the command line (#13 §10, #19 story 87). Any but --seed skips Attract and the card:
 ##   --seed=N        seed the simulation, so a run repeats exactly (default: random)
@@ -35,6 +35,7 @@ var _direct := false  # an agent flag asked for a Run straight away
 var _clock := 0.0  # seconds simulated since boot, across stages and Runs, not counting Pause
 var _world: World
 var _tally: CanvasLayer  # the Tally card's layer, while it shows
+var _beat: GridlockBeat  # the Gridlock beat, until it's done or the board goes
 var _ui := UI.new()
 var _entry: InitialsEntry  # the initials being entered, until the table shows
 var _seed := 0  # the next Run's or Attract's; each takes the next one, so a seeded session repeats exactly
@@ -168,8 +169,9 @@ func _on_flow_changed(state: Flow.State) -> void:
 			_start_run()
 			Audio.music(MusicMix.Track.GROOVE)
 		Flow.State.GRIDLOCK:
-			_world.process_mode = Node.PROCESS_MODE_DISABLED  # the board freezes, and the Raccoon with it
-			_ui.show_screen(GridlockBanner.new())
+			_ui.clear()
+			_beat = GridlockBeat.new(_world)  # it stops the board, and the Raccoon with it
+			add_child(_beat)
 			Audio.gridlock()
 			print("Gridlock at stage %d, score %d" % [run.stage, run.score])
 			run_over.emit(run)
@@ -211,8 +213,11 @@ func _on_paused_changed(paused: bool) -> void:
 		_ui.clear()
 
 
-## Free the board: the World and the Tally card.
+## Free the board: the World, the Tally card and the Gridlock beat.
 func _clear_board() -> void:
+	if is_instance_valid(_beat):
+		_beat.queue_free()
+	_beat = null
 	if _tally != null:
 		_tally.queue_free()
 		_tally = null
@@ -295,7 +300,7 @@ func _on_gridlocked(world: World) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	flow.step(delta)
+	flow.step(1.0 / Engine.physics_ticks_per_second)  # real time: Flow's clock runs on through a freeze or slow-mo
 	if get_tree().paused or _world == null:
 		return
 	var was := _clock

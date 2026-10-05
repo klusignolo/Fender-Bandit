@@ -7,6 +7,8 @@ extends Node2D
 ## while it holds. A driver spending Patience shows a ring once it has Honked, a "HONK!" at each Honk,
 ## and "!!" before it Blows the red; Blowing the red, it's outlined red. Cues sit on their own layer, upright and over
 ## everything upright. Pooled by World; hidden while unused.
+## At Gridlock (#43) it coasts on along its heading on scaled delta, so in the beat's slow-mo (a stopped car lurches
+## forward into the one ahead), until the pile-up crumples it as Wreckage in the view alone: the Car is left as it was.
 
 const WRECKAGE_SPIN := 0.6  # radians: Wreckage is drawn turned up to this far, so it reads as knocked askew
 const BLINK_HZ := 2.0  # blinker flashes per second
@@ -41,16 +43,19 @@ var shadow := Art.sprite(null)  # positioned so it always falls Art.SHADOW_FALL 
 var brake := Art.sprite(null)  # the brake lamps, lit while it slows or waits
 var blink := Art.sprite(null)  # the right-hand blinkers, mirrored for a left turn, shown while they flash on
 var smoke := Node2D.new()  # Wreckage's smoke wisp: upright, at its centre
+var coast := false  # the Gridlock beat: drive on along its heading, at its last speed, until it piles up
 var _cues := Node2D.new()  # upright, at the car's centre, on the cue layer
 var _traffic: Traffic  # for sim time, so blinks and pulses repeat from the seed
 var _layers: Dictionary  # this kind's Art.vehicle layers
 var _boosted := false
-var _wreckage := false
+var _drawn_wrecked := false
 var _spin := 0.0
 var _honks := 0  # the car's Honks when last drawn
 var _honk_at := -INF  # sim time of its latest Honk
 var _honk_text := ""  # what its latest Honk says, kept while it fades even if the Honks reset
 var _animated := false  # drawn with a cue or the Blowing outline last frame
+var _piled := false  # crumpled by the Gridlock pile-up
+var _coasted := 0.0  # world px it has coasted
 
 
 func _init(t: Traffic) -> void:
@@ -86,7 +91,10 @@ func show_car(c: Car) -> void:
 		shadow.texture = _layers.shadow
 		brake.texture = _layers.brake
 		blink.texture = _layers.blink
-		_wreckage = c.wreckage
+		coast = false
+		_piled = false
+		_coasted = 0.0
+		_drawn_wrecked = c.wreckage
 		_spin = 0.0
 		_honks = c.honks
 		_honk_at = -INF
@@ -95,24 +103,35 @@ func show_car(c: Car) -> void:
 		_cues.queue_redraw()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if car != null:
+		if coast and not _wrecked():
+			_coasted += maxf(car.speed, Tuning.GRIDLOCK_LURCH) * delta  # a stopped queue lurches into itself
 		_sync()
 
 
+## The Gridlock pile-up: it crumples where it is.
+func pile_up() -> void:
+	_piled = true
+
+
+func _wrecked() -> bool:
+	return car.wreckage or _piled
+
+
 func _sync() -> void:
-	if car.wreckage and not _wreckage:
+	if _wrecked() and not _drawn_wrecked:
 		# Same car, same skew, every run: the view stays repeatable from the seed.
 		_spin = (float(hash(car.id) % 2001) / 1000.0 - 1.0) * WRECKAGE_SPIN
-	transform = car.transform.rotated_local(_spin)
+	transform = car.transform.translated_local(Vector2(_coasted, 0.0)).rotated_local(_spin)
 	shadow.position = transform.basis_xform_inv(Art.SHADOW_FALL)
-	details.texture = _layers.wreck if car.wreckage else _layers.details
+	details.texture = _layers.wreck if _wrecked() else _layers.details
 	_cues.position = transform.origin
-	brake.visible = car.braking and not car.wreckage
+	brake.visible = car.braking and not _wrecked()
 	var side := _blink_side()
 	blink.visible = side != 0.0 and fmod(_traffic.time * BLINK_HZ, 1.0) < 0.5
 	blink.scale.y = Art.SCALE * (side if side != 0.0 else 1.0)
-	smoke.visible = car.wreckage and not car.towed
+	smoke.visible = _wrecked() and not car.towed
 	if smoke.visible:
 		smoke.position = transform.origin
 		smoke.queue_redraw()
@@ -122,18 +141,18 @@ func _sync() -> void:
 	_honks = car.honks
 	var cued := _arrow_shown() or _ring_shown() or _honk_shown() or car.blow_warning
 	var animated := cued or car.blowing
-	if animated or _animated or car.boosted != _boosted or car.wreckage != _wreckage:
+	if animated or _animated or car.boosted != _boosted or _wrecked() != _drawn_wrecked:
 		queue_redraw()  # every frame while animated, and once more as it stops
 		_cues.queue_redraw()
 	_animated = animated
 	_boosted = car.boosted
-	_wreckage = car.wreckage
+	_drawn_wrecked = _wrecked()
 
 
 # Which side a turning car signals, from spawn until it's through its turn: 1.0 for its right (+y), -1.0 for its left,
 # 0.0 for none.
 func _blink_side() -> float:
-	if car.wreckage or car.past_box():
+	if _wrecked() or car.past_box():
 		return 0.0
 	match car.movement:
 		RoadNet.Movement.RIGHT:
@@ -145,21 +164,21 @@ func _blink_side() -> float:
 
 # A Turner's arrow shows from spawn until it starts its turn.
 func _arrow_shown() -> bool:
-	return not car.wreckage and car.movement == RoadNet.Movement.LEFT and not car.committed
+	return not _wrecked() and car.movement == RoadNet.Movement.LEFT and not car.committed
 
 
 # The Patience ring shows once the driver has Honked: a calm wait at red is normal.
 func _ring_shown() -> bool:
-	return not car.wreckage and car.honks > 0
+	return not _wrecked() and car.honks > 0
 
 
 func _honk_shown() -> bool:
-	return not car.wreckage and _traffic.time - _honk_at < HONK_TIME
+	return not _wrecked() and _traffic.time - _honk_at < HONK_TIME
 
 
 # Over the sprite layers, in the car's own axes: speed lines and the Blowing-the-red outline.
 func _draw() -> void:
-	if car == null or car.wreckage:
+	if car == null or _wrecked():
 		return
 	var l := car.length
 	var w := car.width

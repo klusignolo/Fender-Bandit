@@ -141,10 +141,10 @@ Every vehicle is stacked layers: **body** (tint, one of the 6 safe colours), **d
 |---|---|---|---|
 | `crash_burst` | Comic starburst | 160 × 120 | White, `ink` outline, upright; one word in Bungee |
 | Burst words | KRUNCH!, BONK!, SKRRT-BAM!, WHAM!, KA-CHUNK! | text | Picked by a hash of the Crash's position, so a seeded run repeats; in `ink`, never in signal colours |
-| `debris_bits` | Bumper, hubcap, glass shards | 8–16 each | CPUParticles2D textures |
+| `debris_bits` | Bumper, hubcap, glass shards | 36 × 14, 20 × 20, 14 × 14 | CPUParticles2D textures (`debris_bumper`, `debris_hubcap`, `debris_glass`): chrome grey and pale glass blue, `ink` outline, one white glint. Drawn in on-screen px, so their canvas sets their size at any zoom (#43) |
 | `smoke_puff` | Smoke | 64 × 64 | A grey three-lobed cloud with an `ink` outline and a shade along the bottom. The looping wisp on Wreckage until Towed (#40); the juice pass (#43) reuses it for burst puffs |
 
-Juice: a 60 ms freeze and a small camera shake per Crash. The Gridlock sequence reuses the bursts in bulk.
+Juice (#43): a 60 ms freeze and a small camera shake per Crash. The Gridlock beat reuses the bursts in bulk for its pile-up.
 
 ### Roads and ground
 
@@ -170,8 +170,8 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 | `ui_sign_panel` | Blue sign 9-patch | Most screens |
 | `ui_button_*` | Cabinet button glyphs for the controls card | A Switch, X Dash, Y Tow (#10, #17) |
 | `ui_new_badge` | "NEW: …" on the tally card | Construction stripes |
-| `ui_gridlock` | GRIDLOCK banner | Full red |
-| `shatter_shards` | Glass-shatter pieces | Screen capture split into shards in code |
+| `ui_gridlock` | GRIDLOCK banner | Drawn in code (#43): a full-red band tilted −4°, ink-edged, with two white rules and GRIDLOCK! in white over an ink outline. It slams down over the cracked glass and falls away with it. Not a dark band, not serif or script type: it must never read as GTA's WASTED |
+| `shatter_shards` | Glass-shatter pieces | Drawn in code (#43): the screen captured, washed out (`main/wash.gdshader`) and cut into 14 pre-made Polygon2D shards (7 cracks from an impact point, plus one ring), with white crack lines. A headless run draws them flat grey |
 | HUD strip | Score, Combo, Jam meter, stage/Quota | Sign panel |
 | Pause, results, initials picker, High-score table | Screens | Sign panels + Bungee |
 

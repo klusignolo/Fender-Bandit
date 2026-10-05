@@ -17,7 +17,7 @@ func _flown(t: Traffic) -> Raccoon:
 ## Step the Raccoon and Traffic together for `seconds`, or until `stop` returns true. Returns the seconds run.
 func _fly(t: Traffic, r: Raccoon, seconds: float, stop := func() -> bool: return false) -> float:
 	for i in roundi(seconds * Traffic.TICK_HZ):
-		r._physics_process(Traffic.DT)
+		r.step(Traffic.DT)
 		t.step()
 		if stop.call():
 			return (i + 1) * Traffic.DT

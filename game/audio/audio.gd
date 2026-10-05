@@ -122,13 +122,13 @@ func watch(world: World, muted: bool) -> void:
 		_on_cue(&"reveal", 1.0)
 
 
-## Gridlock: the record scratch cuts the music dead under a chorus of horns, then the glass shatters.
+## Gridlock: the record scratch cuts the music dead on the slow-mo, under a chorus of horns. The GridlockBeat plays
+## the pile-up's Crashes and the glass shatter on its picture (#43).
 func gridlock() -> void:
 	_scrape.stop()
 	music(MusicMix.Track.NONE)
 	play(&"gridlock_scratch")
 	play(&"gridlock_horns")
-	get_tree().create_timer(Tuning.SHATTER_DELAY, true, false, true).timeout.connect(play.bind(&"gridlock_shatter"))
 
 
 func _duck(db: float, seconds: float) -> void:

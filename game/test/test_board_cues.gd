@@ -232,8 +232,8 @@ func test_a_dash_whooshes_when_it_starts() -> void:
 	r.position = t.raccoon_position
 	var ear := _ear(BoardCues.new(t, Run.new(), r))
 	r._pressed.dash = true
-	r._physics_process(Traffic.DT)
+	r.step(Traffic.DT)
 	r._pressed.dash = true  # still on cooldown: no second Dash
-	r._physics_process(Traffic.DT)
+	r.step(Traffic.DT)
 	check_eq(ear.heard, [&"dash"], "one whoosh")
 	r.free()

@@ -87,7 +87,7 @@ Import the OGG with `loop` on and `loop_offset` set; leave `bpm`/`beat_count` at
 | Stage 1 start → every Stage → tally cards | **Gameplay groove**, continuous. It doesn't restart per Stage. On the tally card it glides back to 1.0, since the Jam resets. |
 | Tally card opens | **Stage-clear stinger** over the groove, which is ducked under it |
 | Pause | Groove ducked |
-| Gridlock | A record-scratch cuts the groove dead on the slow-mo. Then only horns, Crashes and the glass shatter. |
+| Gridlock | A record-scratch cuts the groove dead on the slow-mo, under held horns. Then three crunches on the pile-up and the glass shatter as the frame cracks, timed by the Gridlock beat (#43). |
 | Results, initials, High-score table | **Theme** comes back in |
 
 ## Sound list

@@ -56,7 +56,8 @@ func _init(t: Traffic) -> void:
 	add_child(_shadow)
 
 
-func _physics_process(delta: float) -> void:
+## One tick of `delta` seconds. World steps it with Traffic, so a Crash's freeze holds both on the same ticks (#43).
+func step(delta: float) -> void:
 	var world_per_px := 1.0 / cam_zoom  # world px per on-screen px
 	_dash_cooldown = maxf(_dash_cooldown - delta, 0.0)
 	var intent := _player_intent()  # read every tick, so presses made while the autopilot plays don't pile up

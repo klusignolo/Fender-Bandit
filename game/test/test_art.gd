@@ -136,6 +136,48 @@ func test_wreckage_smokes_until_it_is_towed() -> void:
 	v.free()
 
 
+func test_the_gridlock_pile_up_crumples_the_view_but_not_the_car() -> void:
+	var vc := _vehicle(Car.Kind.CAR, RoadNet.Movement.LEFT)
+	var v: Vehicle = vc[0]
+	var c: Car = vc[1]
+	c.speed = 100.0
+	v.coast = true
+	v._process(0.5)
+	check_near(v.position.distance_to(c.transform.origin), 50.0, 0.01, "it coasts on at its speed")
+	c.speed = 0.0
+	v._process(0.5)
+	check_near(v.position.distance_to(c.transform.origin), 50.0 + Tuning.GRIDLOCK_LURCH * 0.5, 0.01, "a stopped car lurches on")
+	v.pile_up()
+	v._sync()
+	check_eq(v.details.texture, Art.vehicle(c.kind).wreck, "crumpled")
+	check(v.smoke.visible, "smoking")
+	check(not v._arrow_shown(), "its cues go")
+	var at := v.position
+	v._process(0.5)
+	check_eq(v.position, at, "it stops where it piled up")
+	check(not c.wreckage, "the Car itself is untouched: the Run is already over")
+	v.show_car(c)
+	check_eq(v.details.texture, Art.vehicle(c.kind).details, "a pooled Vehicle starts clean")
+	v.free()
+
+
+# --- Crashes ---------------------------------------------------------------------
+
+func test_each_crash_throws_debris_seeded_by_where_it_happened() -> void:
+	var m := CrashMarker.new(Vector2(320, 180))
+	var bits := m.find_children("*", "CPUParticles2D", false, false)
+	check_eq(bits.size(), Art.DEBRIS.size(), "one burst of each kind of debris")
+	for p: CPUParticles2D in bits:
+		check(Art.DEBRIS.has(p.texture), "a debris_bits texture")
+		check(p.one_shot and p.emitting, "one burst, now")
+		check_eq(p.gravity, Vector2.ZERO, "seen from above: no fall")
+		check(p.use_fixed_seed, "repeatable")
+	var again := CrashMarker.new(Vector2(320, 180))
+	check_eq((again.get_child(0) as CPUParticles2D).seed, (bits[0] as CPUParticles2D).seed, "the same Crash throws the same bits")
+	m.free()
+	again.free()
+
+
 # --- the Raccoon ----------------------------------------------------------------
 
 func test_the_raccoon_view_follows_its_facing() -> void:

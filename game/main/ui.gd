@@ -1,6 +1,6 @@
 class_name UI
 extends CanvasLayer
-## The flow screens' layer (#35, #36): it shows one screen at a time (Title, Controls, Pause, Gridlock, Results,
+## The flow screens' layer (#35, #36): it shows one screen at a time (Title, Controls, Pause, Results,
 ## Initials, Scores) over the board, the HUD and the Tally card, and keeps processing while the tree is paused.
 
 var screen: Node  # the one showing, or null
