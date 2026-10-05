@@ -1,7 +1,7 @@
 class_name Run
 extends RefCounted
 ## One Run (#28): the score, Combo, stage and Dents that outlive any one stage's Traffic, and the stage's
-## stats for the results card. It listens to each stage's Traffic, handed to it by attach().
+## and the Run's stats for the results card (#35). It listens to each stage's Traffic, handed to it by attach().
 
 signal combo_stepped(multiplier: int)  # Combo reached a new multiplier step: combo_up (docs/audio.md)
 signal combo_broken(lost: int)  # a Crash reset a Combo above 0: combo_break (docs/audio.md)
@@ -14,6 +14,9 @@ var dents: int:  # Crashes this Run, earlier stages included. The stage's Jam ke
 		return _traffic.jam.dents if _traffic != null else 0
 var crashes := 0  # this stage's Crashes: one per crashed signal, so a car into Wreckage is one more
 var best_combo := 0  # this stage's highest Combo
+var cars_through := 0  # cars off the map this Run, every stage
+var top_combo := 0  # the Run's highest Combo
+var most_crashes := 0  # the most Crashes in one stage of this Run
 
 var _stage_start_score := 0
 
@@ -48,8 +51,10 @@ func multiplier() -> int:
 
 
 func _on_car_exited(_car: Car) -> void:
+	cars_through += 1
 	combo += 1
 	best_combo = maxi(best_combo, combo)
+	top_combo = maxi(top_combo, combo)
 	score += Tuning.EXIT_SCORE * multiplier()
 	if combo % Tuning.COMBO_STEP == 0:
 		combo_stepped.emit(multiplier())
@@ -57,6 +62,7 @@ func _on_car_exited(_car: Car) -> void:
 
 func _on_crashed(_a: Car, _b: Car, _at: Vector2) -> void:
 	crashes += 1
+	most_crashes = maxi(most_crashes, crashes)
 	var lost := combo
 	combo = 0
 	if lost > 0:

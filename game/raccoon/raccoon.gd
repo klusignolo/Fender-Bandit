@@ -31,6 +31,8 @@ var target: Light  # the Light a Switch would hit now, or null
 var cam_zoom := 1.0  # the camera zoom, which World sets each tick: speeds and ranges scale with 1/zoom
 var pilot: Autopilot  # plays it in Attract (#34); null reads the player's input
 
+var _pressed := Intent.new()  # the buttons pressed since the last tick
+
 var _dash_left := 0.0  # seconds left in the current Dash
 var _dash_cooldown := 0.0  # seconds until the next Dash can start
 var _dash_dir := Vector2.UP
@@ -55,7 +57,9 @@ func _init(t: Traffic) -> void:
 func _physics_process(delta: float) -> void:
 	var world_per_px := 1.0 / cam_zoom  # world px per on-screen px
 	_dash_cooldown = maxf(_dash_cooldown - delta, 0.0)
-	var intent := pilot.decide(position, target, world_per_px) if pilot != null else _player_intent()
+	var intent := _player_intent()  # read every tick, so presses made while the autopilot plays don't pile up
+	if pilot != null:
+		intent = pilot.decide(position, target, world_per_px)
 	var dashing := false
 	if traffic.raccoon_stun > 0.0:
 		_dash_left = 0.0
@@ -74,14 +78,22 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 
-## The player's intent this tick, from the InputMap.
-static func _player_intent() -> Intent:
-	var i := Intent.new()
+## The player's intent this tick, from the InputMap: the stick as held now, and the buttons pressed since the last tick.
+func _player_intent() -> Intent:
+	var i := _pressed
+	_pressed = Intent.new()
 	i.move = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	i.dash = Input.is_action_just_pressed(&"dash")
-	i.switch = Input.is_action_just_pressed(&"switch")
-	i.tow = Input.is_action_just_pressed(&"tow")
 	return i
+
+
+## Button presses come as events, not polled, so one that reached Main while this was paused or not yet built (the
+## press that resumes from Pause, or closes the controls card) is never seen here as well (#35).
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_echo():
+		return
+	_pressed.dash = _pressed.dash or event.is_action_pressed(&"dash")
+	_pressed.switch = _pressed.switch or event.is_action_pressed(&"switch")
+	_pressed.tow = _pressed.tow or event.is_action_pressed(&"tow")
 
 
 ## Walk or Dash as `intent` asks; true while Dashing.

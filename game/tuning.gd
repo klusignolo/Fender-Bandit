@@ -15,6 +15,14 @@ const DRAIN_MAX := 12.0  # seconds the drain after the Quota lasts at most
 const TALLY_TIME := 3.0  # seconds the Tally card shows before the next stage...
 const TALLY_LOCK := 0.5  # ...and A skips it only after this long, so a Switch mashed during the drain doesn't
 
+# The arcade loop (#35)
+const ATTRACT_TIME := 60.0  # seconds an Attract plays before a fresh one starts (Gridlock starts one sooner)
+const CONTROLS_TIME := 6.0  # seconds the controls card shows before the Run starts...
+const CONTROLS_LOCK := 0.5  # ...and A closes it only after this long, so the press that left Attract doesn't
+const GRIDLOCK_HOLD := 2.0  # seconds from Gridlock to the results, with input locked: the death beat's slot (#43)
+const RESULTS_TIME := 10.0  # seconds the results card shows before Attract...
+const RESULTS_LOCK := 1.5  # ...and A skips it only after this long
+
 # The generator, past stage 9
 const FLOOR_START := 2  # features a generated stage turns on at least, at stage 10...
 const FLOOR_EVERY := 4  # ...and 1 more every this many stages, up to all of them

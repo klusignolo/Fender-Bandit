@@ -11,6 +11,7 @@ var run: Run
 var traffic: Traffic
 var raccoon: Raccoon
 var framing: Framing  # where the camera looks (#33)
+var hud := CanvasLayer.new()  # the HUD strip's layer: Attract hides it (#35)
 
 var _vehicles: Dictionary[int, Vehicle] = {}
 var _pool: Array[Vehicle] = []
@@ -53,7 +54,6 @@ func _ready() -> void:
 	_aim_camera()
 	add_child(_cam)
 	_cam.make_current()
-	var hud := CanvasLayer.new()
 	hud.add_child(HudStrip.new(run, traffic))
 	add_child(hud)
 

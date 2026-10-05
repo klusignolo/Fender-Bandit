@@ -1,8 +1,11 @@
 extends Node
-## Main. It owns the Run and steps it through its Stages (#29): a fresh World for each stage, the Tally card
-## between them over the frozen board, and a fresh Run when one ends in Gridlock (the death beat comes in #43);
-## the flow state machine replaces this in #35.
-## Agent flags, after `--` on the command line (#13 §10, #19 story 87):
+## Main (#35): the one persistent scene. Flow runs the arcade loop (Attract → Controls → Run → Gridlock → Results →
+## Attract, with Pause over the Run); Main builds what each state shows and turns presses into Flow's inputs.
+## A Run steps through its Stages (#29): a fresh World for each stage, the Tally card between them over the frozen
+## board. Attract is a World on stage 1 that the autopilot plays (#34), with no HUD and no score; the death beat
+## (#43) and the High-score table (#36) come later. Attract is muted (#19 story 80): Audio (#37) plays no SFX while
+## flow.state is ATTRACT.
+## Agent flags, after `--` on the command line (#13 §10, #19 story 87). Any but --seed skips Attract and the card:
 ##   --seed=N        seed the simulation, so a run repeats exactly (default: random)
 ##   --stage=N       start the Run at stage N (default 1)
 ##   --shot=<path>   save a PNG of the screen after --at seconds of simulated time, then quit
@@ -12,9 +15,13 @@ extends Node
 ##                   would; repeat it for more. It stages a scene, e.g. the stage-9 art reference (game/tools/reference_shot.sh)
 ##   --autopilot     the Attract autopilot (#34) plays the Raccoon, every stage of every Run
 
-signal run_over(run: Run)  # a Gridlock ended `run`; a fresh one has started. The smoke test (test/smoke.gd) listens.
+signal run_over(run: Run)  # a Gridlock ended `run`; the results follow. The smoke test (test/smoke.gd) listens.
 
-var run: Run
+const NO_QUOTA := 1 << 30  # Attract's Quota: it stays on stage 1 until it restarts
+const RUN_FLAGS: Array[String] = ["--stage=", "--shot=", "--at=", "--quota-at=", "--switch=", "--autopilot"]  # each skips Attract
+
+var flow := Flow.new()
+var run: Run  # the Run being played, or Attract's
 var autopilot := false  # from --autopilot: each stage's Raccoon gets an Autopilot. Change it with set_autopilot().
 
 var _shot_path := ""
@@ -22,15 +29,18 @@ var _shot_at := 15.0
 var _quota_at := -1.0  # from --quota-at; negative never
 var _switches: Array[Array] = []  # from --switch: [seconds, PackedInt32Array of Light indices]
 var _start_stage := 1
-var _clock := 0.0  # seconds simulated since boot, across stages and Runs
+var _direct := false  # an agent flag asked for a Run straight away
+var _clock := 0.0  # seconds simulated since boot, across stages and Runs, not counting Pause
 var _world: World
 var _tally: CanvasLayer  # the Tally card's layer, while it shows
-var _seed := 0  # this Run's; the next Run takes the next one, so a seeded session repeats exactly
+var _ui := UI.new()
+var _seed := 0  # the next Run's or Attract's; each takes the next one, so a seeded session repeats exactly
+var _run_seed := 0  # this Run's
 
 
 func _ready() -> void:
-	# Exported Windows builds run exclusive fullscreen; the web build stays windowed (#13 §8).
-	# Keep this when #35 replaces this placeholder.
+	process_mode = Node.PROCESS_MODE_ALWAYS  # Flow and the UI run on through Pause; each World and Tally is pausable
+	# Exported Windows builds run exclusive fullscreen; the web build stays windowed until the title press (#13 §8).
 	if OS.has_feature("template") and not OS.has_feature("web"):
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
 	_seed = randi()
@@ -50,64 +60,192 @@ func _ready() -> void:
 		elif a.begins_with("--switch="):
 			var parts := a.substr(9).split(":")
 			_switches.append([float(parts[0]), PackedInt32Array(Array(parts[1].split(",")).map(func(s: String) -> int: return int(s)))])
+		_direct = _direct or RUN_FLAGS.any(func(f: String) -> bool: return a.begins_with(f))
 	print("Fender Bandit booted, window mode %d, seed %d" % [DisplayServer.window_get_mode(), _seed])
-	_start_run()
+	add_child(_ui)
+	get_window().focus_exited.connect(flow.focus_lost)  # the web build's blur and a desktop window's
+	get_window().focus_entered.connect(flow.focus_gained)
+	flow.changed.connect(_on_flow_changed)
+	flow.paused_changed.connect(_on_paused_changed)
+	if _direct:
+		flow.play_now()
+	else:
+		_on_flow_changed(flow.state)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		flow.focus_lost()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		flow.focus_gained()
+
+
+## Presses become Flow's inputs: any button leaves Attract, A closes the cards, Start pauses.
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_pressed() or event.is_echo() or flow.input_locked():
+		return
+	match flow.state:
+		Flow.State.ATTRACT:
+			if _is_button(event):
+				if OS.has_feature("web"):  # only from an input handler: the browser wants a user gesture
+					DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+				flow.press_start(not (event is InputEventKey))
+		Flow.State.CONTROLS, Flow.State.RESULTS:
+			if _is_confirm(event):
+				flow.confirm()
+		Flow.State.PLAY:
+			if flow.paused:
+				_pause_input(event)
+			elif event.is_action_pressed(&"pause"):
+				flow.pause_or_resume()
+
+
+## Any key, or any pad button but Select and the guide: the cabinet launcher keeps those (#19 story 11). LT and RT
+## count too: they arrive as trigger axes (#4), and RT is a button on the cabinet's grid.
+static func _is_button(event: InputEvent) -> bool:
+	var b := event as InputEventJoypadButton
+	if b != null:
+		return b.button_index != JOY_BUTTON_BACK and b.button_index != JOY_BUTTON_GUIDE
+	var m := event as InputEventJoypadMotion
+	if m != null:
+		return m.axis == JOY_AXIS_TRIGGER_LEFT or m.axis == JOY_AXIS_TRIGGER_RIGHT
+	return event is InputEventKey
+
+
+static func _is_confirm(event: InputEvent) -> bool:
+	return event.is_action_pressed(&"switch") or event.is_action_pressed(&"ui_accept")
+
+
+func _pause_input(event: InputEvent) -> void:
+	var menu := _ui.screen as PauseMenu
+	if event.is_action_pressed(&"move_up"):
+		menu.move(-1)
+	elif event.is_action_pressed(&"move_down"):
+		menu.move(1)
+	elif _is_confirm(event):  # before Pause: Enter is both, and on the menu it chooses
+		if menu.row == PauseMenu.Row.QUIT:
+			flow.quit_to_title()
+		else:
+			flow.pause_or_resume()
+	elif event.is_action_pressed(&"pause"):
+		flow.pause_or_resume()
+
+
+func _on_flow_changed(state: Flow.State) -> void:
+	match state:
+		Flow.State.ATTRACT:
+			_clear_board()
+			_start_attract()
+			_ui.show_screen(TitleScreen.new())
+		Flow.State.CONTROLS:
+			_ui.show_screen(ControlsCard.new(flow.pad))  # over Attract, which plays on behind it
+		Flow.State.PLAY:
+			_clear_board()
+			_ui.clear()
+			_start_run()
+		Flow.State.GRIDLOCK:
+			_world.process_mode = Node.PROCESS_MODE_DISABLED  # the board freezes, and the Raccoon with it
+			_ui.show_screen(GridlockBanner.new())
+			print("Gridlock at stage %d, score %d" % [run.stage, run.score])
+			run_over.emit(run)
+		Flow.State.RESULTS:
+			_ui.show_screen(ResultsCard.new(run))
+
+
+func _on_paused_changed(paused: bool) -> void:
+	get_tree().paused = paused
+	if paused:
+		_ui.show_screen(PauseMenu.new())
+	else:
+		_ui.clear()
+
+
+## Free the board: the World and the Tally card.
+func _clear_board() -> void:
+	if _tally != null:
+		_tally.queue_free()
+		_tally = null
+	if _world != null:
+		_world.queue_free()
+		_world = null
+
+
+func _take_seed() -> int:
+	_seed += 1
+	return _seed - 1
+
+
+## A fresh Attract: the autopilot plays stage 1 on a fresh seed, with no HUD, and never clears it.
+func _start_attract() -> void:
+	run = Run.new()
+	_run_seed = _take_seed()
+	_add_world(Stages.def(1, _run_seed))
+	_world.traffic.quota = NO_QUOTA
+	_world.hud.visible = false
+	_world.raccoon.pilot = Autopilot.new(_world.traffic)
 
 
 func _start_run() -> void:
 	run = Run.new()
 	run.stage = _start_stage
+	_run_seed = _take_seed()
 	_start_stage_world()
 
 
 func _start_stage_world() -> void:
-	var stage := Stages.def(run.stage, _seed)
-	_world = World.new(run, stage, hash([_seed, run.stage]))
-	_world.traffic.gridlocked.connect(_on_gridlocked, CONNECT_DEFERRED)
-	_world.traffic.stage_cleared.connect(_on_stage_cleared)  # not deferred: the Tally starts on this tick, so a seeded run repeats exactly
-	add_child(_world)
+	_add_world(Stages.def(run.stage, _run_seed))
+	_world.traffic.stage_cleared.connect(_on_stage_cleared.bind(_world))  # not deferred: the Tally starts on this tick, so a seeded run repeats exactly
 	if autopilot:
 		_world.raccoon.pilot = Autopilot.new(_world.traffic)
 
 
-## Hand the Raccoon to the autopilot, or take it back, from now on: this stage too.
+func _add_world(stage: StageDef) -> void:
+	_world = World.new(run, stage, hash([_run_seed, run.stage]))
+	_world.process_mode = Node.PROCESS_MODE_PAUSABLE  # not Main's ALWAYS
+	_world.traffic.gridlocked.connect(_on_gridlocked.bind(_world), CONNECT_DEFERRED)
+	add_child(_world)
+
+
+## Hand the Raccoon to the autopilot, or take it back, from now on: this stage of the Run too.
 func set_autopilot(on: bool) -> void:
 	autopilot = on
-	if on != (_world.raccoon.pilot != null):  # keep a pilot already flying: it remembers the Greens it turned on
+	if flow.state == Flow.State.PLAY and on != (_world.raccoon.pilot != null):  # keep a pilot already flying: it remembers the Greens it turned on
 		_world.raccoon.pilot = Autopilot.new(_world.traffic) if on else null
 
 
-# The stage is cleared: freeze the board and show the Tally card over it.
-func _on_stage_cleared() -> void:
+# The stage is cleared: freeze the board and show the Tally card over it. A World being freed may still tick once.
+func _on_stage_cleared(world: World) -> void:
+	if world != _world:
+		return
 	_world.process_mode = Node.PROCESS_MODE_DISABLED
-	var card := TallyCard.new(run.stage, _world.traffic.cars_through, run.stage_score(), Stages.news(Stages.def(run.stage + 1, _seed)))
-	card.done.connect(_on_tally_done)
+	var card := TallyCard.new(run.stage, _world.traffic.cars_through, run.stage_score(), Stages.news(Stages.def(run.stage + 1, _run_seed)))
+	card.done.connect(_on_tally_done.bind(card))
 	_tally = CanvasLayer.new()
 	_tally.layer = 2  # over the HUD strip
+	_tally.process_mode = Node.PROCESS_MODE_PAUSABLE
 	_tally.add_child(card)
 	add_child(_tally)
 
 
 # On to the next stage, on a clean board.
-func _on_tally_done() -> void:
-	_tally.queue_free()
-	_tally = null
-	_world.queue_free()
+func _on_tally_done(card: TallyCard) -> void:
+	if _tally == null or card.get_parent() != _tally:
+		return  # quit to title while it showed
+	_clear_board()
 	run.next_stage()
 	_start_stage_world()
 
 
-# A bare Gridlock: the Run is over, and a fresh one starts.
-func _on_gridlocked() -> void:
-	_seed += 1
-	var over := run
-	print("Gridlock: a fresh Run, seed %d" % _seed)
-	_world.queue_free()
-	_start_run()
-	run_over.emit(over)
+# The Jam is full. A stale World's Gridlock (deferred past a change of board) is ignored.
+func _on_gridlocked(world: World) -> void:
+	if world == _world:
+		flow.gridlocked()
 
 
 func _physics_process(delta: float) -> void:
+	flow.step(delta)
+	if get_tree().paused or _world == null:
+		return
 	var was := _clock
 	_clock += delta
 	if was < _quota_at and _clock >= _quota_at:

@@ -137,3 +137,28 @@ func test_real_traffic_scores() -> void:
 	check(r.score > 0, "cars exiting score: got %d" % r.score)
 	check(r.combo > 0, "and build Combo: got %d" % r.combo)
 	check_eq(r.crashes, 0, "crashes with N and S green")
+
+
+func test_the_run_keeps_the_results_card_stats_across_stages() -> void:
+	var t := straight_traffic(1)
+	var r := _run_on(t)
+	_exits(t, 9)
+	_crash(t)
+	_crash(t)
+	_exits(t, 3)  # stage 1: 12 cars, best Combo 9, 2 Crashes
+	r.next_stage()
+	var t2 := Traffic.new(2, r.dents)
+	r.attach(t2)
+	_exits(t2, 4)  # Combo 7
+	_crash(t2)
+	_exits(t2, 1)  # stage 2: 5 cars, best Combo 7, 1 Crash
+	check_eq(r.cars_through, 17, "cars through, every stage")
+	check_eq(r.top_combo, 9, "best Combo of the Run")
+	check_eq(r.most_crashes, 2, "most Crashes in one stage")
+	r.next_stage()
+	var t3 := Traffic.new(3, r.dents)
+	r.attach(t3)
+	for i in 3:
+		_crash(t3)
+	check_eq(r.most_crashes, 3, "a later stage can beat it")
+	check_eq(r.dents, 6, "the Dents, every stage")
