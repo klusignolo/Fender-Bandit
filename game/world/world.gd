@@ -58,6 +58,11 @@ func _ready() -> void:
 	add_child(hud)
 
 
+## Whether this stage's crossing attached as it began: the camera pulls back over the Reveal, and Audio whooshes.
+func reveals() -> bool:
+	return _reveal_from.has_area()
+
+
 func _physics_process(delta: float) -> void:
 	traffic.step()
 	framing.step(delta, get_viewport_rect().size, raccoon.position)

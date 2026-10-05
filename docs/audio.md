@@ -39,8 +39,8 @@ What the check found:
 
 | Source | Used for | How | Kept for rebuild |
 |---|---|---|---|
-| **Procedural** | Most SFX | `game/tools/make_sfx.gd`, a headless Godot script with a fixed seed: `godot --headless --path game -s tools/make_sfx.gd`. It writes `game/audio/sfx/*.wav` via `AudioStreamWAV.save_to_wav`. | The function name in **Recipe** |
-| **jsfxr** (sfxr.me) | UI blips, Combo, Jam-level, Swell whistle, Raccoon bonk | Make it in the browser, export WAV to `game/audio/sfx/`. | The jsfxr parameter string in **Recipe** |
+| **Procedural** | Every SFX, and the placeholder stinger | `game/tools/make_sfx.gd`, a headless Godot script with a fixed seed: `godot --headless --path game -s tools/make_sfx.gd`, then `godot --headless --path game --import`. It writes `game/audio/sfx/*.wav` (44.1 kHz, 16-bit mono) via `AudioStreamWAV.save_to_wav`. Each sound draws from its own RNG, seeded by the script's `SEED` and the sound's name, so a rebuild is byte-for-byte the same and changing one recipe leaves the rest alone. | The function in **Recipe** |
+| **Procedural, jsfxr-style** | UI blips, Combo, Jam-level, Swell whistle, Raccoon bonk | The same script, in jsfxr's manner: square and sine blips with pitch slides. (#12 planned these in jsfxr in the browser; #37 made them in the script instead, so they rebuild headless with everything else and an agent can retune them.) A jsfxr export can still replace any of them: drop the WAV over the file and put the parameter string in **Recipe**. | The function in **Recipe** |
 | **Lyria** (Gemini app, work account) | Theme, gameplay groove, stinger | Download the MP3 and convert it with ffmpeg to an OGG in `game/audio/music/`, cut to end at the loop end (below). Keep the downloaded MP3 in `audio_src/` at the repo root, outside the Godot project so it doesn't ship. | The prompt in **Recipe**, plus the loop values |
 
 ffmpeg is installed (`winget install Gyan.FFmpeg`). Python isn't needed.
@@ -56,13 +56,15 @@ Measure both on the MP3 as ffmpeg decodes it, then cut and convert:
 ffmpeg -i theme.mp3 -af "atrim=end=<loop end>" -c:a libvorbis -q:a 6 theme.ogg
 ```
 
+**SFX import settings:** every SFX `.wav.import` has `compress/mode=0` (PCM: the clips are tiny, and plain PCM is the safest in the browser's Sample mode) and `edit/loop_mode=1` (off), except `tow_scrape`, which has `edit/loop_mode=2` (Forward, the whole file). Keep them when a file is rebuilt.
+
 Import the OGG with `loop` on and `loop_offset` set; leave `bpm`/`beat_count` at 0. The file now ends at the loop end, which loops correctly in both the browser and the desktop build. Record `loop_offset` and the loop end on the track's entry. The stinger doesn't loop: cut it the same way and leave `loop` off.
 
 **Lyria prompt template:** *"Instrumental cartoon caper / heist jazz-funk, [tempo] BPM, [mood]. Walking upright bass, tight snare and hi-hat, punchy brass stabs, playful [lead]. Sneaky and mischievous, comedic, loopable, no vocals, no long fade."*
 
 ### Playback rules
 
-- **Music:** one music player, plus one stinger player, plus a pool of SFX players. All of them belong to the `Audio` autoload.
+- **Music:** one music player, plus one stinger player, plus a pool of SFX players, plus the Tow scrape's own looping player. All of them belong to the `Audio` autoload (`game/audio/audio.gd`). `BoardCues` turns each stage's signals into sound names; `VoicePool` books the voices; `Sfx` lists every sound with its priority and level.
 - **The tempo follows the jam-level:** the groove's `pitch_scale` glides to the jam-level's step whenever the level changes. Pitch rises with tempo on purpose (cartoon panic). *Fallback if Heavy grates:* a pre-stretched Heavy MP3, crossfaded.
 - **Busy board:** a capped voice pool, a cap on simultaneous Honks, and a retrigger guard per sound. When the pool is full, the oldest voice of the lowest priority is cut. Priority, highest first:
   1. Gridlock
@@ -72,6 +74,8 @@ Import the OGG with `loop` on and `loop_offset` set; leave `bpm`/`beat_count` at
   5. Switch, Tow and Dash (the player's own actions must always be heard)
   6. Honk
   7. Everything else
+
+  The UI blips are "everything else": a menu never shares the board with much. A sound of the same priority never cuts another, except the player's own actions, which cut the oldest of theirs, so the newest Switch is always heard.
 - **Ducking:** the music dips under each Crash and under the stinger, but never under Honks (they're constant). Done with player volume, not bus effects.
 - **Player control:** a **Music: On / Off** row in the pause menu (between Resume and Quit to title), toggled with Switch and saved best-effort in `user://` next to the High-score table. SFX are always on, because Honks are how the player reads Patience.
 
@@ -96,55 +100,55 @@ Every sound starts as *not made*. Fill in **File** and **Recipe** as each one is
 |---|---|---|---|---|---|
 | `theme` | Attract, title, controls, results, initials, High-score table | Lyria | | Template, about 100 BPM, laid-back and sly, muted-trumpet lead | |
 | `groove` | Every Stage and tally card; glides with the jam-level | Lyria | | Template, about 112 BPM, driving and busy, brass-section lead | |
-| `stinger` | Stage cleared (tally card opens) | Lyria | | A short brass "ta-da!" hit, about 2s, no loop (trim the longest clean hit) | no loop |
+| `stinger` | Stage cleared (tally card opens) | Lyria (placeholder: Procedural, `_ta_da`) | `audio/sfx/stinger.wav`, until #38's Lyria cut | A short brass "ta-da!" hit, about 2s, no loop (trim the longest clean hit) | no loop |
 
 ### Raccoon
 
 | Sound | Event | Sound design | Source | File | Recipe |
 |---|---|---|---|---|---|
-| `switch_green` | **Switch** Red → Green | Chunky relay clack, high | Procedural | | |
-| `switch_yellow` | **Switch** Green → Yellow | The same clack, pitched to the middle | Procedural | | |
-| `dash` | **Dash** | Short whoosh | Procedural | | |
-| `tow_grab` | **Tow** starts | Grab "clunk" | Procedural | | |
-| `tow_scrape` | **Tow**, while dragging | Metal scrape, looping | Procedural | | |
-| `raccoon_hit` | A car hits the Raccoon (no **Yield**) | Cartoon "bonk" | jsfxr | | |
+| `switch_green` | **Switch** Red → Green | Chunky relay clack, high | Procedural | `audio/sfx/switch_green.wav` | `_relay(1.0, 1.0)` |
+| `switch_yellow` | **Switch** Green → Yellow | The same clack, pitched to the middle | Procedural | `audio/sfx/switch_yellow.wav` | `_relay(0.82, 1.0)` |
+| `dash` | **Dash** | Short whoosh | Procedural | `audio/sfx/dash.wav` | `_dash` |
+| `tow_grab` | **Tow** starts | Grab "clunk" | Procedural | `audio/sfx/tow_grab.wav` | `_clunk(1.0)` |
+| `tow_scrape` | **Tow**, while dragging | Metal scrape, looping | Procedural | `audio/sfx/tow_scrape.wav` | `_scrape (1s loop, Forward)` |
+| `raccoon_hit` | A car hits the Raccoon (no **Yield**) | Cartoon "bonk" | Procedural, jsfxr-style | `audio/sfx/raccoon_hit.wav` | `_bonk` |
 
 ### Lights and drivers
 
 | Sound | Event | Sound design | Source | File | Recipe |
 |---|---|---|---|---|---|
-| `light_red` | A **Light** falls Yellow → Red on its own | Softer relay clack | Procedural | | |
-| `honk_1` | First **Honk** | Short "beep", ±pitch per car | Procedural | | |
-| `honk_2` | Second **Honk** | Long angry "beeeep-beep", the same horn | Procedural | | |
-| `blow_red` | **Blowing the red** | Engine rev plus tyre squeal | Procedural | | |
-| `yield` | **Yield** | Brake squeal | Procedural | | |
+| `light_red` | A **Light** falls Yellow → Red on its own | Softer relay clack | Procedural | `audio/sfx/light_red.wav` | `_relay(0.62, 0.0)` |
+| `honk_1` | First **Honk** | Short "beep", ±pitch per car | Procedural | `audio/sfx/honk_1.wav` | `_honk: one 0.2s beep` |
+| `honk_2` | Second **Honk** | Long angry "beeeep-beep", the same horn | Procedural | `audio/sfx/honk_2.wav` | `_honk: 0.55s, then 0.2s` |
+| `blow_red` | **Blowing the red** | Engine rev plus tyre squeal | Procedural | `audio/sfx/blow_red.wav` | `_blow_red` |
+| `yield` | **Yield** | Brake squeal | Procedural | `audio/sfx/yield.wav` | `_brake_squeal` |
 
 ### Crashes
 
 | Sound | Event | Sound design | Source | File | Recipe |
 |---|---|---|---|---|---|
-| `crash_1`, `crash_2`, `crash_3` | **Crash** (random pick, ±pitch) | Cartoon crunch plus glass tinkle | Procedural | | |
-| `gridlock_scratch` | **Gridlock**, slow-mo starts | Record scratch | Procedural | | |
-| `gridlock_horns` | **Gridlock** | Chorus of held horns | Procedural | | |
-| `gridlock_shatter` | **Gridlock**, the screen shatters | Big glass shatter | Procedural | | |
+| `crash_1`, `crash_2`, `crash_3` | **Crash** (random pick, ±pitch) | Cartoon crunch plus glass tinkle | Procedural | `audio/sfx/crash_1.wav` to `crash_3.wav` | `_crash`, three draws |
+| `gridlock_scratch` | **Gridlock**, slow-mo starts | Record scratch | Procedural | `audio/sfx/gridlock_scratch.wav` | `_scratch` |
+| `gridlock_horns` | **Gridlock** | Chorus of held horns | Procedural | `audio/sfx/gridlock_horns.wav` | `_horns` |
+| `gridlock_shatter` | **Gridlock**, the screen shatters | Big glass shatter | Procedural | `audio/sfx/gridlock_shatter.wav` | `_shatter` |
 
 ### Run and world
 
 | Sound | Event | Sound design | Source | File | Recipe |
 |---|---|---|---|---|---|
-| `combo_up` | **Combo** reaches each 5× step | Rising blip | jsfxr | | |
-| `combo_break` | **Combo** reset by a **Crash** | Deflating "wah-wah" | jsfxr | | |
-| `jam_busy` | **Jam-level** rises to Busy | Short warning beep | jsfxr | | |
-| `jam_heavy` | **Jam-level** rises to Heavy | Double warning beep | jsfxr | | |
-| `swell` | A **Swell** is flagged, 1s before it moves (`Traffic.swell_flagged`). The only warning: nothing shows on screen until it moves | Traffic-cop whistle toot | jsfxr | | |
-| `reveal` | A crossing attaches (the reveal) | Whoosh plus construction "ka-chunk" | Procedural | | |
+| `combo_up` | **Combo** reaches each 5× step | Rising blip | Procedural, jsfxr-style | `audio/sfx/combo_up.wav` | `_arpeggio(880, 1175, 1760 Hz)` |
+| `combo_break` | **Combo** reset by a **Crash** | Deflating "wah-wah" | Procedural, jsfxr-style | `audio/sfx/combo_break.wav` | `_wah_wah` |
+| `jam_busy` | **Jam-level** rises to Busy | Short warning beep | Procedural, jsfxr-style | `audio/sfx/jam_busy.wav` | `_beeps(880 Hz, 1)` |
+| `jam_heavy` | **Jam-level** rises to Heavy | Double warning beep | Procedural, jsfxr-style | `audio/sfx/jam_heavy.wav` | `_beeps(1040 Hz, 2)` |
+| `swell` | A **Swell** is flagged, 1s before it moves (`Traffic.swell_flagged`). The only warning: nothing shows on screen until it moves | Traffic-cop whistle toot | Procedural, jsfxr-style | `audio/sfx/swell.wav` | `_whistle` |
+| `reveal` | A crossing attaches (the reveal) | Whoosh plus construction "ka-chunk" | Procedural | `audio/sfx/reveal.wav` | `_reveal` |
 
 ### UI
 
 | Sound | Event | Source | File | Recipe |
 |---|---|---|---|---|
-| `ui_move` | Menu or initials cursor moves | jsfxr | | |
-| `ui_confirm` | Menu confirm, initials letter set | jsfxr | | |
+| `ui_move` | Menu or initials cursor moves | Procedural, jsfxr-style | `audio/sfx/ui_move.wav` | `_blip(660 → 720 Hz)` |
+| `ui_confirm` | Menu confirm, initials letter set | Procedural, jsfxr-style | `audio/sfx/ui_confirm.wav` | `_arpeggio(880, 1320 Hz)` |
 
 ### Deliberately silent
 

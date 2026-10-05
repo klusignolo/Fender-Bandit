@@ -9,9 +9,11 @@ signal car_exited(car: Car)
 signal light_changed(light: Light)
 signal crashed(a: Car, b: Car, at: Vector2)  # at least one of the two is fresh Wreckage
 signal towed(car: Car, off_road: bool)  # towed Wreckage dropped; off the road, it's gone from cars
+signal tow_grabbed(car: Car)  # the Raccoon took hold of Wreckage to Tow it
 signal raccoon_hit(car: Car)  # a car too fast to stop hit the Raccoon: it is stunned and knocked back
 signal honked(car: Car)  # a front driver (or holding Turner) Honked: car.honks says which Honk
 signal blew_red(car: Car)  # a front driver out of Patience is Blowing the red
+signal yielded(car: Car)  # a driver braking from YIELD_SQUEAL_SPEED or faster started to Yield to the Raccoon
 signal jam_level_changed(level: Jam.Level)  # the Jam moved into another Jam-level, up or down
 signal gridlocked  # the Jam is full: the Run is over
 signal swell_flagged(next: int)  # the Swell moves to road `next` in SHIFT_WARN seconds
@@ -157,6 +159,7 @@ func tow(reach: float) -> void:
 	if towing != null:
 		towing.towed = true
 		_tow_hold = (towing.transform.origin - raccoon_position).limit_length(Tuning.TOW_HOLD)
+		tow_grabbed.emit(towing)
 
 
 func step() -> void:
@@ -366,7 +369,12 @@ func _drive() -> void:
 		target = minf(target, _stop_line_limit(c))
 		target = minf(target, _turn_limit(c))
 		target = minf(target, _turner_limit(c))
-		target = minf(target, _obstacle_limit(c))
+		var obstacle := _obstacle_limit(c)
+		target = minf(target, obstacle)
+		var yielding := c.raccoon_ahead and (c.yielding or obstacle < c.speed)  # braked for the Raccoon, which is still there
+		if yielding and not c.yielding and c.speed >= Tuning.YIELD_SQUEAL_SPEED:
+			yielded.emit(c)
+		c.yielding = yielding
 		if c.speed < target:
 			c.speed = minf(target, c.speed + Tuning.ACCEL * DT)
 		else:
@@ -510,7 +518,9 @@ func _gap_ok(c: Car) -> bool:
 func _obstacle_limit(c: Car) -> float:
 	var gap := _follow_gap(c)
 	gap = minf(gap, _wreckage_gap(c, minf(gap, Tuning.LOOK)))  # Wreckage past the car in front can't matter yet
-	gap = minf(gap, _raccoon_gap(c, minf(gap, Tuning.LOOK)))
+	var raccoon := _raccoon_gap(c, minf(gap, Tuning.LOOK))
+	c.raccoon_ahead = raccoon < gap
+	gap = minf(gap, raccoon)
 	if gap == INF:
 		return INF
 	return sqrt(2.0 * Tuning.DECEL * maxf(gap - Tuning.FOLLOW_GAP, 0.0))

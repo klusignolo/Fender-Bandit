@@ -5,7 +5,7 @@ extends Node
 ## A Run steps through its Stages (#29): a fresh World for each stage, the Tally card between them over the frozen
 ## board. Attract is a World on stage 1 that the autopilot plays (#34), with no HUD and no score; the death beat
 ## (#43) comes later. Attract takes turns between its title and the High-score table, which the Scores autoload
-## keeps. Attract is muted (#19 story 80): Audio (#37) plays no SFX while flow.state is ATTRACT.
+## keeps. Attract is muted (#19 story 80): Main has Audio (#37) watch each board, and an Attract board plays no SFX.
 ## Agent flags, after `--` on the command line (#13 §10, #19 story 87). Any but --seed skips Attract and the card:
 ##   --seed=N        seed the simulation, so a run repeats exactly (default: random)
 ##   --stage=N       start the Run at stage N (default 1)
@@ -93,9 +93,13 @@ func _unhandled_input(event: InputEvent) -> void:
 				if OS.has_feature("web"):  # only from an input handler: the browser wants a user gesture
 					DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 				flow.press_start(not (event is InputEventKey))
+				Audio.play(&"ui_confirm")  # in the browser, the first sound: this press unlocks audio
 		Flow.State.CONTROLS, Flow.State.RESULTS, Flow.State.SCORES:
 			if _is_confirm(event):
+				var was := flow.state
 				flow.confirm()
+				if flow.state != was:
+					Audio.play(&"ui_confirm")
 		Flow.State.INITIALS:
 			if _is_confirm(event) and flow.initials_unlocked():
 				(_ui.screen as InitialsScreen).confirm()
@@ -124,17 +128,21 @@ static func _is_confirm(event: InputEvent) -> bool:
 
 func _pause_input(event: InputEvent) -> void:
 	var menu := _ui.screen as PauseMenu
+	var row := menu.row
 	if event.is_action_pressed(&"move_up"):
 		menu.move(-1)
 	elif event.is_action_pressed(&"move_down"):
 		menu.move(1)
 	elif _is_confirm(event):  # before Pause: Enter is both, and on the menu it chooses
+		Audio.play(&"ui_confirm")
 		if menu.row == PauseMenu.Row.QUIT:
 			flow.quit_to_title()
 		else:
 			flow.pause_or_resume()
 	elif event.is_action_pressed(&"pause"):
 		flow.pause_or_resume()
+	if menu.row != row:
+		Audio.play(&"ui_move")
 
 
 func _on_flow_changed(state: Flow.State) -> void:
@@ -152,6 +160,7 @@ func _on_flow_changed(state: Flow.State) -> void:
 		Flow.State.GRIDLOCK:
 			_world.process_mode = Node.PROCESS_MODE_DISABLED  # the board freezes, and the Raccoon with it
 			_ui.show_screen(GridlockBanner.new())
+			Audio.gridlock()
 			print("Gridlock at stage %d, score %d" % [run.stage, run.score])
 			run_over.emit(run)
 		Flow.State.RESULTS:
@@ -160,6 +169,7 @@ func _on_flow_changed(state: Flow.State) -> void:
 			_entry = InitialsEntry.new()
 			var screen := InitialsScreen.new(_entry, run.score, Scores.table.rank_of(run.score))
 			screen.entered.connect(flow.initials_entered)
+			screen.blip.connect(Audio.play)
 			_ui.show_screen(screen)
 		Flow.State.SCORES:
 			_ui.show_screen(ScoresScreen.new(Scores.table.entries, _record()))
@@ -234,6 +244,7 @@ func _add_world(stage: StageDef) -> void:
 	_world.process_mode = Node.PROCESS_MODE_PAUSABLE  # not Main's ALWAYS
 	_world.traffic.gridlocked.connect(_on_gridlocked.bind(_world), CONNECT_DEFERRED)
 	add_child(_world)
+	Audio.watch(_world, flow.state == Flow.State.ATTRACT)  # Attract is muted (#19 story 80), the controls card over it too
 
 
 ## Hand the Raccoon to the autopilot, or take it back, from now on: this stage of the Run too.

@@ -8,6 +8,7 @@ extends SceneTree
 ## A Gridlock while the autopilot plays counts too. The results must then give way to Initials (a fresh table always
 ## ranks a Run that scored), which must save "RAC" by themselves, then the High-score table, then Attract, which must
 ## turn to the table in time. It keeps its table in a scratch file, never the real one.
+## By ear (#37): Attract and the controls card over it play no SFX but the UI's, and the Run plays HEARD.
 ## It exits non-zero at the first engine or script error logged, or if any step doesn't come. Main prints the seed
 ## it booted with; pass it back with --seed to repeat a run exactly.
 
@@ -19,6 +20,7 @@ const PAUSE_FOR := 1.0  # ...for this long
 const AUTO_FOR := 300.0  # simulated seconds
 const IDLE_FOR := 45.0  # simulated seconds
 const STEP_LIMIT := 5.0  # simulated seconds each other step may take, beyond its own time
+const HEARD: Array[StringName] = [&"switch_green", &"honk_1", &"stinger", &"gridlock_scratch", &"gridlock_shatter"]
 const SCORES_PATH := "user://smoke_scores.cfg"
 
 enum Step { ATTRACT, CONTROLS, RUN, PAUSED, IDLE, OVER, INITIALS, TABLE, BACK }
@@ -33,6 +35,8 @@ var _paused_once := false
 var _start_ms := 0
 var _done := false
 var _scores: Node  # the Scores autoload
+var _heard: Dictionary[StringName, bool] = {}  # sounds played outside Attract
+var _attract_sfx: Array[StringName] = []  # SFX played in Attract or over it, but the UI's
 
 
 func _initialize() -> void:
@@ -45,6 +49,7 @@ func _initialize() -> void:
 	_main.autopilot = true  # every Run's Raccoon gets the autopilot: Main isn't ready until the first frame
 	root.add_child(_main)
 	_main.run_over.connect(_on_run_over)
+	root.get_node("Audio").played.connect(_on_played)
 
 
 func _physics_process(delta: float) -> bool:
@@ -113,6 +118,9 @@ func _physics_process(delta: float) -> bool:
 				_finish("FAIL: the High-score table never gave way to Attract")
 		Step.BACK:
 			if flow.attract_table and _main._ui.screen is ScoresScreen:
+				_expect(_attract_sfx.is_empty(), "Attract plays no SFX: it played %s" % [_attract_sfx])
+				for sound in HEARD:
+					_expect(_heard.has(sound), "the Run played %s" % sound)
 				_finish("%s; the table showed and Attract turned to it %.1fs later" % [_gridlock, since])
 			elif since > Tuning.ATTRACT_TITLE + STEP_LIMIT:
 				_finish("FAIL: Attract never turned to the High-score table")
@@ -143,6 +151,13 @@ func _on_run_over(run: Run) -> void:
 	_gridlock = "Gridlock at stage %d, %.1fs in, %s; score %d" % [run.stage, _clock, idle, run.score]
 
 
+func _on_played(sound: StringName) -> void:
+	if _main.flow.state in [Flow.State.ATTRACT, Flow.State.CONTROLS] and not String(sound).begins_with("ui_"):
+		_attract_sfx.append(sound)
+	else:
+		_heard[sound] = true
+
+
 func _finish(what: String) -> void:
 	if _done:
 		return
@@ -152,4 +167,8 @@ func _finish(what: String) -> void:
 	if _errors.count > 0:
 		printerr("FAIL: %d error(s) logged; the last: %s" % [_errors.count, _errors.last])
 	print("Smoke: %s. %s in %.1fs of real time" % [what, "PASS" if ok else "FAIL", (Time.get_ticks_msec() - _start_ms) / 1000.0])
+	root.get_node("Audio").silence()
+	OS.delay_msec(100)  # real time, which --fixed-fps doesn't give: the audio thread lets go of the stopped clips...
+	await process_frame  # ...and the main thread frees them
+	await process_frame
 	quit(0 if ok else 1)

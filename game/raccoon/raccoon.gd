@@ -9,6 +9,8 @@ extends Node2D
 ## Which way it shows: the front moving down, the back moving up, and the side (mirrored for left) on any diagonal.
 enum View { FRONT, BACK, RIGHT, LEFT }
 
+signal dashed  # a Dash started: Audio's whoosh (#37)
+
 ## What it's asked to do this tick: the player's input, or the autopilot's.
 class Intent:
 	var move := Vector2.ZERO  # as Input.get_vector: length up to 1
@@ -105,6 +107,7 @@ func _move(intent: Intent, delta: float, world_per_px: float) -> bool:
 		_dash_left = Tuning.DASH_TIME
 		_dash_cooldown = Tuning.DASH_COOLDOWN
 		_dash_dir = facing
+		dashed.emit()
 	var dashing := _dash_left > 0.0
 	traffic.set_raccoon(position, dashing)  # towing slows a walk and a Dash differently
 	var speed_scale := traffic.raccoon_speed_scale() * world_per_px

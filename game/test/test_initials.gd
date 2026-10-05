@@ -98,3 +98,19 @@ func test_a_finished_entry_takes_no_more_input() -> void:
 	e.next()
 	check_eq(e.text(), "AAA", "no letter changes")
 	check_eq(e.slot, 2, "no slot changes")
+
+
+func test_the_screen_blips_a_move_per_letter_and_a_confirm_per_letter_set() -> void:
+	var screen := InitialsScreen.new(InitialsEntry.new(), 100, 0)
+	var heard: Array[StringName] = []
+	screen.blip.connect(func(s: StringName) -> void: heard.append(s))
+	screen._blip_on(screen.entry.step.bind(0.0, 0, 0))  # the first look at the stick
+	screen._blip_on(screen.entry.step.bind(0.016, 1, 0))  # up: a letter
+	screen._blip_on(screen.entry.step.bind(0.016, 0, 1))  # right: on to the next slot
+	screen._blip_on(screen.entry.step.bind(0.016, 0, -1))  # left: back
+	screen.confirm()
+	screen.confirm()
+	screen.confirm()  # the last slot: done
+	screen.confirm()  # nothing left to do
+	check_eq(heard, [&"ui_move", &"ui_confirm", &"ui_move", &"ui_confirm", &"ui_confirm", &"ui_confirm"], "blips")
+	screen.free()

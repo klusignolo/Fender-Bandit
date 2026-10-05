@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 Scores="*res://main/scores.gd"
+Audio="*res://audio/audio.gd"
 
 [display]
 

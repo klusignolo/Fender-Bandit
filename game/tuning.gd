@@ -164,3 +164,11 @@ const REVEAL_TIME := 2.5  # seconds the pull-back takes when a crossing attaches
 # Audio
 const MUSIC_PITCH: Array[float] = [1.0, 1.06, 1.12]  # groove pitch_scale at Clear, Busy, Heavy
 const MUSIC_GLIDE := 1.5  # seconds to glide to a new MUSIC_PITCH step
+const SFX_VOICES := 16  # SFX players in the pool; the music, the stinger and the Tow scrape have their own
+const HONK_MAX := 3  # Honks that may sound at once
+const SFX_RETRIGGER := 0.08  # seconds before the same sound may start again
+const DUCK_CRASH: Array[float] = [-6.0, 0.5]  # music dip under each Crash: dB, seconds
+const DUCK_STINGER := -9.0  # dB the music dips while the stinger plays
+const SFX_JITTER := 0.08  # pitch_scale spread on Honks (per car) and Crashes (per Crash)
+const YIELD_SQUEAL_SPEED := 90.0  # px/s: a car braking for the Raccoon from at least this fast squeals
+const SHATTER_DELAY := 0.5  # seconds from the Gridlock record scratch to the glass shatter, until #43 times it

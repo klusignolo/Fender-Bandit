@@ -252,11 +252,29 @@ Mix and playback numbers for the `Audio` autoload ([#12](https://github.com/klus
 |---|---|---|---|---|---|
 | Groove tempo steps | The groove's `pitch_scale` at each Jam-level. Pitch rises with tempo. | Clear 1.0, Busy 1.06, Heavy 1.12 | `MUSIC_PITCH` | #12 | About 1 and 2 semitones up. If Heavy grates, fall back to a pre-stretched Heavy file. |
 | Groove glide | How long the tempo takes to move to a new step. Also smooths the Jam bouncing across a band edge. | 1.5s | `MUSIC_GLIDE` | #12 | |
-| SFX voice pool | SFX players in the pool. The music and the stinger have their own. | 16 | `SFX_VOICES` | #12 | |
+| SFX voice pool | SFX players in the pool. The music, the stinger and the Tow scrape have their own. | 16 | `SFX_VOICES` | #12 | |
 | Honk cap | Honks that may sound at once. Past this, extra Honks carry no information. | 3 | `HONK_MAX` | #12 | |
 | Retrigger guard | The same sound can't start again within this time. | 80 ms | `SFX_RETRIGGER` | #12 | Stops a pile-up from stacking identical crunches. |
 | Crash duck | Music dip under each Crash. | −6 dB for 0.5s | `DUCK_CRASH` | #12 | |
 | Stinger duck | Groove dip while the stage-clear stinger plays. | −9 dB for the stinger | `DUCK_STINGER` | #12 | First guess. |
 | Pause duck | Groove level while paused. | −12 dB | `DUCK_PAUSE` | #12 | |
 | Attract music | Theme level during Attract (no SFX in Attract). | 0 dB | `ATTRACT_MUSIC_DB` | #12 | Turn down if HCSS wants a quieter cabinet. |
-| Pitch jitter | Random `pitch_scale` spread on Honks and Crashes. | ±8% | `SFX_JITTER` | #12 | First guess. |
+| Pitch jitter | `pitch_scale` spread on Honks (fixed per car, from its id) and Crashes (random per Crash). | ±8% | `SFX_JITTER` | #12, #37 | First guess. |
+| Yield squeal | A driver braking for the Raccoon squeals only if it was going at least this fast, once per stop. | 90 px/s | `YIELD_SQUEAL_SPEED` | #37 | 60% of a car's base speed: a car pulling away from a standstill into the Raccoon reaches about 65 px/s before it brakes, and shouldn't squeal. |
+| Shatter delay | From the Gridlock record scratch to the glass shatter. | 0.5s | `SHATTER_DELAY` | #37 | A stand-in until the death beat (#43) times the shatter to its picture. |
+
+**Mix levels** (#37): each SFX's player volume in dB, in `Sfx.SOUNDS` (`game/audio/sfx.gd`) next to its priority. Every clip is normalised to the same peak, so these alone set the mix. First guesses, set by ear on laptop speakers; tune on the cabinet.
+
+| Sounds | dB |
+|---|---|
+| Crashes, Gridlock scratch and shatter | −2 |
+| Raccoon hit | −3 |
+| Switch (Green, Yellow), Tow grab, stinger | −4 |
+| Blowing the red, reveal | −5 |
+| Gridlock horns, Jam Heavy, Swell whistle | −6 |
+| Second Honk | −7 |
+| Dash, Combo break, Jam Busy | −8 |
+| First Honk, UI confirm | −9 |
+| Light falling to red, Combo blip | −10 |
+| Yield squeal, UI move | −12 |
+| Tow scrape (loop) | −14 |

@@ -6,6 +6,7 @@ extends Card
 ## on after INITIALS_TIME and Main saves InitialsEntry.DEFAULT.
 
 signal entered
+signal blip(sound: StringName)  # ui_move as a letter or slot moves, ui_confirm as a letter is set (#37)
 
 const SIZE := Vector2(560, 400)
 const LETTER_SIZE := 72
@@ -28,15 +29,28 @@ func _init(e: InitialsEntry, score: int, rank: int) -> void:
 
 ## A: the next slot, or done.
 func confirm() -> void:
-	entry.next()
+	_blip_on(entry.next)
 	_check()
 
 
 func _process(delta: float) -> void:
 	_clock += delta
-	entry.step(delta, _dir(&"move_down", &"move_up"), _dir(&"move_left", &"move_right"))
+	_blip_on(entry.step.bind(delta, _dir(&"move_down", &"move_up"), _dir(&"move_left", &"move_right")))
 	_check()
 	queue_redraw()
+
+
+## Call `change` on the entry, and blip for what it did: a letter set (the slot moved on, or the last one done)
+## confirms; a letter cycled or a step back moves.
+func _blip_on(change: Callable) -> void:
+	var slot := entry.slot
+	var letters := entry.letters.duplicate()
+	var done := entry.done
+	change.call()
+	if entry.slot > slot or entry.done != done:
+		blip.emit(&"ui_confirm")
+	elif entry.slot < slot or entry.letters != letters:
+		blip.emit(&"ui_move")
 
 
 static func _dir(neg: StringName, pos: StringName) -> int:
