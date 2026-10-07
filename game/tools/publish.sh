@@ -41,4 +41,4 @@ fi
 echo "== Pushing $VERSION to $TARGET ${DRY:+(dry run)}"
 "$BUTLER" push "$GAME/build/web" "$TARGET:html5" --userversion "$VERSION" $DRY
 "$BUTLER" push "$GAME/build/windows" "$TARGET:windows" --userversion "$VERSION" $DRY
-"$BUTLER" status "$TARGET"
+echo "Pushed. itch processes builds for a few minutes; check with: butler status $TARGET"
