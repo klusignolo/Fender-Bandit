@@ -163,3 +163,10 @@ func test_the_itch_thumbnail_is_rendered() -> void:
 	var img := Image.load_from_file(path)
 	if check(img != null, "docs/art/itch-thumbnail.png exists"):
 		check_eq(img.get_size(), Vector2i(630, 500), "at itch's cover size")
+
+
+func test_the_itch_banner_is_rendered() -> void:
+	var path := ProjectSettings.globalize_path("res://").path_join("../docs/art/itch-banner.png")
+	var img := Image.load_from_file(path)
+	if check(img != null, "docs/art/itch-banner.png exists"):
+		check_eq(img.get_size(), Vector2i(960, 240), "at the width of itch's page column")

@@ -26,7 +26,8 @@ after it, push only what the jam rules allow (usually bug fixes).
      gets the Windows tag from its channel name.
    - Embed options: viewport **1280 × 720**, tick **Fullscreen button**. Leave
      "SharedArrayBuffer support" off (the Web preset exports without threads).
-   - Cover image: `docs/art/itch-thumbnail.png` (630×500). Screenshots: `docs/art/stage9-reference.png` or fresh `--shot=` captures.
+   - Cover image: `docs/art/itch-thumbnail.png` (630×500). Banner (Edit theme): `docs/art/itch-banner.png` (960×240).
+     Screenshots: `docs/art/itch/` (1280×720), or fresh `--shot=` captures.
    - Description: tagline "Stop. Go. Oops.", the pitch, and the controls (WASD/arrows + buttons; no mouse).
    - Save, open the page, play a run in the browser and launch the Windows zip.
 6. **Go public and submit.** Set Visibility to **Public** (or Restricted while testing), then on
