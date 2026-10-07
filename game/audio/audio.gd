@@ -4,7 +4,7 @@ extends Node
 ## stage's World: a BoardCues turns the board's signals into cues. An Attract board is muted (#19 story 80), so
 ## Attract has no SFX; the UI's own sounds still play. Ducking is done with player volume, never bus effects, and
 ## every clip plays in the default playback mode (Sample on the web): see docs/audio.md "Web limits". In the browser
-## nothing sounds until the first press, which is also the press that leaves Attract.
+## nothing sounds until the first press, unless the page already allows sound (itch.io's "Run game" click can).
 
 signal played(sound: StringName)  # a sound started: the smoke test listens
 signal music_started(track: MusicMix.Track)  # the Theme or groove started from the top: the smoke test listens
@@ -22,7 +22,7 @@ var _board_muted := false
 var _clock := 0.0  # seconds since boot, Pause included: VoicePool's time
 var _duck_db := 0.0  # how far the music is ducked, until _duck_until
 var _duck_until := 0.0
-var _unlocked := not OS.has_feature("web")  # the browser plays nothing until the first press: music waits for it
+var _unlocked := not OS.has_feature("web") or _autoplay_allowed()  # else the browser plays nothing until the first press: music waits for it
 
 
 func _ready() -> void:
@@ -151,3 +151,20 @@ func _on_scrape(on: bool) -> void:
 		_scrape.play()
 	else:
 		_scrape.stop()
+
+
+## Whether the browser lets this page play sound before any press: a fresh AudioContext starts "running" when the
+## page has autoplay, e.g. on itch.io, whose embed allows it and whose "Run game" click is the user gesture (#45).
+## Godot's own context is under the same policy. Elsewhere it starts "suspended" and the first press unlocks.
+static func _autoplay_allowed() -> bool:
+	var running = JavaScriptBridge.eval("""
+		(function () {
+			var A = window.AudioContext || window.webkitAudioContext;
+			if (!A) return false;
+			var c = new A();
+			var ok = c.state === "running";
+			c.close();
+			return ok;
+		})()
+	""", true)
+	return running == true

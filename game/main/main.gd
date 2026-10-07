@@ -16,6 +16,7 @@ extends Node
 ##   --switch=S:L,M  Switch Lights L, M, ... (indices into Traffic.lights) at S seconds of simulated time, as the Raccoon
 ##                   would; repeat it for more. It stages a scene, e.g. the stage-9 art reference (game/tools/reference_shot.sh)
 ##   --autopilot     the Attract autopilot (#34) plays the Raccoon, every stage of every Run
+##   --attract       stay in Attract despite the other flags, e.g. to --shot the title over the autopilot
 
 signal run_over(run: Run)  # a Gridlock ended `run`; the results follow. The smoke test (test/smoke.gd) listens.
 
@@ -65,6 +66,7 @@ func _ready() -> void:
 			var parts := a.substr(9).split(":")
 			_switches.append([float(parts[0]), PackedInt32Array(Array(parts[1].split(",")).map(func(s: String) -> int: return int(s)))])
 		_direct = _direct or RUN_FLAGS.any(func(f: String) -> bool: return a.begins_with(f))
+	_direct = _direct and not OS.get_cmdline_user_args().has("--attract")
 	print("Fender Bandit booted, window mode %d, seed %d" % [DisplayServer.window_get_mode(), _seed])
 	Audio.set_music_on(Scores.table.music)
 	add_child(_ui)

@@ -18,7 +18,7 @@ Like `docs/sprites.md`, this is a living register. When a sound is made or chang
 - **Never force `playback_type`.** Leave it at the default: Sample on the web, Stream on desktop. Forcing Sample plays nothing on desktop.
 - `pitch_scale` moves **pitch and tempo together** (it's the Web Audio playback rate). A live change on a looping clip works in the browser (verified in the week-1 check below).
 - **In the browser, MP3 and OGG loop at the end of the file.** Sample mode honours `loop_offset` but ignores `bpm`/`beat_count` (Godot 4.7.2 passes `loop_end = 0` for both formats). So every looping music file must **end exactly at its loop end**. MP3 can't, because the encoder pads the end, so music ships as OGG cut with ffmpeg (see **Lyria loops**). On desktop, the `bpm`/`beat_count` loop end works.
-- No audio plays until the first key or button press, which is also the press that leaves Attract.
+- No audio plays until the first key or button press, which is also the press that leaves Attract, unless the page already allows sound. At boot, `Audio._autoplay_allowed()` makes a throwaway AudioContext and checks that it starts "running". On itch.io the "Run game" click usually allows it, so the Theme plays over Attract from the start, as on desktop (#45).
 
 ### Week-1 audio check ([#20](https://github.com/klusignolo/GameJam2026/issues/20))
 

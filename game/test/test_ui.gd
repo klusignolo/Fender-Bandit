@@ -66,7 +66,7 @@ func test_the_title_is_the_logo_lockup() -> void:
 	title.measure(VIEW)
 	var texts := title.words.map(func(w: Card.Words) -> String: return w.text)
 	check("FENDER" in texts and "BANDIT" in texts, "the logo reads FENDER BANDIT: %s" % [texts])
-	check("STOP. GO. OOPS." in texts, "with the tagline: %s" % [texts])
+	check(not "STOP. GO. OOPS." in texts, "no tagline: the itch banner and the other screens carry it (#45): %s" % [texts])
 	check(not title.stripes.is_empty(), "on construction stripes, a Raccoon moment")
 	title.free()
 
@@ -191,3 +191,18 @@ func test_hints_name_the_key_to_press_not_the_action() -> void:
 		check(not texts.any(func(t: String) -> bool: return "resume" in t.to_lower() and t != "RESUME"), "pause: no Start hint: %s" % [texts])
 		menu.free()
 	Card.pad = was
+
+
+func test_the_title_leaves_the_attract_crossing_and_its_roads_clear() -> void:
+	for view: Vector2 in [VIEW, Vector2(1600, 720), Vector2(1280, 800)]:  # 16:9, wider, and 16:10
+		var title := TitleScreen.new()
+		title.measure(view)
+		var c := view / 2.0  # Attract's one crossing, which the camera centres
+		var roads: Array[Rect2] = [
+			Rect2(c.x - TitleScreen.ROAD_CLEAR, 0, 2.0 * TitleScreen.ROAD_CLEAR, view.y),  # the N–S road
+			Rect2(0, c.y - TitleScreen.ROAD_CLEAR, view.x, 2.0 * TitleScreen.ROAD_CLEAR),  # the E–W road
+		]
+		for r: Rect2 in title.signs + title.stripes:
+			for road in roads:
+				check(not r.intersects(road), "%s: the sign at %s stays off the road %s" % [view, r, road])
+		title.free()
