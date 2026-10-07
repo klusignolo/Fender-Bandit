@@ -48,10 +48,7 @@ const _VEHICLES := {
 	},
 }
 
-const RACCOON_FRONT := preload("res://art/raccoon_front.svg")
-const RACCOON_BACK := preload("res://art/raccoon_back.svg")
-const RACCOON_SIDE := preload("res://art/raccoon_side.svg")  # facing right
-const RACCOON_FEET := Vector2(32, 80)  # texture px of the feet in each Raccoon view: its anchor
+const RACCOON_FRONT := preload("res://art/raccoon_front.svg")  # the whole front, for the title; the game draws the RaccoonRig
 
 const LIGHT_POLE := preload("res://art/light_pole.svg")
 const POLE_BASE := Vector2(14, 80)  # texture px of the pole's base: its anchor
@@ -93,3 +90,14 @@ static func sprite(tex: Texture2D) -> Sprite2D:
 	s.texture = tex
 	s.scale = Vector2(SCALE, SCALE)
 	return s
+
+
+## How much bigger than world size floating cues draw at camera zoom `zoom`: past Tuning.CUE_MIN_ZOOM they stop
+## shrinking on screen, so the furthest zoom shows them as they look at that floor (#41).
+static func cue_scale(zoom: float) -> float:
+	return floor_scale(zoom, Tuning.CUE_MIN_ZOOM)
+
+
+## How much bigger than world size to draw something that stops shrinking on screen past camera zoom `min_zoom`.
+static func floor_scale(zoom: float, min_zoom: float) -> float:
+	return maxf(1.0, min_zoom / zoom)

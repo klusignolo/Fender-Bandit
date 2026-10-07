@@ -41,9 +41,13 @@ func test_the_lineup_shows_every_raccoon_view_and_light_state() -> void:
 	var t := Traffic.new(1, 0, Stages.def(9, 1))
 	var lineup: Node2D = Proof.lineup(t)
 	var views := {}
-	for s in lineup.find_children("Raccoon*", "Sprite2D", true, false):
-		views[[(s as Sprite2D).texture, (s as Sprite2D).flip_h]] = true
+	var anims := {}
+	for n in lineup.find_children("*", "RaccoonRig", true, false):
+		var rig := n as RaccoonRig
+		views[rig.view] = true
+		anims[rig.anim] = true
 	check_eq(views.size(), 4, "the Raccoon's front, back, side and mirrored side")
+	check_eq(anims.size(), RaccoonRig.Anim.size(), "and a pose from each of its six animations")
 	var states := {}
 	for p in lineup.find_children("*", "LightPole", true, false):
 		states[(p as LightPole).light.state] = true
@@ -69,7 +73,7 @@ func test_the_backdrop_is_ground_under_the_stop_lines_and_shadows() -> void:
 	if check(ground != null, "the backdrop is its own Ground node"):
 		check_eq(ground.z_index, Art.Z_GROUND, "on the ground layer")
 		check(not ground.z_as_relative, "as an absolute z, like the game's")
-	var shadow := lineup.get_node_or_null("RaccoonFrontShadow") as Node2D
+	var shadow := lineup.get_node_or_null("RaccoonFront/Shadow") as Node2D
 	if check(shadow != null, "the Raccoon's shadow is named for its view"):
 		check_eq(shadow.z_index, Art.Z_SHADOW, "on the shadow layer")
 	lineup.free()

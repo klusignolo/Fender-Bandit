@@ -37,7 +37,9 @@ func _draw() -> void:
 	var pulse := 0.5 + 0.5 * sin(_clock * TAU * PULSE_HZ)
 	var heavy := _traffic.jam.level() >= Jam.Level.HEAVY 
 	var cam := get_viewport().get_camera_2d()
-	var inset := INSET / (cam.zoom.x if cam else 1.0)
+	var zoom := cam.zoom.x if cam else 1.0
+	var inset := INSET / zoom
+	var k := Art.cue_scale(zoom)  # past the cue floor the chevrons and "+N" hold their size on screen (#41)
 	for i in _traffic.net.approaches.size():
 		var a := _traffic.net.approaches[i]
 		if not a.entry:
@@ -54,25 +56,26 @@ func _draw() -> void:
 			var lane := PackedVector2Array([back + across, front + across, front - across, back - across, back + across])
 			draw_polyline(lane, Color(HEAVY_RED, 0.35 + 0.65 * pulse), 2.0 + 3.0 * pulse)
 		if _traffic.k_swell and i == _traffic.swell:
-			_chevrons(at + right * CHEVRON_OUT, d)
+			_chevrons(at + right * CHEVRON_OUT, d, k)
 		if waiting > 0:
-			_tag("+%d" % waiting, at + right * TAG_OUT, MARKING)
+			_tag("+%d" % waiting, at + right * (CHEVRON_OUT + (TAG_OUT - CHEVRON_OUT) * k), MARKING, k)  # clear of the grown chevrons
 
 
 # Three chevrons along the lane, pointing the way its cars drive, lit in turn from the back one to the front one:
 # each brightens and fades smoothly, a third of a cycle after the one behind it.
-func _chevrons(at: Vector2, d: Vector2) -> void:
-	for k in 3:
-		var lit := 0.5 + 0.5 * cos(TAU * (_clock * MARQUEE_HZ - k / 3.0))
+func _chevrons(at: Vector2, d: Vector2, k: float) -> void:
+	for i in 3:
+		var lit := 0.5 + 0.5 * cos(TAU * (_clock * MARQUEE_HZ - i / 3.0))
 		var alpha := lerpf(MARQUEE_DIM, 1.0, lit * lit)
-		draw_set_transform(at + d * (k - 1) * 12.0, d.angle(), Vector2(Art.SCALE, Art.SCALE))
+		draw_set_transform(at + d * (i - 1) * 12.0 * k, d.angle(), Vector2.ONE * Art.SCALE * k)
 		draw_texture(Art.CUE_SWELL, -CHEVRON_TIP, Color(1, 1, 1, alpha))
 	draw_set_transform(Vector2.ZERO)
 
 
-func _tag(text: String, centre: Vector2, col: Color) -> void:
+func _tag(text: String, centre: Vector2, col: Color, k: float) -> void:
 	var font := Sign.FONT
-	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, TAG_SIZE)
-	var at := centre + Vector2(-size.x / 2.0, TAG_SIZE * 0.35)
-	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, TAG_SIZE, 6, INK)
-	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, TAG_SIZE, col)
+	var px := roundi(TAG_SIZE * k)
+	var size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px)
+	var at := centre + Vector2(-size.x / 2.0, px * 0.35)
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, roundi(6 * k), INK)
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, col)

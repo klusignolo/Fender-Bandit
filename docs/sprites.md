@@ -76,32 +76,34 @@ The proof (#18) kept every hex value: at 0.45× the six tints stay distinct from
 
 ## Sprite list
 
-Canvas sizes are @2× and include the outline margin. "Tint" means a white layer tinted in Godot. Animations marked *cutout* are part motion in Godot (AnimationPlayer/tweens), not drawn frames.
+Canvas sizes are @2× and include the outline margin. "Tint" means a white layer tinted in Godot. Animations marked *cutout* are part motion in Godot, posed from code each tick (`RaccoonRig.pose_of`, #41), not drawn frames.
 
 ### Raccoon
 
 Cutout rig: head, body with vest, tail, 2 arms, 2 legs, drawn for **3 facings: front (moving down), back (moving up), side (mirrored for left)**. Diagonal movement shows the side view. Facing always follows the joystick.
 
-**First pass (#39):** one whole sprite per facing, `raccoon_front`, `raccoon_back` and `raccoon_side` (64 × 84, feet at (32, 80)), swapped by `Raccoon.view_of` with no animation. The part sets and the six animations come in #41.
+**The rig (#41):** `RaccoonRig` (`game/raccoon/raccoon_rig.gd`). Every part of every view is drawn on the first pass's shared 64 × 84 canvas with the feet at (32, 80), so at rest the parts land exactly where the whole sprite (#39) had them. Each part turns about its own pivot. `RaccoonRig.pose_of` is a pure function: given a view, an animation and how far into it, it returns how each part turns and lifts, and how the whole body moves about its feet. The Raccoon picks the animation each tick, the first that applies of Bonk, Dash, Switch, Tow, Walk and Idle. Each view has its own part files, even where they match (the back's legs and arms copy the front's), so one view can be redrawn alone. Only `raccoon_front` survives as a whole sprite, for the title's peeking Raccoon.
+
+**Floor size (#41):** past `RACCOON_MIN_ZOOM` (0.7) the rig stops shrinking on screen: at the 0.45 floor it draws 1.56× world size. Its footprint (`RACCOON_R`) doesn't change, so hits and Yields are as before; the hero reads as bigger than it is, the way arcade heroes do.
 
 | ID | Shows | Canvas @2× | Anchor | Notes |
 |---|---|---|---|---|
-| `raccoon_front_*` | Parts, front facing | ~64 × 84 overall | Feet | Mask, ringed tail, vest front with reflective stripes |
-| `raccoon_back_*` | Parts, back facing | ~64 × 84 | Feet | Vest back, tail prominent |
-| `raccoon_side_*` | Parts, side facing | ~64 × 84 | Feet | Mirrored in Godot for left |
-| `raccoon_arm_reach` | Swap-in paw-open arm | — | Shoulder | Used by Switch |
-| `rope` | Tow line | drawn in code | — | Line from paw to wreck, `ink` with a light core |
-| `stars` | Stunned stars | 40 × 16 | Centre | Circle the head during Bonk |
-| `dust_puff` | Dash dust | 24 × 16 | Centre | Plus 2 speed lines drawn in code |
+| `raccoon_front_*` | Parts, front facing: `tail`, `leg_l`, `leg_r`, `body` (with the vest), `arm_l`, `arm_r`, `head`, `blink` | 64 × 84 each | Feet | Mask, ringed tail, vest front with reflective stripes. `blink` is the shut eyes, laid over the head |
+| `raccoon_back_*` | Parts, back facing: `leg_l`, `leg_r`, `body`, `arm_l`, `arm_r`, `head`, `tail` | 64 × 84 each | Feet | Vest back with its X; the tail draws last, in front |
+| `raccoon_side_*` | Parts, side facing right: `tail`, `leg_l` (far, darker), `body`, `leg_r` (near), `arm_r`, `head`, `blink` | 64 × 84 each | Feet | Mirrored in Godot for left |
+| `raccoon_arm_reach` | Swap-in paw-open arm, pointing up | 24 × 40 | Shoulder (12, 36) | Stands in for the arm on the pole's side during Switch, tilted toward the pole by up to 1.1 rad |
+| `rope` | Tow line | drawn in code | — | From the shoulder to the Wreckage, `ink` with a light core |
+| `raccoon_star` | One stunned star, white with an `ink` outline | 16 × 16 | Centre | Three circle the head during Bonk, drawn 9 world px across. The register asked for one 40 × 16 strip; single stars let code orbit them. White, not yellow: yellow is a signal |
+| `dust_puff` | Dash dust | — | Centre | Not its own file: two small `smoke_puff`s kicked up behind the feet, fading over the Dash, plus 2 white speed lines drawn in code |
 
-| Animation | Motion (cutout) | Length | Loops |
-|---|---|---|---|
-| Idle | Breathing bob, tail sway, blink every few seconds | 1.2s | yes |
-| Walk | 2-beat bob, legs swing, tail trails | 0.4s per cycle, synced to speed | yes |
-| Dash | Squash, then stretch along the move direction, legs tucked; dust puff | 0.18s (the Dash) | no |
-| Switch | Arm snaps up toward the pole, head tilts up, back down; the stop line changes at the peak | 0.25s | no |
-| Tow | Leans forward away from the wreck, rope over the shoulder, heavy walk | Walk at 0.6× | yes |
-| Bonk | Knocked along the knockback, one spin, squash flat, stars until the stun ends, pop up | the stun | no |
+| Animation | Motion (cutout) | Length | Loops | As built (#41) |
+|---|---|---|---|---|
+| Idle | Breathing bob, tail sway, blink every few seconds | 1.2s | yes | Body up 0.6, arms 0.8, head 1 world px; tail ±0.12 rad; eyes shut 0.12s of every 3s |
+| Walk | 2-beat bob, legs swing, tail trails | 0.4s per cycle, synced to speed | yes | The clock is the distance walked on screen over `RACCOON_SPEED`, so the legs keep step at any speed or zoom. Bob 1 world px per step. Side: legs swing ±0.5 rad, the arm ±0.6 against the near leg, the tail held back and flicking. Front and back: each leg steps up 2.5 world px in turn, the arm opposite lifts 1.2 |
+| Dash | Squash, then stretch along the move direction, legs tucked; dust puff | 0.18s (the Dash) | no | A quarter of it squashing to 0.78 along / 1.12 across, then a stretch from 1.35 / 0.82 easing back, about the middle of the body; legs up 3 world px; dust and 2 speed lines behind |
+| Switch | Arm snaps up toward the pole, head tilts up, back down; the stop line changes at the peak | 0.25s | no | The arm is up from the very press, so the peak is the tick the Light changes: the sim isn't delayed for the animation. It holds for 60%, then lowers; the paw-open arm swaps out at 80%. Up on its toes 5% |
+| Tow | Leans forward away from the wreck, rope over the shoulder, heavy walk | Walk at 0.6× | yes | The walk on the same clock, so towing's 0.55× speed makes it 0.55×; a 1.6× bob. Side: leans 0.2 rad away from the Wreckage, the arm back over the shoulder. Towing in place it stands with both feet down, at the nearest point of the stride where they are. Front and back: hunched (1.04 × 0.94), the right arm up |
+| Bonk | Knocked along the knockback, one spin, squash flat, stars until the stun ends, pop up | the stun | no | One eased spin over the first 35% about the body's middle; squashed to 1.3 × 0.55 on its feet, eyes shut, three stars circling at 1.5/s; the last 15% pops to 0.9 × 1.15 and settles. A Dash keeps the view it started with, even if the stick turns. BONK! in `raccoon_orange` over the stars |
 
 ### Vehicles
 
@@ -118,6 +120,8 @@ Every vehicle is stacked layers: **body** (tint, one of the 6 safe colours), **d
 | `ambulance_*` | *Stretch.* Ambulance | 88 × 48 | Centre | Light bar **blue and white**, not red |
 
 ### Floating cues (upright, never rotate)
+
+**The cue floor (#41):** past `CUE_MIN_ZOOM` (0.75) cues stop shrinking on screen: at the 0.45 floor they draw 1.67× world size, so they look as they do at 0.75×. That covers everything on the cue layer (the Turner bubble and arrow, the Patience ring and pips), the Swell chevrons and "+N", the Switch target ring and the Blowing outline's width. HONK! and "!!" were already sized on screen and stay as they were. Judged against the stage-9 reference at about 0.5×: the Turner arrows read as arrows (before, white specks), and the rings, pips and "+N" read. One knob, `Art.cue_scale`, so a playtest can trade legibility for clutter in one place.
 
 | ID | Shows | Canvas @2× | Notes |
 |---|---|---|---|
@@ -197,7 +201,7 @@ What it decided:
 - **The palette stays** (see "Palette").
 - **The stop lines carry the Lights:** at 0.45× and even 0.34× the tinted bar and its halo are the clearest thing on screen, as planned; the lit lamp on the pole is a few px.
 - **Still weak at 0.45×:** the motorcycle (its helmet tint is a few px) and the Raccoon's mask. Both are legible as a small vehicle and as the orange-vested Raccoon. The Raccoon rig (#41) can do more for the Raccoon.
-- **Not proved here:** the Idle and Switch cutout animations. The Raccoon is still one whole sprite per view; the rig and its animations are #41's, and their legibility is judged there.
+- **The rig (#41):** the lineup now shows the rig in each view and a pose from each animation (a blink, mid-stride, mid-Dash, the Switch reach, a Tow, flat in a Bonk). At 0.45× the Raccoon draws at its floor size (1.56×): the Switch's raised arm and paw, the Dash stretch and the Bonk's stars all read. The Idle bob is 1 world px, under a pixel at 0.45×: Idle reads as standing still, which is what it is for, and the blink only shows at 1×. Judging the motion needs the game running, a hands-on check.
 - **The 0.34× shot is a warning:** in a window smaller than 1280×720, the readability floor drops with the stretch. There, the outlines merge into the bodies and the Raccoon is a grey blob with an orange vest. The cabinet's resolution is still unknown; if it is under 720 lines, raise `READ_FLOOR` (`docs/tuning.md`) so the on-screen floor stays at 0.45.
 
 ## Recipes
@@ -209,10 +213,10 @@ How the sprites are made: the first pass (#39), plus the lamps, smoke wisp and r
 - **Import:** each `.svg.import` has `mipmaps/generate=true`, and World draws with a Linear Mipmap filter (`texture_filter`), inherited by everything under it. Sprites are drawn at scale 0.5.
 - **Outline and shading:** a 4 px `ink` stroke around every silhouette, 2 px for interior lines. The one shade tone is `ink` at 22% along the bottom edge, away from the top-left light. Glass is `#2B3A55` with a 45% white glint. Wreckage adds a 38% `ink` soot wash, crumple zig-zags and cracked glass, over the same tint.
 - **Vehicle layers:** `*_body` is plain white, tinted in Godot with one of `Car.TINTS`. `*_details` is never tinted. `*_wreck` replaces the details on Wreckage. `*_shadow` is a white silhouette drawn in `shadow` on the shadow layer, offset so it always falls 3 px down-right, however the vehicle turns. `*_lamps_brake` shows while the vehicle brakes or waits (`Car.braking`), and `*_lamps_blink` while a blinker flashes on. Each lamp has a 35–40% halo of its colour, spreading past the outline but staying inside the 4 px margin. Every layer draws behind the node's own `_draw`, so the speed lines and the Blowing outline go on top. Wreckage shows no lamps. Instead it trails an upright `smoke_puff` wisp, on a top-level node, until it's Towed.
-- **Uprights:** the Raccoon (feet at (32, 80)) and the Light pole (base at (14, 80); lamps at y 11, 24 and 37) are anchored at the ground and Y-sorted together. The Raccoon's shadow is a 24 × 10 ellipse. The pole is drawn unlit, and code lights one lamp.
-- **Cues:** drawn on a top-level child at the cue layer, so they never rotate and float over the uprights. Honk and "!!" are sized in on-screen px and hold at any zoom; the Turner bubble is in world px.
+- **Uprights:** the Raccoon (feet at (32, 80) on every part's canvas) and the Light pole (base at (14, 80); lamps at y 11, 24 and 37) are anchored at the ground and Y-sorted together. The Raccoon's shadow is a 24 × 10 ellipse. The pole is drawn unlit, and code lights one lamp.
+- **Cues:** drawn on a top-level child at the cue layer, so they never rotate and float over the uprights. Honk and "!!" are sized in on-screen px and hold at any zoom; the rest are in world px, scaled up past the cue floor (`Art.cue_scale`, #41).
 - **Ground:** drawn in code (`Ground`) from the RoadNet curves: pavement, then roof shadows and roofs, kerbs, asphalt, tar patches and manholes (on their own seeded RNG, kept off the boxes), crosswalks and dashes. Roads at the map edge run on past it, for wide windows.
 - **Draw order:** `Art.Z_GROUND` < `Z_DECAL` (stop lines) < `Z_SHADOW` < `Z_VEHICLE` (vehicles and the Wreckage smoke wisps, in tree order, so a wisp may pass under a later vehicle) < `Z_UPRIGHT` < `Z_CUE` < `Z_BURST`, then the HUD's CanvasLayer.
 - **Text:** Bungee (#42), `game/art/fonts/Bungee-Regular.ttf` from [google/fonts](https://github.com/google/fonts/tree/main/ofl/bungee) (the 2023 Bungee Project release), with its licence beside it in `OFL.txt`, which both export presets pack (`include_filter`), as the OFL asks. The OFL lets the game ship the font embedded, commercially too, but the font's own copyright stays with The Bungee Project Authors: it is licensed to HCSS with the game, not assigned. `Sign.FONT` is the one place to swap it if the jam needs every byte assignable. `Sign.FONT` is the one font, and `test_ui.gd` fails any script that draws with `ThemeDB.fallback_font`. White words carry a 4 px `ink` outline.
 - **UI (#42):** `Sign` (`game/main/sign.gd`) is the kit: `panel` (drop shadow, `sign_blue` face with a 3 px ink edge and 16 px corners, a 3 px white rule 7 px in), `stripes` (orange bands 26 px across on ink, slanting up to the right, cut to the box), `plate`, `text`. Flow screens extend `Card`, which draws only through these, so `measure()` can lay a screen out headless for the tests.
-- **Still drawn in code, owned by later passes:** the backlog "+N" tag, the Switch target ring and line, the Dash cooldown ring, the Blowing outline and the Patience ring (#41); BONK! (greybox yellow, close to `signal_yellow`) and boost speed lines (#41, #43).
+- **Drawn in code (#41 kept them so):** the backlog "+N" tag, the Switch target ring and line, the Dash cooldown ring, the Blowing outline and the Patience ring and pips: rings and lines are crisper as vector strokes than as textures, and now scale with the floors. BONK! is `raccoon_orange` Bungee with an `ink` outline (it was greybox yellow, too close to `signal_yellow`). The boost speed lines stay white (#43).

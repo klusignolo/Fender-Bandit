@@ -6,7 +6,8 @@ extends Node2D
 ## through its turn, and Wreckage trails a smoke wisp until it's Towed. A Turner carries an upright arrow that pulses amber
 ## while it holds. A driver spending Patience shows a ring once it has Honked, a "HONK!" at each Honk,
 ## and "!!" before it Blows the red; Blowing the red, it's outlined red. Cues sit on their own layer, upright and over
-## everything upright. Pooled by World; hidden while unused.
+## everything upright, and past the cue floor zoom (#41) they hold their size on screen.
+## Pooled by World; hidden while unused.
 ## At Gridlock (#43) it coasts on along its heading on scaled delta, so in the beat's slow-mo (a stopped car lurches
 ## forward into the one ahead), until the pile-up crumples it as Wreckage in the view alone: the Car is left as it was.
 
@@ -127,6 +128,7 @@ func _sync() -> void:
 	shadow.position = transform.basis_xform_inv(Art.SHADOW_FALL)
 	details.texture = _layers.wreck if _wrecked() else _layers.details
 	_cues.position = transform.origin
+	_cues.scale = Vector2.ONE * Art.cue_scale(_zoom())  # past the cue floor they hold their size on screen
 	brake.visible = car.braking and not _wrecked()
 	var side := _blink_side()
 	blink.visible = side != 0.0 and fmod(_traffic.time * BLINK_HZ, 1.0) < 0.5
@@ -185,8 +187,9 @@ func _draw() -> void:
 	if car.boosted:  # speed lines behind a car waved through on green
 		draw_line(Vector2(-l / 2.0 - 8.0, -5.0), Vector2(-l / 2.0 - 2.0, -5.0), Color.WHITE, 2.0)
 		draw_line(Vector2(-l / 2.0 - 10.0, 5.0), Vector2(-l / 2.0 - 2.0, 5.0), Color.WHITE, 2.0)
-	if car.blowing:
-		draw_rect(Rect2(-l / 2.0 - 3.0, -w / 2.0 - 3.0, l + 6.0, w + 6.0), SIGNAL_RED, false, 3.0)
+	if car.blowing:  # as thick on screen as a cue at the cue floor
+		var o := 3.0 * Art.cue_scale(_zoom())
+		draw_rect(Rect2(-l / 2.0 - o, -w / 2.0 - o, l + o * 2.0, w + o * 2.0), SIGNAL_RED, false, o)
 
 
 # The smoke wisp, on smoke: puffs rise off the Wreckage's centre in world axes, growing and fading, staggered by the
@@ -241,7 +244,7 @@ func _draw_patience() -> void:
 			_cues.draw_circle(pip, 3.5, Color(INK, 0.6))
 			if p < car.honks or (p == Tuning.PATIENCE_RINGS - 1 and car.blow_warning):
 				_cues.draw_circle(pip, 2.5, SIGNAL_RED if p == Tuning.PATIENCE_RINGS - 1 else SIGNAL_YELLOW)
-	var per_px := 1.0 / _zoom()  # world px per on-screen px
+	var per_px := 1.0 / (_zoom() * _cues.scale.x)  # cue px per on-screen px: HONK! and "!!" are sized on screen
 	if _honk_shown():
 		var k := (_traffic.time - _honk_at) / HONK_TIME
 		_honk(Vector2(RING_R, -RING_R - HONK_RISE * k), roundi(HONK_SIZE * per_px), 1.0 - k * k)

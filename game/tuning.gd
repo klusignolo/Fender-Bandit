@@ -171,6 +171,8 @@ const TOW_BONUS := 5  # points for Wreckage towed off the road
 # Camera
 const FIT := 1.03  # zoom a touch past "fits everything", so the map edges bleed off
 const READ_FLOOR := 0.45  # the camera never zooms out past this; a map that would need more is followed instead
+const CUE_MIN_ZOOM := 0.75  # past this zoom out, floating cues stop shrinking: they hold the size they have here (#41)
+const RACCOON_MIN_ZOOM := 0.7  # likewise the Raccoon, so the hero and its animations read at the floor (#41)
 const DRIFT := 0.06  # while fitting, the view drifts toward the Raccoon by this share of its offset from the map centre
 const CAM_RATE := 3.0  # per second: how fast the view eases toward where it should be (exponential)
 const REVEAL_TIME := 2.5  # seconds the pull-back takes when a crossing attaches

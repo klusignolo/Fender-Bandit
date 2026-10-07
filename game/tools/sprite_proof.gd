@@ -1,6 +1,6 @@
 extends SceneTree
 ## The sprite proof (#18): every sprite the proof judges, drawn by the game's own nodes (Vehicle, LightPole and the
-## Raccoon's views), shot in a 960×540 window at on-screen zooms 1× and 0.45×, each with mipmaps (the game's Linear
+## RaccoonRig), shot in a 960×540 window at on-screen zooms 1× and 0.45×, each with mipmaps (the game's Linear
 ## Mipmap filter) and without (Linear), in the Compatibility renderer. A fifth shot is the 0.45 floor seen in a
 ## 960×540 window, where the canvas_items stretch shrinks the 1280×720 base by a further 0.75. Each zoomed-out shot
 ## also gets a crop of the lineup, enlarged 3× nearest-neighbour, to show its pixels. Content stretch is off
@@ -27,6 +27,20 @@ const PITCH := 56.0  # world px between vehicle centres in a row
 const EXTENT := Rect2(-230, -140, 480, 345)  # world px round the lineup: the crop of a zoomed-out shot
 const CROP_SCALE := 3  # its crop is enlarged this many times, nearest-neighbour, to show the pixels
 const ROWS: Array[float] = [-110.0, -50.0, 20.0, 95.0, 160.0]  # world px: tints, specials, Raccoons, Light poles, the Honk
+const RACCOON_PITCH := 46.0  # world px between the Raccoons: room for them at their floor size
+## The Raccoon poses: [name, view, animation, seconds in, direction]. Its four views, then a moment of each animation.
+const RACCOON_POSES: Array[Array] = [
+	["Front", Raccoon.View.FRONT, RaccoonRig.Anim.IDLE, 0.0, Vector2.ZERO],
+	["Back", Raccoon.View.BACK, RaccoonRig.Anim.IDLE, 0.0, Vector2.ZERO],
+	["Side", Raccoon.View.RIGHT, RaccoonRig.Anim.IDLE, 0.0, Vector2.ZERO],
+	["SideLeft", Raccoon.View.LEFT, RaccoonRig.Anim.IDLE, 0.0, Vector2.ZERO],
+	["Blink", Raccoon.View.FRONT, RaccoonRig.Anim.IDLE, RaccoonRig.BLINK_EVERY - 0.05, Vector2.ZERO],
+	["Walk", Raccoon.View.RIGHT, RaccoonRig.Anim.WALK, RaccoonRig.WALK_CYCLE / 4.0, Vector2.RIGHT],
+	["Dash", Raccoon.View.RIGHT, RaccoonRig.Anim.DASH, Tuning.DASH_TIME * 0.5, Vector2.RIGHT],
+	["Switch", Raccoon.View.FRONT, RaccoonRig.Anim.SWITCH, 0.0, Vector2(1, -1)],
+	["Tow", Raccoon.View.RIGHT, RaccoonRig.Anim.TOW, RaccoonRig.WALK_CYCLE / 4.0, Vector2.RIGHT],
+	["Bonk", Raccoon.View.FRONT, RaccoonRig.Anim.BONK, Tuning.STUN_TIME * 0.6, Vector2.ZERO],
+]
 
 var _traffic := Traffic.new(1, 0, Stages.def(9, 1))
 var _lineup: Node2D
@@ -74,6 +88,8 @@ func _process(_delta: float) -> bool:
 func _set_shot() -> void:
 	_frames = 0
 	_camera.zoom = Vector2.ONE * SHOTS[_shot][1]
+	for rig in _lineup.find_children("*", "RaccoonRig", true, false):
+		show_rig(rig, maxf(SHOTS[_shot][1], Tuning.READ_FLOOR))  # the game's camera never zooms out past the floor
 	set_filter(_lineup, SHOTS[_shot][2])
 	_label.queue_redraw()
 
@@ -81,7 +97,7 @@ func _set_shot() -> void:
 ## The proof's lineup, centred on the origin, on asphalt between strips of pavement:
 ## a car in each safe tint, then a motorcycle and a semi; a braking car and Wreckage of each kind; the Raccoon's front,
 ## back, side and mirrored side; a pole lit red, yellow and green with its stop line; a blinking Turner with its
-## arrow, Patience ring and a HONK.
+## arrow, Patience ring and a HONK; and the Raccoon rig (#41) in each view and in a pose from each animation.
 static func lineup(t: Traffic) -> Node2D:
 	var root := Node2D.new()
 	root.name = "Lineup"
@@ -122,10 +138,15 @@ static func lineup(t: Traffic) -> Node2D:
 		id += 1
 		x += PITCH * (1.0 if kind == Car.Kind.CAR else 1.6)
 	x = -3.5 * PITCH
-	for view in [["Front", Art.RACCOON_FRONT, false], ["Back", Art.RACCOON_BACK, false],
-			["Side", Art.RACCOON_SIDE, false], ["SideLeft", Art.RACCOON_SIDE, true]]:
-		_raccoon(root, "Raccoon" + view[0], view[1], view[2], Vector2(x, ROWS[2] + 19.0))
-		x += 40.0
+	for pose: Array in RACCOON_POSES:
+		var rig := RaccoonRig.new()
+		rig.name = "Raccoon" + pose[0]
+		rig.z_index = Art.Z_UPRIGHT
+		rig.position = Vector2(x, ROWS[2] + 19.0)
+		rig.set_meta(&"pose", pose.slice(1))
+		show_rig(rig, 1.0)
+		root.add_child(rig)
+		x += RACCOON_PITCH
 	var south := t.net.approaches.filter(func(a: RoadNet.Approach) -> bool: return a.direction.y > 0.9)
 	x = 0.5 * PITCH
 	for state: Light.State in [Light.State.RED, Light.State.YELLOW, Light.State.GREEN]:
@@ -163,20 +184,8 @@ static func _vehicle(root: Node2D, t: Traffic, c: Car, tint: Color, at: Vector2)
 	v.show_car(c)
 
 
-static func _raccoon(root: Node2D, name: String, tex: Texture2D, flip: bool, feet: Vector2) -> void:
-	var shadow := Node2D.new()
-	shadow.name = name + "Shadow"
-	shadow.z_as_relative = false
-	shadow.z_index = Art.Z_SHADOW
-	shadow.position = feet
-	shadow.draw.connect(func() -> void:
-		shadow.draw_set_transform(Art.SHADOW_FALL, 0.0, Raccoon.SHADOW_R / Raccoon.SHADOW_R.x)
-		shadow.draw_circle(Vector2.ZERO, Raccoon.SHADOW_R.x, Art.SHADOW))
-	root.add_child(shadow)
-	var s := Art.sprite(tex)
-	s.name = name
-	s.flip_h = flip
-	s.z_index = Art.Z_UPRIGHT
-	s.offset = tex.get_size() / 2.0 - Art.RACCOON_FEET
-	s.position = feet
-	root.add_child(s)
+## Poses a lineup Raccoon as its "pose" meta says, at the size the game draws it at camera zoom `zoom`.
+static func show_rig(rig: RaccoonRig, zoom: float) -> void:
+	var p: Array = rig.get_meta(&"pose")
+	rig.zoom = zoom
+	rig.show_pose(p[0], p[1], p[2], p[3])

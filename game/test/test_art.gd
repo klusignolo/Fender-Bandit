@@ -161,6 +161,29 @@ func test_the_gridlock_pile_up_crumples_the_view_but_not_the_car() -> void:
 	v.free()
 
 
+# --- floating cues ----------------------------------------------------------------
+
+func test_cues_hold_a_floor_size_as_the_camera_zooms_out() -> void:
+	check_eq(Art.cue_scale(1.0), 1.0, "at 1× a cue is drawn at world size")
+	check_eq(Art.cue_scale(Tuning.CUE_MIN_ZOOM), 1.0, "down to the cue floor")
+	check_near(Art.cue_scale(Tuning.READ_FLOOR), Tuning.CUE_MIN_ZOOM / Tuning.READ_FLOOR, 0.001,
+			"past it, cues grow to look as they do at the floor")
+
+
+func test_cues_stay_upright_however_the_vehicle_turns() -> void:
+	var vc := _vehicle(Car.Kind.CAR, RoadNet.Movement.LEFT)
+	var v: Vehicle = vc[0]
+	var c: Car = vc[1]
+	for angle: float in [0.0, PI / 2.0, 2.4, -1.0]:
+		c.transform = Transform2D(angle, Vector2(500, 300))
+		v._sync()
+		check(v._cues.top_level, "the cues don't inherit the vehicle's turn")
+		check_eq(v._cues.rotation, 0.0, "at %s rad they stay upright" % angle)
+		check_eq(v._cues.position, c.transform.origin, "over the car")
+		check_eq(v._cues.scale, Vector2.ONE * Art.cue_scale(1.0), "at the cue scale")
+	v.free()
+
+
 # --- Crashes ---------------------------------------------------------------------
 
 func test_each_crash_throws_debris_seeded_by_where_it_happened() -> void:
