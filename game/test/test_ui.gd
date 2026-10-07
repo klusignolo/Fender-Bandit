@@ -33,9 +33,9 @@ func _screens() -> Dictionary:
 		"scores": ScoresScreen.new(table, 0),
 		"scores, attract": ScoresScreen.new(table, -1, true),
 	}
-	for n in news:  # each news line, alone and as the longest card
+	for n in news:  # each news line alone, then two: a stage debuts one feature at most, and may grow a crossing too
 		out["tally, %s" % n] = TallyCard.new(99, 9999, LONG_SCORE, PackedStringArray([n]))
-	out["tally, all news"] = TallyCard.new(99, 9999, LONG_SCORE, news.slice(0, 2))
+	out["tally, two news"] = TallyCard.new(99, 9999, LONG_SCORE, PackedStringArray([Stages.NAMES[Stages.Feature.ODD_JUNCTIONS], Stages.GROW_NAME]))
 	return out
 
 

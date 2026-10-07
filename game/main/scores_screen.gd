@@ -45,5 +45,5 @@ func _draw() -> void:
 		y += ROW
 	if not _attract:
 		hint(box, "SWITCH: continue")
-	elif blink(_clock, TitleScreen.BLINK):
-		text("PRESS ANY BUTTON", Vector2(mid, minf(box.end.y + 60, view().y - 20)), 40, Color.WHITE, true)
+	else:
+		prompt(Vector2(mid, minf(box.end.y + 52.0, view().y - 40.0)), blink(_clock, TitleScreen.BLINK))

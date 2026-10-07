@@ -1,7 +1,7 @@
 class_name TitleScreen
 extends Card
-## The Attract title (#35, #42, #19 story 1) over the autopilot's Run: the logo lockup, then a blinking
-## "PRESS ANY BUTTON". The logo is FENDER over BANDIT on a navy plate framed in construction stripes (a Raccoon
+## The Attract title (#35, #42, #19 story 1) over the autopilot's Run: the logo lockup, then a blinking "PRESS ANY
+## BUTTON" on its own sign. The logo is FENDER over BANDIT on a navy plate framed in construction stripes (a Raccoon
 ## moment), the Raccoon peeking over its top edge, and "STOP. GO. OOPS." on a little blue sign hung under it.
 
 const BLINK := 1.2  # seconds per blink of the prompt: on for the first two thirds
@@ -42,6 +42,5 @@ func _draw() -> void:
 		circle(paw, 10.0, FUR)
 	var tag := Rect2(Vector2(mid - TAG.x / 2.0, board.end.y + 14.0), TAG)
 	frame(tag)
-	text("STOP. GO. OOPS.", Vector2(mid, tag.get_center().y + TAG_SIZE * Sign.CAP / 2.0), TAG_SIZE)
-	if blink(_clock, BLINK):
-		text("PRESS ANY BUTTON", Vector2(v.x / 2.0, v.y * 0.8), 40, Color.WHITE, true)
+	text("STOP. GO. OOPS.", Vector2(mid, Sign.baseline(tag.get_center().y, TAG_SIZE)), TAG_SIZE)
+	prompt(Vector2(v.x / 2.0, v.y * 0.8), blink(_clock, BLINK))

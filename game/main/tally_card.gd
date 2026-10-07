@@ -9,19 +9,19 @@ signal done
 const WIDTH := 600.0
 const GAP := 26.0  # px between lines
 const BADGE_PAD := 10.0  # px round a NEW line, to its navy plate's edge...
-const BADGE_CAP := 26.0  # ...and px of striped barricade cap at each end
+const BADGE_CAP := 44.0  # ...and px of striped barricade cap at each end
 
-var _lines: Array[Array] = []  # [text, font size]
+var _lines: Array[Array] = []  # [text, font size, whether it's a NEW badge]
 var _shown := 0.0
 var _skip := false  # A was pressed since the last tick
 
 
 func _init(stage: int, cars_through: int, score_gained: int, news: PackedStringArray) -> void:
-	_lines.append(["STAGE %d CLEARED" % stage, 34])
-	_lines.append(["Cars through   %d" % cars_through, 24])
-	_lines.append(["Score   +%d" % score_gained, 24])
+	_lines.append(["STAGE %d CLEARED" % stage, 34, false])
+	_lines.append(["Cars through   %d" % cars_through, 24, false])
+	_lines.append(["Score   +%d" % score_gained, 24, false])
 	for n in news:
-		_lines.append(["NEW: %s!" % n, 24])
+		_lines.append(["NEW: %s!" % n, 24, true])
 
 
 func _physics_process(delta: float) -> void:  # in ticks, like the simulation, so a seeded run repeats exactly
@@ -46,11 +46,11 @@ func _draw() -> void:
 	var y := box.position.y + 58.0
 	for l in _lines:
 		var s: String = l[0]
-		if s.begins_with("NEW"):  # a Raccoon moment: the "NEW: …" badge in construction stripes
+		if l[2]:  # a Raccoon moment: the "NEW: …" badge in construction stripes
 			var w := text_width(s, l[1]) + 2.0 * (BADGE_PAD + BADGE_CAP)
 			var badge := Rect2(mid - w / 2.0, y - l[1] * Sign.CAP - BADGE_PAD, w, l[1] * Sign.CAP + 2.0 * BADGE_PAD)
 			stripe(badge)
-			plate(badge.grow_individual(-BADGE_CAP, -3.0, -BADGE_CAP, -3.0), INK)
+			bar(badge.grow_individual(-BADGE_CAP, -3.0, -BADGE_CAP, -3.0), INK)  # square, so the caps end clean
 		text(s, Vector2(mid, y), l[1])
 		y += l[1] + GAP
 	hint(box, "SWITCH: skip")

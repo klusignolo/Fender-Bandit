@@ -34,7 +34,7 @@ static func layout(w: float, left: String, right: String) -> Array[Rect2]:
 
 
 static func _baseline() -> float:
-	return (HEIGHT - Sign.INSET) / 2.0 + TEXT_SIZE * Sign.CAP / 2.0
+	return Sign.baseline((HEIGHT - Sign.INSET) / 2.0, TEXT_SIZE)
 
 
 func _process(_delta: float) -> void:

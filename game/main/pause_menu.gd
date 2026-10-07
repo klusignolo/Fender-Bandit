@@ -43,7 +43,7 @@ func _draw() -> void:
 		var s := row_text(i as Row)
 		if i == row:  # the chosen row: a white sign within the sign, in sign blue
 			plate(Rect2(box.position.x + 40, y - 36, box.size.x - 80, 48), Color.WHITE)
-			text_at(s, Vector2(mid - text_width(s, 28) / 2.0, y), 28, Sign.BLUE, false, 0)
+			text(s, Vector2(mid, y), 28, Sign.BLUE, false, 0)
 		else:
 			text(s, Vector2(mid, y), 28, MUTED)
 	text("SWITCH: choose   START: resume", Vector2(mid, box.end.y - 22), HINT_SIZE, MUTED)

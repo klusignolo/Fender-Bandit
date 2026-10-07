@@ -8,6 +8,7 @@ const DIM := Color(0, 0, 0, 0.45)
 const INK := Sign.INK
 const MUTED := Color(1, 1, 1, 0.6)
 const HINT_SIZE := 16
+const PROMPT_SIZE := 34
 const MIN_TEXT := 16  # px: the smallest words on any screen, readable at 1280×720 on the cabinet
 
 ## A word or line of text measure() found: its box, size, and whether it may sit off the signs.
@@ -86,9 +87,18 @@ func hint(box: Rect2, s: String) -> void:
 	text_at(s, inner.end - Vector2(text_width(s, HINT_SIZE) + 10, 10), HINT_SIZE, MUTED)
 
 
+## "PRESS ANY BUTTON" on a little sign of its own centred on `centre`, its words lit while `lit`.
+func prompt(centre: Vector2, lit: bool) -> void:
+	var s := "PRESS ANY BUTTON"
+	var size := Vector2(text_width(s, PROMPT_SIZE) + 64.0, PROMPT_SIZE + 34.0)
+	frame(Rect2(centre - size / 2.0, size))
+	if lit:
+		text(s, Vector2(centre.x, Sign.baseline(centre.y, PROMPT_SIZE)), PROMPT_SIZE)
+
+
 ## Outlined text with its baseline centred on `centre`. A `loose` line may sit off the signs.
-func text(s: String, centre: Vector2, size: int, colour := Color.WHITE, loose := false) -> void:
-	text_at(s, centre - Vector2(text_width(s, size) / 2.0, 0), size, colour, loose)
+func text(s: String, centre: Vector2, size: int, colour := Color.WHITE, loose := false, outline := Sign.OUTLINE) -> void:
+	text_at(s, centre - Vector2(text_width(s, size) / 2.0, 0), size, colour, loose, outline)
 
 
 ## Outlined text starting at `at`, on its baseline.

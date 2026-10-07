@@ -67,7 +67,7 @@ func _draw_pad(box: Rect2) -> void:
 			continue
 		circle(c, BUTTON_R + 3.0, INK)
 		circle(c, BUTTON_R, BUTTON)
-		text_at(LETTERS[at], c + Vector2(-text_width(LETTERS[at], LETTER_SIZE) / 2.0, LETTER_SIZE * Sign.CAP / 2.0), LETTER_SIZE, INK, false, 0)
+		text(LETTERS[at], Vector2(c.x, Sign.baseline(c.y, LETTER_SIZE)), LETTER_SIZE, INK, false, 0)
 		text(job, c + Vector2(0, BUTTON_R + 24), 18)
 	text("START: pause", Vector2(box.position.x + 150, box.end.y - 34), 20)
 

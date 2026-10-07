@@ -6,12 +6,12 @@ extends RefCounted
 
 const FONT := preload("res://art/fonts/Bungee-Regular.ttf")
 const BLUE := Color("#1F5FAF")  # `sign_blue`
-const INK := Color("#1B2340")  # `ink`
+const INK := Art.INK  # `ink`
 const ORANGE := Color("#FF7A1A")  # `raccoon_orange`: Raccoon moments only
-const SHADOW := Color("#0E1424", 0.45)  # `shadow`
+const SHADOW := Art.SHADOW  # `shadow`
 const RADIUS := 16  # px: a sign's corner
 const EDGE := 3  # px of ink around a sign
-const INSET := 7.0  # px from a sign's edge to its white rule...
+const INSET := 7  # px from a sign's edge to its white rule...
 const RULE := 3  # ...and the rule's width
 const DROP := Vector2(5, 5)  # px a sign's shadow falls down-right, light from the top-left
 const STRIPE := 26.0  # px across one construction stripe
@@ -20,7 +20,7 @@ const CAP := 0.75  # Bungee's cap height, in ems
 const TAIL := 0.15  # how far a comma or Q drops below the baseline, in ems
 
 static var _face := _box(BLUE, INK, EDGE, RADIUS)
-static var _rule := _box(Color.TRANSPARENT, Color.WHITE, RULE, RADIUS - int(INSET))
+static var _rule := _box(Color.TRANSPARENT, Color.WHITE, RULE, RADIUS - INSET)
 static var _drop := _box(SHADOW, Color.TRANSPARENT, 0, RADIUS)
 static var _plate := _box(Color.WHITE, Color.TRANSPARENT, 0, 8)
 
@@ -84,3 +84,8 @@ static func width(s: String, size: int) -> float:
 ## The box `s` inks with its baseline at `at`: Bungee is all capitals, so from cap height to a comma's tail.
 static func text_rect(s: String, at: Vector2, size: int) -> Rect2:
 	return Rect2(at.x, at.y - CAP * size, width(s, size), (CAP + TAIL) * size)
+
+
+## The baseline that centres a line of `size` px capitals on `centre_y`.
+static func baseline(centre_y: float, size: int) -> float:
+	return centre_y + size * CAP / 2.0
