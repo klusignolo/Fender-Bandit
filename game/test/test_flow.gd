@@ -15,12 +15,10 @@ const S := Flow.State.SCORES
 class Log:
 	var states: Array[int] = []
 	var pauses: Array[bool] = []
-	var tables: Array[bool] = []
 
 	func _init(f: Flow) -> void:
 		f.changed.connect(func(s: Flow.State) -> void: states.append(s))
 		f.paused_changed.connect(func(p: bool) -> void: pauses.append(p))
-		f.attract_table_changed.connect(func(on: bool) -> void: tables.append(on))
 
 
 ## Step `f` for `seconds` of 60 Hz ticks.
@@ -95,32 +93,6 @@ func test_the_table_skips_on_a_press_only_after_its_lock() -> void:
 	_wait(f, Tuning.SCORES_LOCK + 0.1)
 	f.confirm()
 	check_eq(f.state, A, "A moves on once the lock is over")
-
-
-func test_attract_cycles_to_the_table_and_back() -> void:
-	var f := Flow.new()
-	var log := Log.new(f)
-	_wait(f, Tuning.ATTRACT_TITLE - 0.1)
-	check_eq(log.tables, [] as Array[bool], "the title first")
-	_wait(f, 0.2)
-	check_eq(log.tables, [true] as Array[bool], "then the table")
-	check(f.attract_table, "showing")
-	_wait(f, Tuning.ATTRACT_TABLE)
-	check_eq(log.tables, [true, false] as Array[bool], "then the title again")
-	_wait(f, Tuning.ATTRACT_TITLE)
-	check_eq(log.tables, [true, false, true] as Array[bool], "every cycle")
-	f.press_start(false)
-	check(not f.attract_table, "leaving Attract drops the table")
-	_wait(f, Tuning.ATTRACT_TITLE + 0.2)
-	check_eq(log.tables.size(), 3, "only Attract cycles")
-
-
-func test_a_fresh_attract_starts_on_the_title() -> void:
-	var f := Flow.new()
-	_wait(f, Tuning.ATTRACT_TITLE + 0.2)
-	f.gridlocked()
-	check_eq(f.state, A, "a fresh Attract")
-	check(not f.attract_table, "on the title")
 
 
 func test_a_keyboard_press_shows_the_keyboard_card() -> void:

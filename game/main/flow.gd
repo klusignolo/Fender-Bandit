@@ -1,21 +1,19 @@
 class_name Flow
 extends RefCounted
 ## The arcade loop (#35, #36, #19 "Flow"): Attract → Controls → Play (the Run's stages, with the Tally between) →
-## Gridlock → Results → Initials (top 10 only) → Scores → Attract, with Pause over Play. Attract shows the title
-## and the High-score table in turn. It keeps the state, its clock and which inputs each state takes; Main builds
-## what each state shows and feeds it semantic inputs. The timings are Tuning's.
+## Gridlock → Results → Initials (top 10 only) → Scores → Attract, with Pause over Play. Attract shows only the title:
+## the High-score table follows a Run (#45). It keeps the state, its clock and which inputs each state takes; Main
+## builds what each state shows and feeds it semantic inputs. The timings are Tuning's.
 
 enum State { ATTRACT, CONTROLS, PLAY, GRIDLOCK, RESULTS, INITIALS, SCORES }
 
 signal changed(state: State)  # entered `state`; ATTRACT again means a fresh Attract, on its title
 signal paused_changed(paused: bool)
-signal attract_table_changed(showing: bool)  # Attract turned to the High-score table, or back to its title
 
 var state := State.ATTRACT
 var paused := false  # Pause, over Play only
 var pad := false  # the press that left Attract came from a pad: the controls card shows the pad, else the keys
 var ranked := false  # the Run that gridlocked made the top 10, so Initials follow the results
-var attract_table := false  # Attract is showing the High-score table, not its title
 
 var _in_state := 0.0  # seconds in this state, not counting Pause
 var _away := false  # the window or tab has lost focus and not got it back
@@ -30,9 +28,6 @@ func step(dt: float) -> void:
 		State.ATTRACT:
 			if _in_state >= Tuning.ATTRACT_TIME:
 				_go(State.ATTRACT)
-			elif (fmod(_in_state, Tuning.ATTRACT_TITLE + Tuning.ATTRACT_TABLE) >= Tuning.ATTRACT_TITLE) != attract_table:
-				attract_table = not attract_table
-				attract_table_changed.emit(attract_table)
 		State.CONTROLS:
 			if _in_state >= Tuning.CONTROLS_TIME:
 				_go(State.PLAY)
@@ -129,7 +124,6 @@ func _after_results() -> void:
 func _go(s: State) -> void:
 	state = s
 	_in_state = 0.0
-	attract_table = false
 	changed.emit(s)
 	if s == State.PLAY and _away:
 		_set_paused(true)

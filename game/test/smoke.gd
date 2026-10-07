@@ -7,7 +7,8 @@ extends SceneTree
 ## goes idle, and the Run must end in Gridlock within IDLE_FOR seconds: an idle Raccoon gridlocks in about 30s (#34).
 ## A Gridlock while the autopilot plays counts too. The results must then give way to Initials (a fresh table always
 ## ranks a Run that scored), which must save "RAC" by themselves, then the High-score table, then Attract, which must
-## turn to the table in time. It keeps its table in a scratch file, never the real one.
+## stay on its title for TITLE_FOR seconds (#45: the table shows only after a Run). It keeps its table in a scratch
+## file, never the real one.
 ## By ear (#37): Attract and the controls card over it play no SFX but the UI's, and the Run plays HEARD.
 ## The music (#38) starts as MUSIC says: the Theme on Attract, the groove for the Run, the Theme again at the results,
 ## playing on through the table into the next Attract.
@@ -22,6 +23,7 @@ const PAUSE_FOR := 1.0  # ...for this long
 const AUTO_FOR := 300.0  # simulated seconds
 const IDLE_FOR := 45.0  # simulated seconds
 const STEP_LIMIT := 5.0  # simulated seconds each other step may take, beyond its own time
+const TITLE_FOR := 12.0  # simulated seconds the next Attract must stay on its title
 const HEARD: Array[StringName] = [&"switch_green", &"honk_1", &"stinger", &"gridlock_scratch", &"gridlock_shatter"]
 const MUSIC := [[Flow.State.ATTRACT, MusicMix.Track.THEME], [Flow.State.PLAY, MusicMix.Track.GROOVE],
 		[Flow.State.RESULTS, MusicMix.Track.THEME]]  # [the state, the track started there], in order
@@ -123,14 +125,14 @@ func _physics_process(delta: float) -> bool:
 			elif since > Tuning.SCORES_TIME + STEP_LIMIT:
 				_finish("FAIL: the High-score table never gave way to Attract")
 		Step.BACK:
-			if flow.attract_table and _main._ui.screen is ScoresScreen:
+			if not _main._ui.screen is TitleScreen:
+				_finish("FAIL: Attract left its title %.1fs in" % since)
+			elif since >= TITLE_FOR:
 				_expect(_attract_sfx.is_empty(), "Attract plays no SFX: it played %s" % [_attract_sfx])
 				for sound in HEARD:
 					_expect(_heard.has(sound), "the Run played %s" % sound)
 				_expect(_music == MUSIC, "the music started as %s: it went %s" % [MUSIC, _music])
-				_finish("%s; the table showed and Attract turned to it %.1fs later" % [_gridlock, since])
-			elif since > Tuning.ATTRACT_TITLE + STEP_LIMIT:
-				_finish("FAIL: Attract never turned to the High-score table")
+				_finish("%s; the table showed, then Attract stayed on its title" % _gridlock)
 	return false
 
 

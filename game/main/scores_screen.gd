@@ -2,7 +2,7 @@ class_name ScoresScreen
 extends Card
 ## The High-score table (#36, #42, #19 stories 3 and 16): rank, initials and score for the top ScoreTable.SIZE, empty
 ## places as dashes. After a Run it shows over the frozen board with the new entry flashing, and A skips it once
-## Flow's lock is over. In Attract it takes turns with the title, over the autopilot's Run.
+## Flow's lock is over. It shows only after a Run, never in Attract (#45).
 
 const SIZE := Vector2(460, 540)
 const ROW := 38.0  # px between rows
@@ -10,15 +10,13 @@ const FLASH := 0.5  # seconds per flash of the new entry: on for the first two t
 
 var _entries: Array[Dictionary]
 var _new := -1  # the new entry's rank, or -1
-var _attract := false
 var _clock := 0.0  # seconds shown
 
 
-## `new_rank` flashes that row; `attract` shows the title's prompt in place of the hint.
-func _init(entries: Array[Dictionary], new_rank := -1, attract := false) -> void:
+## `new_rank` flashes that row.
+func _init(entries: Array[Dictionary], new_rank := -1) -> void:
 	_entries = entries.duplicate(true)
 	_new = new_rank
-	_attract = attract
 
 
 func _process(delta: float) -> void:
@@ -43,7 +41,4 @@ func _draw() -> void:
 		else:
 			text_at("---", Vector2(box.position.x + 120, y), 28, MUTED)
 		y += ROW
-	if not _attract:
-		hint(box, "SWITCH: continue")
-	else:
-		prompt(Vector2(mid, minf(box.end.y + 52.0, view().y - 40.0)), blink(_clock, TitleScreen.BLINK))
+	hint(box, "SWITCH: continue")

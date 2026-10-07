@@ -10,10 +10,9 @@ const K_PATIENCE: Array[float] = [15.0, 12.0, 7.0]  # seconds a front driver wai
 const K_EASE := 0.85  # per stage past 9, the share of the gap to the far limit left
 
 # Stage length and Quota
-const TARGET_LEN: Array[float] = [45.0, 75.0]  # seconds a stage should last if traffic flows, stage 1 to 9, then flat
-const DRAIN_MAX := 12.0  # seconds the drain after the Quota lasts at most
+const TARGET_LEN: Array[float] = [24.0, 75.0]  # seconds a stage should last if traffic flows, stage 1 to 9, then flat
 const TALLY_TIME := 3.0  # seconds the Tally card shows before the next stage...
-const TALLY_LOCK := 0.5  # ...and A skips it only after this long, so a Switch mashed during the drain doesn't
+const TALLY_LOCK := 0.5  # ...and A skips it only after this long, so a Switch mashed as the stage clears doesn't
 
 # The arcade loop (#35)
 const ATTRACT_TIME := 60.0  # seconds an Attract plays before a fresh one starts (Gridlock starts one sooner)
@@ -38,8 +37,6 @@ const GRIDLOCK_BANNER_AT := 1.65  # the GRIDLOCK banner slams in; the shards fal
 const GRIDLOCK_FALL_TIME := 1.0  # ...and are gone this long after
 
 # The High-score table (#36)
-const ATTRACT_TITLE := 6.0  # seconds Attract shows the title...
-const ATTRACT_TABLE := 4.0  # ...then the High-score table, and round again: the table every 10s (#19 story 3)
 const INITIALS_TIME := 30.0  # seconds to enter initials before they save as InitialsEntry.DEFAULT ("RAC")...
 const INITIALS_LOCK := 0.75  # ...and A enters a letter only after this long, so A mashed through the results doesn't
 const REPEAT_DELAY := 0.4  # seconds up or down is held before a letter starts to repeat...

@@ -38,9 +38,9 @@ func test_opening_knobs_step_up_and_debuts_hold_the_previous_stage() -> void:
 		check_near(d.turners, turners[n - 1], 0.0001, "stage %d's Turner share" % n)
 
 
-func test_stage_length_grows_from_45s_to_75s_then_stays_flat() -> void:
+func test_stage_length_grows_from_24s_to_75s_then_stays_flat() -> void:
 	# Story 56. A Debut doesn't hold it: it's how long the stage lasts, not how hard it is.
-	var want := {1: 45.0, 2: 48.75, 3: 52.5, 5: 60.0, 9: 75.0, 10: 75.0, 25: 75.0}
+	var want := {1: 24.0, 2: 30.375, 3: 36.75, 5: 49.5, 9: 75.0, 10: 75.0, 25: 75.0}
 	for n: int in want:
 		check_near(Stages.def(n, 1).target_len, want[n], 0.0001, "stage %d's target length" % n)
 

@@ -12,7 +12,7 @@ extends Node
 ##   --stage=N       start the Run at stage N (default 1)
 ##   --shot=<path>   save a PNG of the screen after --at seconds of simulated time, then quit
 ##   --at=S          when --shot fires, in seconds of simulated time across stages (default 15, as in the greybox)
-##   --quota-at=S    meet the current stage's Quota at S seconds of simulated time, to see the drain and Tally
+##   --quota-at=S    meet the current stage's Quota at S seconds of simulated time, to see the stage clear and the Tally
 ##   --switch=S:L,M  Switch Lights L, M, ... (indices into Traffic.lights) at S seconds of simulated time, as the Raccoon
 ##                   would; repeat it for more. It stages a scene, e.g. the stage-9 art reference (game/tools/reference_shot.sh)
 ##   --autopilot     the Attract autopilot (#34) plays the Raccoon, every stage of every Run
@@ -72,7 +72,6 @@ func _ready() -> void:
 	get_window().focus_entered.connect(flow.focus_gained)
 	flow.changed.connect(_on_flow_changed)
 	flow.paused_changed.connect(_on_paused_changed)
-	flow.attract_table_changed.connect(_on_attract_table_changed)
 	if _direct:
 		flow.play_now()
 	else:
@@ -198,11 +197,6 @@ func _record() -> int:
 	var rank := Scores.table.add(initials, run.score)
 	print("High score: %s %d, rank %d" % [initials, run.score, rank + 1])
 	return rank
-
-
-## Attract turns to the High-score table, or back to its title.
-func _on_attract_table_changed(showing: bool) -> void:
-	_ui.show_screen(ScoresScreen.new(Scores.table.entries, -1, true) if showing else TitleScreen.new())
 
 
 func _on_paused_changed(paused: bool) -> void:

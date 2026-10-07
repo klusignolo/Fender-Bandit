@@ -1,6 +1,6 @@
 class_name TallyCard
 extends Card
-## The Tally card (#29, #42, #19 stories 59–60): after a stage's drain, over the frozen board, it shows the stage
+## The Tally card (#29, #42, #19 stories 59–60): as soon as a stage clears, over the frozen board, it shows the stage
 ## cleared, the cars through, the score gained and what's new next stage. It's done after TALLY_TIME, or on A
 ## (Switch) once TALLY_LOCK has gone by.
 

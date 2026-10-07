@@ -17,7 +17,7 @@ signal yielded(car: Car)  # a driver braking from YIELD_SQUEAL_SPEED or faster s
 signal jam_level_changed(level: Jam.Level)  # the Jam moved into another Jam-level, up or down
 signal gridlocked  # the Jam is full: the Run is over
 signal swell_flagged(next: int)  # the Swell moves to road `next` in SHIFT_WARN seconds
-signal stage_cleared  # the Quota was met and the drain is over: Traffic stops. Audio's stinger hooks here (#37)
+signal stage_cleared  # the Quota was met: Traffic stops on that tick. Audio's stinger hooks here (#37)
 
 const TICK_HZ := 60
 const DT := 1.0 / TICK_HZ
@@ -37,8 +37,7 @@ var swell_next := 0  # the road the Swell moves to next
 var swell_left := 0.0  # seconds until the Swell moves to swell_next
 var quota := 0  # cars this stage needs to get off the map: its target length over k_gap, for each entry
 var cars_through := 0  # cars off the map this stage
-var draining := false  # the Quota is met: nothing spawns, the Jam is held, and the cars on the map drain
-var cleared := false  # the drain is over; step() does nothing more
+var cleared := false  # the Quota is met; step() does nothing more
 
 # Stage knobs, from the StageDef. Tests may set them.
 var k_gap := 0.0
@@ -62,7 +61,6 @@ var _wreckage: Array[Car] = []  # this tick's Wreckage, towed or not
 var _by_route: Array[Array] = []  # this tick's moving cars, by route id
 var _tow_hold := Vector2.ZERO  # where the towed Wreckage trails, from the Raccoon
 var _jam_level := Jam.Level.CLEAR  # the Jam-level last signalled
-var _drain_left := 0.0  # seconds the drain has left before it gives up
 
 
 ## A stage's traffic, set up by its StageDef (stage 1 without one). The Run hands it the Dents from its earlier stages.
@@ -99,7 +97,7 @@ func swell_warning() -> bool:
 	return swell_left <= Tuning.SHIFT_WARN
 
 
-## Count the Quota as met now: the drain starts next tick. For the --quota-at agent flag.
+## Count the Quota as met now: the stage clears next tick. For the --quota-at agent flag.
 func meet_quota() -> void:
 	cars_through = maxi(cars_through, quota)
 
@@ -174,20 +172,18 @@ func step() -> void:
 			if l.yellow_left <= 0.0:
 				l.state = Light.State.RED
 				light_changed.emit(l)
-	if not draining:
-		_move_swell()
+	_move_swell()
 	_haul()  # before cars drive, so they brake for where towed Wreckage is now
-	if not draining:
-		_spawn()
+	_spawn()
 	_drive()
+	_check_quota()
+	if cleared:
+		return  # the Quota is met: this tick can't Crash or Gridlock any more
 	var honking := _spend_patience()
-	if not draining:
-		jam.step(honking + Tuning.JAM_BACKLOG * _backlog_total(), DT)
+	jam.step(honking + Tuning.JAM_BACKLOG * _backlog_total(), DT)
 	_check_crashes()
 	_check_hit()
-	if not draining:
-		_check_jam()
-	_check_quota()
+	_check_jam()
 
 
 # Every vehicle that's due joins its entry's queue, its kind drawn as it falls due, then drives on as soon as the
@@ -386,8 +382,7 @@ func _drive() -> void:
 			_hand_off(c)
 		if c.s >= c.route.length:
 			cars_through += 1
-			if not draining:
-				jam.exit()
+			jam.exit()
 			car_exited.emit(c)
 			continue
 		_place(c)
@@ -646,18 +641,9 @@ func _check_crashes() -> void:
 				_crash(w, c)
 
 
-# The Quota: once it's met, the backlog is dropped and the drain starts. The drain ends when no car is moving
-# (Wreckage stays), or after DRAIN_MAX seconds.
+# The Quota: the stage clears on the tick it's met, with the cars still on the map where they are (#45).
 func _check_quota() -> void:
-	if not draining:
-		if cars_through >= quota:
-			draining = true
-			_drain_left = Tuning.DRAIN_MAX
-			for d in _due:
-				d.clear()
-		return
-	_drain_left -= DT
-	if _drain_left <= 0.0 or cars.all(func(c: Car) -> bool: return c.wreckage):
+	if cars_through >= quota:
 		cleared = true
 		stage_cleared.emit()
 

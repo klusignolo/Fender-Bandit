@@ -16,6 +16,7 @@ func _init(r: Run, t: Traffic) -> void:
 	run = r
 	traffic = t
 	add_child(JamMeter.new(t))
+	t.stage_cleared.connect(queue_redraw)  # the board stops on that tick: show the met Quota under the Tally
 
 
 static func left_text(stage: int, through: int, quota: int) -> String:
