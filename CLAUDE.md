@@ -38,6 +38,7 @@ The Godot project lives in `game/`. Run these from the repo root in Git Bash:
 - **Sprite proof:** `game/tools/sprite_proof.sh` re-shoots `docs/art/proof/` (#18): every sprite at 1× and 0.45× in a 960×540 window, with and without mipmaps, plus 3× crops (`docs/sprites.md` "Proof"). It needs a window.
 - **Itch cover:** `game/tools/make_thumbnail.sh` re-renders `docs/art/itch-thumbnail.png` (630×500) from `game/icon.svg` and the name lockup. It needs a window.
 - **Headless boot check of the exe:** `game/build/windows/FenderBandit.exe --quit-after 90 --log-file <file>`. Exported Windows builds go exclusive fullscreen.
+- **Publish to itch.io:** `game/tools/publish.sh` (add `--dry-run` to rehearse it). It runs the tests and the smoke test, exports release builds and pushes them with butler to the `html5` and `windows` channels. The `publish-itch` skill wraps it; one-time setup is in `docs/publishing.md`.
 
 ## Build mode (phase 1)
 
