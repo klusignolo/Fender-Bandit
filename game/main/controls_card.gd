@@ -45,7 +45,7 @@ func _draw() -> void:
 		_draw_pad(box)
 	else:
 		_draw_keys(box)
-	hint(box, "SWITCH: start")
+	hint(box, "%s: start" % confirm_key())
 
 
 func _draw_pad(box: Rect2) -> void:

@@ -30,4 +30,4 @@ func _draw() -> void:
 		text_at(v, Vector2(box.end.x - 50 - text_width(v, 24), y), 24)
 		y += 42
 	text("SCORE  %d" % _score, Vector2(mid, y + 40), 40)
-	hint(box, "SWITCH: continue")
+	hint(box, "%s: continue" % confirm_key())

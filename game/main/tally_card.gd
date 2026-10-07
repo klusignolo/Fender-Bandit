@@ -53,4 +53,4 @@ func _draw() -> void:
 			bar(badge.grow_individual(-BADGE_CAP, -3.0, -BADGE_CAP, -3.0), INK)  # square, so the caps end clean
 		text(s, Vector2(mid, y), l[1])
 		y += l[1] + GAP
-	hint(box, "SWITCH: skip")
+	hint(box, "%s: skip" % confirm_key())

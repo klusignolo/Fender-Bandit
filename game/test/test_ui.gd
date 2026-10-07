@@ -170,3 +170,24 @@ func test_the_itch_banner_is_rendered() -> void:
 	var img := Image.load_from_file(path)
 	if check(img != null, "docs/art/itch-banner.png exists"):
 		check_eq(img.get_size(), Vector2i(960, 240), "at the width of itch's page column")
+
+
+func test_hints_name_the_key_to_press_not_the_action() -> void:
+	var was := Card.pad
+	for pad: bool in [false, true]:
+		Card.pad = pad
+		var key := "A" if pad else "J"
+		var screens := _screens()
+		for name: String in screens:
+			var card: Card = screens[name]
+			card.measure(VIEW)
+			for w: Card.Words in card.words:
+				check(not w.text.begins_with("SWITCH:"), "%s: \"%s\" names a key, not the Switch" % [name, w.text])
+			card.free()
+		var menu := PauseMenu.new(true)
+		menu.measure(VIEW)
+		var texts := menu.words.map(func(w: Card.Words) -> String: return w.text)
+		check("%s: choose" % key in texts, "pause, pad %s: the hint is \"%s: choose\": %s" % [pad, key, texts])
+		check(not texts.any(func(t: String) -> bool: return "resume" in t.to_lower() and t != "RESUME"), "pause: no Start hint: %s" % [texts])
+		menu.free()
+	Card.pad = was

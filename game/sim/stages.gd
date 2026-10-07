@@ -6,7 +6,7 @@ enum Feature { TURNERS, MOTORCYCLES, SEMIS, BLOWING, ODD_JUNCTIONS }
 const OPENING := 9  # the last stage of the Opening
 const DEBUTS := {3: Feature.TURNERS, 5: Feature.MOTORCYCLES, 7: Feature.BLOWING, 8: Feature.SEMIS, 9: Feature.ODD_JUNCTIONS}
 const GROWS := [4, 9]  # Opening stages where a crossing attaches
-const NAMES := {Feature.TURNERS: "Turners", Feature.MOTORCYCLES: "Motorcycles", Feature.SEMIS: "Semis", Feature.BLOWING: "Blowing the red", Feature.ODD_JUNCTIONS: "T-junctions and 5-ways"}
+const NAMES := {Feature.TURNERS: "Left turns", Feature.MOTORCYCLES: "Motorcycles", Feature.SEMIS: "Semis", Feature.BLOWING: "Blowing the red", Feature.ODD_JUNCTIONS: "T-junctions and 5-ways"}
 const GROW_NAME := "Another crossing"
 
 

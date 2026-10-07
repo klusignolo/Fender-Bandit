@@ -81,4 +81,4 @@ func _draw() -> void:
 		var line := Rect2(x - 32, base + 14, 64, 6)
 		bar(line, Color.WHITE if current else MUTED)
 	text("UP/DOWN: letter   RIGHT: next   LEFT: back", Vector2(mid, box.position.y + 320), 18)
-	hint(box, "SWITCH: next")
+	hint(box, "%s: next" % confirm_key())

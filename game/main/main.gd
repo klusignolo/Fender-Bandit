@@ -87,7 +87,17 @@ func _notification(what: int) -> void:
 
 ## Presses become Flow's inputs: any button leaves Attract, A closes the cards, Start pauses.
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo() or flow.input_locked():
+	if not event.is_pressed() or event.is_echo():
+		return
+	var from_pad := event is InputEventJoypadButton or event is InputEventJoypadMotion
+	if (from_pad or event is InputEventKey) and from_pad != Card.pad:  # the hints follow the device last pressed
+		Card.pad = from_pad
+		if _ui.screen != null:
+			_ui.screen.queue_redraw()
+		if is_instance_valid(_tally):
+			for c in _tally.get_children():
+				(c as CanvasItem).queue_redraw()
+	if flow.input_locked():
 		return
 	match flow.state:
 		Flow.State.ATTRACT:

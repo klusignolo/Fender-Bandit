@@ -103,7 +103,7 @@ func test_the_same_seed_gives_the_same_generated_stage() -> void:
 
 func test_news_names_what_a_stage_debuts_and_grows() -> void:
 	check_eq(Stages.news(Stages.def(2, 1)), PackedStringArray(), "stage 2 brings nothing new")
-	check_eq(Stages.news(Stages.def(3, 1)), PackedStringArray(["Turners"]), "stage 3")
+	check_eq(Stages.news(Stages.def(3, 1)), PackedStringArray(["Left turns"]), "stage 3: right turns run from stage 1, so the news is the left ones")
 	check_eq(Stages.news(Stages.def(4, 1)), PackedStringArray(["Another crossing"]), "stage 4")
 	check_eq(Stages.news(Stages.def(9, 1)), PackedStringArray(["T-junctions and 5-ways", "Another crossing"]), "stage 9")
 	check_eq(Stages.news(Stages.def(13, 1)), PackedStringArray(["Another crossing"]), "stage 13")

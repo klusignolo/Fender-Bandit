@@ -24,6 +24,10 @@ class Words:
 		size = px
 		loose = off_sign
 
+
+## Whether the last press came from a pad: the hints then name its button, else the keyboard key (#45). Main sets it.
+static var pad := false
+
 var signs: Array[Rect2] = []  # measure()'s findings
 var stripes: Array[Rect2] = []
 var words: Array[Words] = []
@@ -81,7 +85,7 @@ func stripe(box: Rect2) -> void:
 		Sign.stripes(self, box)
 
 
-## The small prompt in the bottom-right corner of `box`, inside its rule, e.g. "SWITCH: SKIP".
+## The small prompt in the bottom-right corner of `box`, inside its rule, e.g. "J: skip".
 func hint(box: Rect2, s: String) -> void:
 	var inner := Sign.inner(box)
 	text_at(s, inner.end - Vector2(text_width(s, HINT_SIZE) + 10, 10), HINT_SIZE, MUTED)
@@ -142,3 +146,9 @@ func texture(tex: Texture2D, r: Rect2) -> void:
 ## Whether a blink of `period` seconds is lit `clock` seconds in: on for the first two thirds of each.
 static func blink(clock: float, period: float) -> bool:
 	return fmod(clock, period) < period * 2.0 / 3.0
+
+
+## The key that confirms a screen, for its hint: A on a pad, else Switch's first keyboard key. Hints name a key,
+## not the Switch, so a keyboard player needn't know which key Switch is (#45).
+static func confirm_key() -> String:
+	return "A" if pad else ControlsCard.keys(&"switch").get_slice(" / ", 0)

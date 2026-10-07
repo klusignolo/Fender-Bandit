@@ -41,4 +41,4 @@ func _draw() -> void:
 		else:
 			text_at("---", Vector2(box.position.x + 120, y), 28, MUTED)
 		y += ROW
-	hint(box, "SWITCH: continue")
+	hint(box, "%s: continue" % confirm_key())
