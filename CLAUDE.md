@@ -35,6 +35,7 @@ The Godot project lives in `game/`. Run these from the repo root in Git Bash:
 - **Watch the autopilot:** `<godot console exe> --path game -- --autopilot` (any agent flag but `--seed` skips Attract and the controls card).
 - **Screenshot a run:** `<godot console exe> --path game -- --seed=1 --shot=<png> --at=<sim seconds>`. A seed makes the run repeat exactly. It needs a window, so don't pass `--headless`.
 - **Art reference shot:** `game/tools/reference_shot.sh` re-shoots `docs/art/stage9-reference.png`, the stage-9 frame every art pass is judged against (`docs/sprites.md` "Reference"). `--switch=S:L,M` switches Lights at S seconds, to stage a scene.
+- **Sprite proof:** `game/tools/sprite_proof.sh` re-shoots `docs/art/proof/` (#18): every sprite at 1× and 0.45× in a 960×540 window, with and without mipmaps, plus 3× crops (`docs/sprites.md` "Proof"). It needs a window.
 - **Itch cover:** `game/tools/make_thumbnail.sh` re-renders `docs/art/itch-thumbnail.png` (630×500) from `game/icon.svg` and the name lockup. It needs a window.
 - **Headless boot check of the exe:** `game/build/windows/FenderBandit.exe --quit-after 90 --log-file <file>`. Exported Windows builds go exclusive fullscreen.
 

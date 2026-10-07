@@ -4,7 +4,7 @@ The game's look: the fixed rules every sprite obeys (the **style sheet**) and on
 
 Like `docs/tuning.md`, this is a living register: when a proof or playtest changes a rule or a sprite, update its entry and add a note. Sizes that are gameplay (vehicle footprints) also live in `docs/tuning.md`.
 
-**Not yet proven.** The legibility rules below (outline, shadow, mipmaps at 0.45× zoom) are not yet signed off. The first-pass sprites are in the game, and the [stage-9 reference](#reference) shows them at the real zoom ([#39](https://github.com/klusignolo/GameJam2026/issues/39)). The sprite proof ([#18](https://github.com/klusignolo/GameJam2026/issues/18)) still decides the fallbacks noted inline.
+**Legible at 0.45× ([#18](https://github.com/klusignolo/GameJam2026/issues/18)); charm at 1× awaits the dev.** The sprite proof shot every sprite at 1× and 0.45×, with and without mipmaps ([Proof](#proof)). The baked outline, the mipmaps, the SVG Raccoon and the palette all stay. The dev's verdict on the 1× look can still overrule the Raccoon and the palette.
 
 ## Style sheet
 
@@ -18,11 +18,11 @@ Like `docs/tuning.md`, this is a living register: when a proof or playtest chang
 ### Medium
 
 - **Flat vector SVG,** written by Claude. No pixel art (it shimmers under zoom and rotation).
-- **Fallback:** if the SVG Raccoon lacks charm in the proof, the Raccoon alone moves to Claude-scripted Blender renders (Workbench, flipped-shell outline) in the same palette and outline colour.
+- **Fallback, not taken (#18):** Claude-scripted Blender renders of the Raccoon alone (Workbench, flipped-shell outline). At 0.45× the Raccoon (28 × 38 world px) is 13 × 17 on-screen px whatever the medium, and its orange vest is what reads, so renders would add nothing there. It stays an option if the dev finds the 1× Raccoon lacks charm.
 
 ### Outline and shadow
 
-- **Outline:** 2 world px (4 px @2×), baked into each SVG, in ink navy. Every silhouette gets it; interior lines are 1 world px. *Fallback if cars turn to mush at 0.45×: a constant-screen-width outline shader.*
+- **Outline:** 2 world px (4 px @2×), baked into each SVG, in ink navy. Every silhouette gets it; interior lines are 1 world px. At 0.45× it is under 1 on-screen px but still reads as a dark rim, so the constant-screen-width outline shader (the fallback) was not needed (#18).
 - **Light:** one light, from the top-left.
 - **Shadow:** each upright or vehicle sprite has a separate shadow sprite: its silhouette in shadow colour, offset 3 world px down-right, on a shadow layer under everything upright. It does not rotate with the vehicle, so the light stays consistent through turns.
 - **Interior shading:** at most one flat shade tone per colour (the side away from the light). No gradients.
@@ -47,7 +47,7 @@ Saturated red, yellow and green are **reserved for game signals** (Lights, stop 
 | Rooftops | cool blues, slates, muted purples | Block scatter. **No trees** (green is reserved) |
 | `sign_blue` | `#1F5FAF` | UI sign panels |
 
-Hex values are first guesses; tune them in the proof, keeping the reservation rule.
+The proof (#18) kept every hex value: at 0.45× the six tints stay distinct from each other and from `asphalt`. Charcoal is the weakest; it reads by its outline and pale glass. Tune them in a playtest if needed, keeping the reservation rule.
 
 ### Type and UI
 
@@ -183,6 +183,22 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 `docs/art/stage9-reference.png` is the yardstick every art pass is judged against ([#39](https://github.com/klusignolo/GameJam2026/issues/39)). It's the real game at the real camera zoom (about 0.5× at stage 9), not a mockup: three crossings, queues, Turners, semis, motorcycles, Honks, "!!", Patience rings, the Swell chevrons, a backlog, Wreckage from three Crashes and a fresh burst from a fourth, and the Raccoon with its Switch target.
 
 **Reproduce it:** `game/tools/reference_shot.sh` (pass a directory to write the shot somewhere else and compare). It runs stage 9 from seed 1, turns the north–south Lights green at 1s with the `--switch` agent flag, so the east–west roads queue up, Blow the red and Crash, and shoots at 31.4s. When an art pass changes what's on screen, re-shoot and commit the new reference with it. If a sim change moves the Crashes, re-time `--at` so a burst is fresh.
+
+## Proof
+
+![0.45× with mipmaps, 3× crop](art/proof/sprites-045x-mipmaps-crop.png)
+
+`docs/art/proof/` holds the sprite proof ([#18](https://github.com/klusignolo/GameJam2026/issues/18)), shot by `game/tools/sprite_proof.sh`. A lineup drawn by the game's own nodes is shown in a 960×540 window, with content stretch off, so a world px at zoom 1 is one window px. The lineup: a car in each tint, a motorcycle, a semi, a braking car, a blinking Turner with its arrow, Patience ring and HONK, Wreckage of each kind, the Raccoon's four views, and a pole lit red, yellow and green. There are five shots: 1× and 0.45×, each with mipmaps (the game's Linear Mipmap filter) and without (Linear), plus the 0.45 floor as a 960×540 window really shows it. The canvas_items stretch shrinks the 1280×720 base by a further 0.75 there, so that shot is at 0.34×. Each zoomed-out shot also has a `-crop.png`, enlarged 3× nearest-neighbour.
+
+What it decided:
+- **Mipmaps stay on.** Without them the 0.45× stills are a touch crisper but alias: a 2× texture drawn at 0.45× skips most of its texels, which shimmers as vehicles turn and the camera zooms. The stills can't show that, so comparing it in motion is a hands-on check.
+- **The baked outline stays** (see "Outline and shadow").
+- **The SVG Raccoon stays** (see "Medium").
+- **The palette stays** (see "Palette").
+- **The stop lines carry the Lights:** at 0.45× and even 0.34× the tinted bar and its halo are the clearest thing on screen, as planned; the lit lamp on the pole is a few px.
+- **Still weak at 0.45×:** the motorcycle (its helmet tint is a few px) and the Raccoon's mask. Both are legible as a small vehicle and as the orange-vested Raccoon. The Raccoon rig (#41) can do more for the Raccoon.
+- **Not proved here:** the Idle and Switch cutout animations. The Raccoon is still one whole sprite per view; the rig and its animations are #41's, and their legibility is judged there.
+- **The 0.34× shot is a warning:** in a window smaller than 1280×720, the readability floor drops with the stretch. There, the outlines merge into the bodies and the Raccoon is a grey blob with an orange vest. The cabinet's resolution is still unknown; if it is under 720 lines, raise `READ_FLOOR` (`docs/tuning.md`) so the on-screen floor stays at 0.45.
 
 ## Recipes
 
