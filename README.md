@@ -3,7 +3,7 @@
 **Stop. Go. Oops.** A raccoon has gotten its paws on the city's traffic lights. Flip lights, keep the cars moving,
 tow away the wreckage, and hold off gridlock for as long as you can.
 
-**Play it on itch.io: https://kittypounce.itch.io/fender-bandit** (in the browser, or download for Windows)
+**Play it on itch.io: https://kittypounce.itch.io/fender-bandit** (in the browser, or download for Windows). Submitted to the jam.
 
 ![A crash at stage 9](docs/art/itch/1-crash.png)
 

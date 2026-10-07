@@ -14,7 +14,8 @@ if anything below fails.
    - `git status`: the script refuses a dirty tree. Other sessions may be mid-change in this repo, so never commit,
      stash, or discard someone else's work to get a clean tree. Ask the user whether to wait, or publish the dirty
      tree with `--allow-dirty` (only if they say so).
-   - Confirm with the user before the real push: it's outward-facing. Say which commit (`git describe --always --dirty`)
+   - Confirm with the user before the real push: the page is public and submitted to the jam, so a push reaches
+     players at once. After the deadline (Oct 14, 2026, 11:59 PM Central), also ask whether the jam rules allow it. Say which commit (`git describe --always --dirty`)
      will go up. A `--dry-run` needs no confirmation.
 2. **Publish.** From the repo root in Git Bash: `game/tools/publish.sh` (it runs the tests, the smoke test, the
    release export, then `butler push` to the `html5` and `windows` channels). It takes a few minutes; run it in
@@ -22,5 +23,3 @@ if anything below fails.
    unless the user asks.
 3. **Report.** Relay the version pushed, then poll `butler status kittypounce/fender-bandit` (in a background until-loop) until both channels show a build; channels stay missing for a few minutes after a first push. Each build should show a √.
    Remind the user of the hands-on check: open the itch page, play a run in the browser.
-   If the push was the first one, point them at step 5 of `docs/publishing.md` (tick "played in the browser",
-   embed size, cover, submit to the jam).

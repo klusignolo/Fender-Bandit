@@ -6,7 +6,11 @@ The game ships as two channels on one itch project, pushed with [butler](https:/
 The itch project defaults to `kittypounce/fender-bandit`; set `ITCH_TARGET=<user>/<slug>` if yours differs
 (or change the default in the script).
 
-## One-time setup
+**Status (2026-10-06):** https://kittypounce.itch.io/fender-bandit is **Public** and submitted to the jam, so every
+push reaches players at once; rehearse with `--dry-run` when unsure. The deadline is Oct 14, 2026, 11:59 PM Central;
+after it, push only what the jam rules allow (usually bug fixes).
+
+## One-time setup (done)
 
 1. **Install butler.** Download https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default
    (a zip). There's no installer: put `butler.exe` and its two DLLs directly in `~/.local/bin` (already on PATH),
