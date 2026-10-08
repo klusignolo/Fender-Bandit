@@ -42,7 +42,7 @@ static func def(n: int, seed_value: int) -> StageDef:
 		d.motorcycles = Tuning.MOTO_SHARE
 	if d.features.has(Feature.SEMIS):
 		d.semis = Tuning.SEMI_SHARE
-	d.target_len = lerpf(Tuning.TARGET_LEN[0], Tuning.TARGET_LEN[1], (mini(n, OPENING) - 1) / float(OPENING - 1))
+	d.target_len = Tuning.TARGET_LEN
 	return d
 
 

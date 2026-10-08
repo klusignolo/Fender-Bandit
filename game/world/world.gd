@@ -10,6 +10,9 @@ extends Node2D
 ## owes, so the freeze never breaks the fixed step. At Gridlock the Run's board stops (gridlock()), its traffic
 ## coasts on in slow-mo, and then every car crashes at once (pile_up()), for the GridlockBeat.
 
+## The dev's fast-forward (#45, F8 in a Run): every board runs this many times as fast. Main sets it.
+static var speed := 1.0
+
 var run: Run
 var traffic: Traffic
 var raccoon: Raccoon
@@ -77,7 +80,7 @@ func _physics_process(delta: float) -> void:
 	framing.step(delta, get_viewport_rect().size, raccoon.position)
 	_aim_camera()
 	if can_process():  # unless this tick's step cleared the stage and Main has stopped the board
-		Engine.time_scale = juice.time_scale()  # from the next tick, for everything run on scaled delta
+		Engine.time_scale = juice.time_scale() * speed  # from the next tick, for everything run on scaled delta
 
 
 func _notification(what: int) -> void:

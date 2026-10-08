@@ -123,6 +123,24 @@ func _unhandled_input(event: InputEvent) -> void:
 				_pause_input(event)
 			elif event.is_action_pressed(&"pause"):
 				flow.pause_or_resume()
+			else:
+				_dev_keys(event)
+
+
+## The dev's playtest keys (#45), keyboard only and bound to nothing else: F8 toggles double speed, F9 meets the
+## stage's Quota. Either marks the Run cheated, so it never makes the High-score table.
+func _dev_keys(event: InputEvent) -> void:
+	var k := event as InputEventKey
+	if k == null or _world == null:
+		return
+	if k.keycode == KEY_F8:
+		World.speed = 1.0 if World.speed > 1.0 else 2.0
+		run.cheated = true
+		print("Dev: speed ×%d" % World.speed)
+	elif k.keycode == KEY_F9:
+		_world.traffic.meet_quota()
+		run.cheated = true
+		print("Dev: stage %d's Quota met" % run.stage)
 
 
 ## Any key, or any pad button but Select and the guide: the cabinet launcher keeps those (#19 story 11). LT and RT
@@ -167,6 +185,7 @@ func _pause_input(event: InputEvent) -> void:
 func _on_flow_changed(state: Flow.State) -> void:
 	match state:
 		Flow.State.ATTRACT:
+			World.speed = 1.0  # Quit to title mid-fast-forward
 			_clear_board()
 			_start_attract()
 			_ui.show_screen(TitleScreen.new())
@@ -180,6 +199,7 @@ func _on_flow_changed(state: Flow.State) -> void:
 			_start_run()
 			Audio.music(MusicMix.Track.GROOVE)
 		Flow.State.GRIDLOCK:
+			World.speed = 1.0  # the beat plays at its own pace
 			_ui.clear()
 			_beat = GridlockBeat.new(_world)  # it stops the board, and the Raccoon with it
 			add_child(_beat)
@@ -249,6 +269,7 @@ func _start_attract() -> void:
 
 func _start_run() -> void:
 	run = Run.new()
+	World.speed = 1.0
 	run.stage = _start_stage
 	_run_seed = _take_seed()
 	_start_stage_world()
@@ -302,7 +323,7 @@ func _on_tally_done(card: TallyCard) -> void:
 # The Jam is full. A stale World's Gridlock (deferred past a change of board) is ignored.
 func _on_gridlocked(world: World) -> void:
 	if world == _world:
-		flow.gridlocked(Scores.table.ranks(run.score))
+		flow.gridlocked(Scores.table.ranks(run.score) and not run.cheated)
 
 
 func _physics_process(delta: float) -> void:

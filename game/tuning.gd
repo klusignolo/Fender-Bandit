@@ -10,7 +10,7 @@ const K_PATIENCE: Array[float] = [15.0, 12.0, 7.0]  # seconds a front driver wai
 const K_EASE := 0.85  # per stage past 9, the share of the gap to the far limit left
 
 # Stage length and Quota
-const TARGET_LEN: Array[float] = [24.0, 75.0]  # seconds a stage should last if traffic flows, stage 1 to 9, then flat
+const TARGET_LEN := 24.0  # seconds every stage should last if traffic flows (#45: flat, so stages stay short)
 const TALLY_TIME := 3.0  # seconds the Tally card shows before the next stage...
 const TALLY_LOCK := 0.5  # ...and A skips it only after this long, so a Switch mashed as the stage clears doesn't
 

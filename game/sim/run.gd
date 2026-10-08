@@ -17,6 +17,7 @@ var best_combo := 0  # this stage's highest Combo
 var cars_through := 0  # cars off the map this Run, every stage
 var top_combo := 0  # the Run's highest Combo
 var most_crashes := 0  # the most Crashes in one stage of this Run
+var cheated := false  # the dev's F8 or F9 was used (#45): the Run never makes the High-score table
 
 var _stage_start_score := 0
 

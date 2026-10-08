@@ -38,11 +38,11 @@ func test_opening_knobs_step_up_and_debuts_hold_the_previous_stage() -> void:
 		check_near(d.turners, turners[n - 1], 0.0001, "stage %d's Turner share" % n)
 
 
-func test_stage_length_grows_from_24s_to_75s_then_stays_flat() -> void:
-	# Story 56. A Debut doesn't hold it: it's how long the stage lasts, not how hard it is.
-	var want := {1: 24.0, 2: 30.375, 3: 36.75, 5: 49.5, 9: 75.0, 10: 75.0, 25: 75.0}
-	for n: int in want:
-		check_near(Stages.def(n, 1).target_len, want[n], 0.0001, "stage %d's target length" % n)
+func test_every_stage_lasts_24s_of_flowing_traffic() -> void:
+	# Story 56, #45: the dev wants short stages. The new mechanics bring the challenge, so stage length stays flat, and
+	# the Quota grows only as cars come faster and from more roads.
+	for n: int in [1, 2, 6, 9, 10, 25]:
+		check_near(Stages.def(n, 1).target_len, 24.0, 0.0001, "stage %d's target length" % n)
 
 
 func test_knobs_never_get_easier() -> void:

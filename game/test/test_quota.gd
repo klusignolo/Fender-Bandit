@@ -15,9 +15,9 @@ func _run(t: Traffic, seconds: float) -> void:
 
 func test_the_quota_is_the_target_length_over_the_spawn_gap_for_each_entry() -> void:
 	# Stage 1, one crossing with 4 entries: 24s ÷ 3.2s × 4 = 30. Stage 5, two linked crossings with 6 entries:
-	# 49.5s ÷ 2.375s × 6 = 125.05.
+	# 24s ÷ 2.375s × 6 = 60.6 (every stage is 24s since #45).
 	check_eq(Traffic.new(1, 0, Stages.def(1, 1)).quota, 30, "stage 1's Quota")
-	check_eq(Traffic.new(1, 0, Stages.def(5, 1)).quota, 125, "stage 5's Quota")
+	check_eq(Traffic.new(1, 0, Stages.def(5, 1)).quota, 61, "stage 5's Quota")
 
 
 func test_traffic_takes_its_stage_knobs_and_features() -> void:
