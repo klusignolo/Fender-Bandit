@@ -2,11 +2,11 @@
 
 Every number the game is tuned by: what it's for, its starting value, the ticket that set it, and what playtests have said. All values are **starting points, to be tuned (or cut) by feel**. When a playtest changes one, update its row and add a note; don't start a new file.
 
-The latest greybox with all of these in it: `prototypes/turners/` on the [`prototype/crossing-guard`](https://github.com/klusignolo/GameJam2026/tree/prototype/crossing-guard/prototypes/turners) branch. Its constants use the names in the **Greybox** column. The game keeps every number here in `game/tuning.gd` (`Tuning`) under the same names. Where the greybox used an unnamed number, the ticket that ported it named it, and the Greybox column says "inline".
+The latest greybox with all of these in it: `prototypes/turners/` on the [`prototype/crossing-guard`](https://github.com/klusignolo/Fender-Bandit/tree/prototype/crossing-guard/prototypes/turners) branch. Its constants use the names in the **Greybox** column. The game keeps every number here in `game/tuning.gd` (`Tuning`) under the same names. Where the greybox used an unnamed number, the ticket that ported it named it, and the Greybox column says "inline".
 
 ## Stage knobs
 
-The difficulty curves. Each is fixed for a whole Stage and steps up between Stages ([#7](https://github.com/klusignolo/GameJam2026/issues/7)). Values are linear from stage 1 to stage 9, then ease toward a far limit with no ceiling. A Debut stage holds the knobs still, so the new feature is the only thing that gets harder (but see the open question below).
+The difficulty curves. Each is fixed for a whole Stage and steps up between Stages ([#7](https://github.com/klusignolo/Fender-Bandit/issues/7)). Values are linear from stage 1 to stage 9, then ease toward a far limit with no ceiling. A Debut stage holds the knobs still, so the new feature is the only thing that gets harder (but see the open question below).
 
 | Knob | What it's for | Stage 1 → 9 → far limit | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -29,7 +29,7 @@ The difficulty curves. Each is fixed for a whole Stage and steps up between Stag
 
 ## The arcade loop
 
-The flow around a Run ([#35](https://github.com/klusignolo/GameJam2026/issues/35), [#36](https://github.com/klusignolo/GameJam2026/issues/36)): Attract → controls card → Run → Gridlock → results → Initials (top 10 only) → High-score table → Attract. Every screen moves on by itself, so the cabinet always returns to Attract (#19 story 12). Attract is the autopilot on stage 1 with a fresh seed, no HUD and a Quota it never meets, so it never leaves stage 1 and never records a score. It shows only the title: the High-score table comes only after a Run (#45; #36 had it take turns with the title every 10s, which the dev found distracting). A press of any key or pad button but Select and the guide leaves it. A (Switch) skips a card only after its lock, so a mashed press can't skip it too.
+The flow around a Run ([#35](https://github.com/klusignolo/Fender-Bandit/issues/35), [#36](https://github.com/klusignolo/Fender-Bandit/issues/36)): Attract → controls card → Run → Gridlock → results → Initials (top 10 only) → High-score table → Attract. Every screen moves on by itself, so the cabinet always returns to Attract (#19 story 12). Attract is the autopilot on stage 1 with a fresh seed, no HUD and a Quota it never meets, so it never leaves stage 1 and never records a score. It shows only the title: the High-score table comes only after a Run (#45; #36 had it take turns with the title every 10s, which the dev found distracting). A press of any key or pad button but Select and the guide leaves it. A (Switch) skips a card only after its lock, so a mashed press can't skip it too.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -52,7 +52,7 @@ The Opening's schedule (which stage debuts what, and the crossings at 4 and 9) i
 
 ## Traffic shape
 
-Uneven from stage 1, so a fixed light cycle starves a road ([#14](https://github.com/klusignolo/GameJam2026/issues/14)). The Swell is the only shape left; its strength and shift time could become stage knobs if difficulty needs more levers.
+Uneven from stage 1, so a fixed light cycle starves a road ([#14](https://github.com/klusignolo/Fender-Bandit/issues/14)). The Swell is the only shape left; its strength and shift time could become stage knobs if difficulty needs more levers.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -98,7 +98,7 @@ How cars move, follow and stop. Distances are measured along the car's route.
 
 ## Crash juice and the Gridlock beat
 
-The comedic payoff ([#43](https://github.com/klusignolo/GameJam2026/issues/43), #19 stories 47, 54). `Juice` counts physics ticks: each tick it owes Traffic its steps (none while frozen, a share in slow-mo) and hands the engine its time scale, so the Raccoon, camera, bursts and debris freeze and slow with the board. A freeze only delays the fixed-step simulation: a seeded run reaches the same board, a few ticks later (`test_juice`), and the seeded smoke run still scores 21450. The Gridlock beat runs on real time from the Gridlock (`GridlockBeat`), and Flow's clock is real time too.
+The comedic payoff ([#43](https://github.com/klusignolo/Fender-Bandit/issues/43), #19 stories 47, 54). `Juice` counts physics ticks: each tick it owes Traffic its steps (none while frozen, a share in slow-mo) and hands the engine its time scale, so the Raccoon, camera, bursts and debris freeze and slow with the board. A freeze only delays the fixed-step simulation: a seeded run reaches the same board, a few ticks later (`test_juice`), and the seeded smoke run still scores 21450. The Gridlock beat runs on real time from the Gridlock (`GridlockBeat`), and Flow's clock is real time too.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -121,7 +121,7 @@ The comedic payoff ([#43](https://github.com/klusignolo/GameJam2026/issues/43), 
 
 ## Right turns
 
-Right turns happen everywhere, for natural-looking traffic ([#13](https://github.com/klusignolo/GameJam2026/issues/13)). They aren't a difficulty lever: a right-turning car obeys its Light (no turning on red), never waits for a gap, never holds up its lane, and signals with its right blinker. Where geometry leaves no straight exit (the T, some 5-way approaches), the route picker chooses among the movements the approach actually has. Since #32 the share of a movement an approach lacks goes straight on (a T's side road has no right or no left), or, with no straight exit (the T's stem, the 5-way's diagonal road), is split evenly between the movements it has. Where an approach has two routes making the same movement (a 5-way's second right or left), each gets half. A left turn whose road has no oncoming road (the T's stem, the diagonal) is still a Turner with an arrow, but never holds for a gap: there's no oncoming flow to wait for. While Turners are off (stages 1–2, or a generated stage that drew them off), left turns aren't offered at all: the T's stem all turns right.
+Right turns happen everywhere, for natural-looking traffic ([#13](https://github.com/klusignolo/Fender-Bandit/issues/13)). They aren't a difficulty lever: a right-turning car obeys its Light (no turning on red), never waits for a gap, never holds up its lane, and signals with its right blinker. Where geometry leaves no straight exit (the T, some 5-way approaches), the route picker chooses among the movements the approach actually has. Since #32 the share of a movement an approach lacks goes straight on (a T's side road has no right or no left), or, with no straight exit (the T's stem, the 5-way's diagonal road), is split evenly between the movements it has. Where an approach has two routes making the same movement (a 5-way's second right or left), each gets half. A left turn whose road has no oncoming road (the T's stem, the diagonal) is still a Turner with an arrow, but never holds for a gap: there's no oncoming flow to wait for. While Turners are off (stages 1–2, or a generated stage that drew them off), left turns aren't offered at all: the T's stem all turns right.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -140,7 +140,7 @@ Only the front driver at each red (or Yellow) Light spends Patience, plus a Turn
 
 ## The Jam
 
-One meter for the whole city ([#15](https://github.com/klusignolo/GameJam2026/issues/15)). Its fill must scale with map size ([#16](https://github.com/klusignolo/GameJam2026/issues/16)).
+One meter for the whole city ([#15](https://github.com/klusignolo/Fender-Bandit/issues/15)). Its fill must scale with map size ([#16](https://github.com/klusignolo/Fender-Bandit/issues/16)).
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -167,7 +167,7 @@ Footprints in world px. They're gameplay, not just art: a longer vehicle blocks 
 
 ## Vehicle mix
 
-Motorcycles debut at stage 5, garbage trucks at stage 6 ([#46](https://github.com/klusignolo/GameJam2026/issues/46)) and semis at stage 8 ([#30](https://github.com/klusignolo/GameJam2026/issues/30)). A garbage truck wears one livery (`Car.GARBAGE_TINT`), not a random tint. The `StageDef` carries the mix: each share is on while its feature is, and flat, not a stage curve. A vehicle's kind is drawn as it falls due at its entry, from its own random stream, so the mix never shifts any other seeded draw. Pace scales cruising, the Green boost and the turn speed. A semi also enters slower, while a motorcycle enters at a car's speed. A Turner's gap is divided by its pace, so a slow semi waits for a longer one. Every kind obeys the same rules otherwise. A Turner of any kind holds with its front bumper where a car's would be (a car's centre on the stop line), so a semi's nose stays out of the cross traffic.
+Motorcycles debut at stage 5, garbage trucks at stage 6 ([#46](https://github.com/klusignolo/Fender-Bandit/issues/46)) and semis at stage 8 ([#30](https://github.com/klusignolo/Fender-Bandit/issues/30)). A garbage truck wears one livery (`Car.GARBAGE_TINT`), not a random tint. The `StageDef` carries the mix: each share is on while its feature is, and flat, not a stage curve. A vehicle's kind is drawn as it falls due at its entry, from its own random stream, so the mix never shifts any other seeded draw. Pace scales cruising, the Green boost and the turn speed. A semi also enters slower, while a motorcycle enters at a car's speed. A Turner's gap is divided by its pace, so a slow semi waits for a longer one. Every kind obeys the same rules otherwise. A Turner of any kind holds with its front bumper where a car's would be (a car's centre on the stop line), so a semi's nose stays out of the cross traffic.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -215,7 +215,7 @@ World px. One lane each way. At zoom 1, the map around one crossing fills the sc
 
 ## Attract autopilot
 
-How the Attract autopilot ([#34](https://github.com/klusignolo/GameJam2026/issues/34)) plays the Raccoon. It tows Wreckage near it off the road. Otherwise it picks the red Light with the most demand: cars on its approach short of the line, plus its entry's backlog. Before giving that Light Green, it Switches any crossing Green to Yellow, waits for Yellow to fall and for the box to clear, then Switches the goal. It waits and Switches from a post: the nearest spot to each pole that is off the road, so its own cars needn't Yield to it. These knobs don't touch gameplay. With them it clears stage 1 (seeds 1–3, about 65s) with no Crashes and the Jam near 0%.
+How the Attract autopilot ([#34](https://github.com/klusignolo/Fender-Bandit/issues/34)) plays the Raccoon. It tows Wreckage near it off the road. Otherwise it picks the red Light with the most demand: cars on its approach short of the line, plus its entry's backlog. Before giving that Light Green, it Switches any crossing Green to Yellow, waits for Yellow to fall and for the box to clear, then Switches the goal. It waits and Switches from a post: the nearest spot to each pole that is off the road, so its own cars needn't Yield to it. These knobs don't touch gameplay. With them it clears stage 1 (seeds 1–3, about 65s) with no Crashes and the Jam near 0%.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -228,7 +228,7 @@ How the Attract autopilot ([#34](https://github.com/klusignolo/GameJam2026/issue
 
 ## Score and Combo
 
-`Run` keeps the score ([#28](https://github.com/klusignolo/GameJam2026/issues/28)). Each car out adds 1 to Combo, then scores `EXIT_SCORE × (1 + Combo ÷ COMBO_STEP)`, with whole-number division. A Crash resets Combo; each `crashed` signal counts as one Crash, so a car hitting Wreckage counts as another.
+`Run` keeps the score ([#28](https://github.com/klusignolo/Fender-Bandit/issues/28)). Each car out adds 1 to Combo, then scores `EXIT_SCORE × (1 + Combo ÷ COMBO_STEP)`, with whole-number division. A Crash resets Combo; each `crashed` signal counts as one Crash, so a car hitting Wreckage counts as another.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -271,7 +271,7 @@ How the Attract autopilot ([#34](https://github.com/klusignolo/GameJam2026/issue
 
 ## Audio
 
-Mix and playback numbers for the `Audio` autoload ([#12](https://github.com/klusignolo/GameJam2026/issues/12)). The sounds themselves and their recipes are in [`docs/audio.md`](audio.md). Mix levels per sound are set when the sounds exist; add a row each.
+Mix and playback numbers for the `Audio` autoload ([#12](https://github.com/klusignolo/Fender-Bandit/issues/12)). The sounds themselves and their recipes are in [`docs/audio.md`](audio.md). Mix levels per sound are set when the sounds exist; add a row each.
 
 | Knob | What it's for | Value | Constant | Set by | Playtest notes |
 |---|---|---|---|---|---|

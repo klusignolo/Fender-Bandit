@@ -168,4 +168,10 @@ static func _autoplay_allowed() -> bool:
 		})()
 	""", true)
 	print("Web autoplay allowed: %s" % [running])  # in the browser console: why the Theme did or didn't start at boot
-	return running == true
+	return js_true(running)
+
+
+## Whether a value from JavaScriptBridge.eval means yes. A JS boolean can come back as a number (itch.io gave 1, #45),
+## and 1 == true is false in GDScript, so read numbers and booleans by their truth.
+static func js_true(v: Variant) -> bool:
+	return typeof(v) in [TYPE_BOOL, TYPE_INT, TYPE_FLOAT] and bool(v)

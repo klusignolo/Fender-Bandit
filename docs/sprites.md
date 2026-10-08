@@ -1,10 +1,10 @@
 # Sprite register
 
-The game's look: the fixed rules every sprite obeys (the **style sheet**) and one entry per sprite (the **sprite list**). AI tools take this file as context, so every asset comes out consistent with the others. Decided in [#6](https://github.com/klusignolo/GameJam2026/issues/6); background research in `docs/research/sprite-pipeline.md` on the [`research/sprite-pipeline`](https://github.com/klusignolo/GameJam2026/tree/research/sprite-pipeline) branch.
+The game's look: the fixed rules every sprite obeys (the **style sheet**) and one entry per sprite (the **sprite list**). AI tools take this file as context, so every asset comes out consistent with the others. Decided in [#6](https://github.com/klusignolo/Fender-Bandit/issues/6); background research in `docs/research/sprite-pipeline.md` on the [`research/sprite-pipeline`](https://github.com/klusignolo/Fender-Bandit/tree/research/sprite-pipeline) branch.
 
 Like `docs/tuning.md`, this is a living register: when a proof or playtest changes a rule or a sprite, update its entry and add a note. Sizes that are gameplay (vehicle footprints) also live in `docs/tuning.md`.
 
-**Legible at 0.45× ([#18](https://github.com/klusignolo/GameJam2026/issues/18)); charm at 1× awaits the dev.** The sprite proof shot every sprite at 1× and 0.45×, with and without mipmaps ([Proof](#proof)). The baked outline, the mipmaps, the SVG Raccoon and the palette all stay. The dev's verdict on the 1× look can still overrule the Raccoon and the palette.
+**Legible at 0.45× ([#18](https://github.com/klusignolo/Fender-Bandit/issues/18)); charm at 1× awaits the dev.** The sprite proof shot every sprite at 1× and 0.45×, with and without mipmaps ([Proof](#proof)). The baked outline, the mipmaps, the SVG Raccoon and the palette all stay. The dev's verdict on the 1× look can still overrule the Raccoon and the palette.
 
 ## Style sheet
 
@@ -187,7 +187,7 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 
 ![Stage-9 reference](art/stage9-reference.png)
 
-`docs/art/stage9-reference.png` is the yardstick every art pass is judged against ([#39](https://github.com/klusignolo/GameJam2026/issues/39)). It's the real game at the real camera zoom (about 0.5× at stage 9), not a mockup: three crossings, queues, Turners, semis, motorcycles, Honks, "!!", Patience rings, the Swell chevrons, a backlog, Wreckage from three Crashes and a fresh burst from a fourth, and the Raccoon with its Switch target.
+`docs/art/stage9-reference.png` is the yardstick every art pass is judged against ([#39](https://github.com/klusignolo/Fender-Bandit/issues/39)). It's the real game at the real camera zoom (about 0.5× at stage 9), not a mockup: three crossings, queues, Turners, semis, motorcycles, Honks, "!!", Patience rings, the Swell chevrons, a backlog, Wreckage from three Crashes and a fresh burst from a fourth, and the Raccoon with its Switch target.
 
 **Reproduce it:** `game/tools/reference_shot.sh` (pass a directory to write the shot somewhere else and compare). It runs stage 9 from seed 1, turns the north–south Lights green at 1s with the `--switch` agent flag, so the east–west roads queue up, Blow the red and Crash, and shoots at 31.4s. When an art pass changes what's on screen, re-shoot and commit the new reference with it. If a sim change moves the Crashes, re-time `--at` so a burst is fresh.
 
@@ -195,7 +195,7 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 
 ![0.45× with mipmaps, 3× crop](art/proof/sprites-045x-mipmaps-crop.png)
 
-`docs/art/proof/` holds the sprite proof ([#18](https://github.com/klusignolo/GameJam2026/issues/18)), shot by `game/tools/sprite_proof.sh`. A lineup drawn by the game's own nodes is shown in a 960×540 window, with content stretch off, so a world px at zoom 1 is one window px. The lineup: a car in each tint, a motorcycle, a semi, a braking car, a blinking Turner with its arrow, Patience ring and HONK, Wreckage of each kind, the Raccoon's four views, and a pole lit red, yellow and green. There are five shots: 1× and 0.45×, each with mipmaps (the game's Linear Mipmap filter) and without (Linear), plus the 0.45 floor as a 960×540 window really shows it. The canvas_items stretch shrinks the 1280×720 base by a further 0.75 there, so that shot is at 0.34×. Each zoomed-out shot also has a `-crop.png`, enlarged 3× nearest-neighbour.
+`docs/art/proof/` holds the sprite proof ([#18](https://github.com/klusignolo/Fender-Bandit/issues/18)), shot by `game/tools/sprite_proof.sh`. A lineup drawn by the game's own nodes is shown in a 960×540 window, with content stretch off, so a world px at zoom 1 is one window px. The lineup: a car in each tint, a motorcycle, a semi, a braking car, a blinking Turner with its arrow, Patience ring and HONK, Wreckage of each kind, the Raccoon's four views, and a pole lit red, yellow and green. There are five shots: 1× and 0.45×, each with mipmaps (the game's Linear Mipmap filter) and without (Linear), plus the 0.45 floor as a 960×540 window really shows it. The canvas_items stretch shrinks the 1280×720 base by a further 0.75 there, so that shot is at 0.34×. Each zoomed-out shot also has a `-crop.png`, enlarged 3× nearest-neighbour.
 
 What it decided:
 - **Mipmaps stay on.** Without them the 0.45× stills are a touch crisper but alias: a 2× texture drawn at 0.45× skips most of its texels, which shimmers as vehicles turn and the camera zooms. The stills can't show that, so comparing it in motion is a hands-on check.

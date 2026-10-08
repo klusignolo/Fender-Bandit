@@ -132,3 +132,14 @@ func test_the_pause_menu_has_the_music_row_between_resume_and_quit() -> void:
 	menu.move(1)
 	check_eq(menu.row, PauseMenu.Row.QUIT, "then Quit to title")
 	menu.free()
+
+
+# --- web autoplay ---------------------------------------------------------------------
+
+func test_the_autoplay_probe_reads_any_true_answer_from_the_browser() -> void:
+	# On itch the browser said yes, but the bridge handed back 1, not true, so the Theme waited for a press (#45).
+	var audio := load("res://audio/audio.gd")
+	for yes: Variant in [true, 1, 1.0]:
+		check(audio.js_true(yes), "%s (%s) counts as yes" % [yes, type_string(typeof(yes))])
+	for no: Variant in [false, 0, 0.0, null, ""]:
+		check(not audio.js_true(no), "%s (%s) counts as no" % [no, type_string(typeof(no))])

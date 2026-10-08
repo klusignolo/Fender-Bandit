@@ -1,6 +1,6 @@
 # Audio register
 
-How the game sounds: the fixed rules every sound follows (the **style sheet**) and one entry per sound (the **sound list**). AI tools take this file as context, so every asset comes out consistent with the others. Decided in [#12](https://github.com/klusignolo/GameJam2026/issues/12).
+How the game sounds: the fixed rules every sound follows (the **style sheet**) and one entry per sound (the **sound list**). AI tools take this file as context, so every asset comes out consistent with the others. Decided in [#12](https://github.com/klusignolo/Fender-Bandit/issues/12).
 
 Like `docs/sprites.md`, this is a living register. When a sound is made or changed, fill in its **Recipe** so it can be rebuilt, and add a note. Mix levels and the voice-pool, limit and ducking numbers are gameplay tuning and live in [`docs/tuning.md`](tuning.md#audio).
 
@@ -12,7 +12,7 @@ Like `docs/sprites.md`, this is a living register. When a sound is made or chang
 - **SFX:** exaggerated real sounds. Horns, squeals and relays sound real, and Crashes are cartoon crunches with glass tinkle. UI moments are clean jsfxr arcade blips.
 - **Avoid:** chiptune music, realistic city ambience, anything grim.
 
-### Web limits (from [#8](https://github.com/klusignolo/GameJam2026/issues/8))
+### Web limits (from [#8](https://github.com/klusignolo/Fender-Bandit/issues/8))
 
 - In the web build, audio plays in Sample mode: WAV/MP3/OGG clips, **no AudioEffects** (no bus reverb, filters or pitch shift), no generated audio, and positional audio is unreliable. Bake every variation into the files or do it with `pitch_scale` and volume.
 - **Never force `playback_type`.** Leave it at the default: Sample on the web, Stream on desktop. Forcing Sample plays nothing on desktop.
@@ -20,7 +20,7 @@ Like `docs/sprites.md`, this is a living register. When a sound is made or chang
 - **In the browser, MP3 and OGG loop at the end of the file.** Sample mode honours `loop_offset` but ignores `bpm`/`beat_count` (Godot 4.7.2 passes `loop_end = 0` for both formats). So every looping music file must **end exactly at its loop end**. MP3 can't, because the encoder pads the end, so music ships as OGG cut with ffmpeg (see **Lyria loops**). On desktop, the `bpm`/`beat_count` loop end works.
 - No audio plays until the first key or button press, which is also the press that leaves Attract, unless the page already allows sound. At boot, `Audio._autoplay_allowed()` makes a throwaway AudioContext and checks that it starts "running". On itch.io the "Run game" click usually allows it, so the Theme plays over Attract from the start, as on desktop (#45).
 
-### Week-1 audio check ([#20](https://github.com/klusignolo/GameJam2026/issues/20))
+### Week-1 audio check ([#20](https://github.com/klusignolo/Fender-Bandit/issues/20))
 
 Done on 2026-10-01 with a throwaway scene. It's gone now; see commit history for `game/tools/audio_check/`. The test clip was 24s at 120 BPM, generated in code, with periodic PCM, looped from 8s to 24s.
 

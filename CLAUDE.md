@@ -57,7 +57,7 @@ without stopping for the dev:
 
 ### Issue tracker
 
-Issues and specs live in GitHub Issues for klusignolo/GameJam2026, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues and specs live in GitHub Issues for klusignolo/Fender-Bandit, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
