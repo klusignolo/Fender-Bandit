@@ -33,7 +33,7 @@ func _mixed(seed_value: int, motorcycles: float, semis: float) -> Traffic:
 
 
 func _kinds(cars: Array[Car]) -> Dictionary:
-	var out := {KIND.CAR: 0, KIND.MOTORCYCLE: 0, KIND.SEMI: 0}
+	var out := {KIND.CAR: 0, KIND.MOTORCYCLE: 0, KIND.SEMI: 0, KIND.GARBAGE: 0}
 	for c in cars:
 		out[c.kind] += 1
 	return out

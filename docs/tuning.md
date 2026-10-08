@@ -162,11 +162,12 @@ Footprints in world px. They're gameplay, not just art: a longer vehicle blocks 
 | Car | The standard vehicle. | 38 × 20 | `CAR_L`, `CAR_W` | #5 | Legible at ~0.66 zoom (#16). |
 | Motorcycle | Small and fast; harder to see. | 22 × 10 | `MOTO_L`, `MOTO_W` | #6, #30 | First guess. |
 | Semi | Long and slow; one rigid sprite, so its turn arc cuts the corner. | 84 × 24 | `SEMI_L`, `SEMI_W` | #6, #30 | First guess. |
+| Garbage truck | Between a car and a semi; one rigid sprite. | 56 × 24 | `GARBAGE_L`, `GARBAGE_W` | #46 | First guess. |
 | Raccoon | The player: kept at car scale so the hero reads. | 28 wide (sprite ~28 × 38) | `RACCOON_R` | #5, #6 | |
 
 ## Vehicle mix
 
-Motorcycles debut at stage 5 and semis at stage 8 ([#30](https://github.com/klusignolo/GameJam2026/issues/30)). The `StageDef` carries the mix: each share is on while its feature is, and flat, not a stage curve. A vehicle's kind is drawn as it falls due at its entry, from its own random stream, so the mix never shifts any other seeded draw. Pace scales cruising, the Green boost and the turn speed. A semi also enters slower, while a motorcycle enters at a car's speed. A Turner's gap is divided by its pace, so a slow semi waits for a longer one. Every kind obeys the same rules otherwise. A Turner of any kind holds with its front bumper where a car's would be (a car's centre on the stop line), so a semi's nose stays out of the cross traffic.
+Motorcycles debut at stage 5, garbage trucks at stage 6 ([#46](https://github.com/klusignolo/GameJam2026/issues/46)) and semis at stage 8 ([#30](https://github.com/klusignolo/GameJam2026/issues/30)). A garbage truck wears one livery (`Car.GARBAGE_TINT`), not a random tint. The `StageDef` carries the mix: each share is on while its feature is, and flat, not a stage curve. A vehicle's kind is drawn as it falls due at its entry, from its own random stream, so the mix never shifts any other seeded draw. Pace scales cruising, the Green boost and the turn speed. A semi also enters slower, while a motorcycle enters at a car's speed. A Turner's gap is divided by its pace, so a slow semi waits for a longer one. Every kind obeys the same rules otherwise. A Turner of any kind holds with its front bumper where a car's would be (a car's centre on the stop line), so a semi's nose stays out of the cross traffic.
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
@@ -174,6 +175,10 @@ Motorcycles debut at stage 5 and semis at stage 8 ([#30](https://github.com/klus
 | Semi share | Share of new vehicles that are semis, from stage 8. The rest are cars. | 10% | `SEMI_SHARE` | #30 | First guess. |
 | Motorcycle pace | A motorcycle's speed as a multiple of a car's. Faster, so the gaps around it close sooner. | ×1.3 | `MOTO_PACE` | #30 | First guess. |
 | Semi pace | A semi's speed as a multiple of a car's. Slow and long, so it sits in the box longer and stacks a queue behind it. | ×0.75 | `SEMI_PACE` | #30 | First guess. |
+| Garbage truck share | Share of new vehicles that are garbage trucks, from stage 6. | 10% | `GARBAGE_SHARE` | #46 | First guess. |
+| Garbage truck pace | Its speed as a multiple of a car's. | ×0.85 | `GARBAGE_PACE` | #46 | First guess. |
+| Pickup time | Seconds a garbage truck stands at its pickup point, once per crossing, whatever its Light shows, holding up its lane. It spends no Patience and doesn't Honk; the cost is the lane it blocks, and the queue and backlog behind it. While it stands, little raccoons (`Vehicle.CREW`, charm only) hop from the kerb for the bags. | 2s | `PICKUP_TIME` | #46 | First guess. |
+| Pickup point | How far short of its stop line the truck's centre stops: clear of the box and the crosswalk. A truck already past it (a short road between crossings) skips that crossing's pickup. | 90 px | `PICKUP_BEFORE`, `Traffic.PICKUP_SLACK` (4 px) | #46 | First guess. |
 
 ## Roads
 

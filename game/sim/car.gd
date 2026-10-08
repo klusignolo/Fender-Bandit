@@ -1,11 +1,13 @@
 class_name Car
 extends RefCounted
-## One vehicle: a car, motorcycle or semi. Traffic moves it along its Route by distance; the view reads its pose.
+## One vehicle: a car, motorcycle, semi or garbage truck. Traffic moves it along its Route by distance; the view reads its pose.
 ## Whatever its kind, its footprint is one rigid rectangle centred on its route, so a long one cuts its turns.
 
-enum Kind { CAR, MOTORCYCLE, SEMI }
+enum Kind { CAR, MOTORCYCLE, SEMI, GARBAGE }
 ## The six safe body tints (docs/sprites.md): saturated red, yellow, green and orange are reserved for game signals and the Raccoon.
 const TINTS: Array[Color] = [Color("#3A7BD5"), Color("#5BC0EB"), Color("#8E5BD6"), Color("#F27BB5"), Color("#EEF1F6"), Color("#4A5060")]
+## A garbage truck's one livery (#46): a muted city green, well clear of the Lights' signal green.
+const GARBAGE_TINT := Color("#4F8A6B")
 
 var id: int
 var kind := Kind.CAR
@@ -26,6 +28,9 @@ var transform := Transform2D()  # pose: origin is the centre, x points the way i
 var wreckage := false  # Crashed: Wreckage, stopped for good. Once towed, its pose no longer follows s.
 var towed := false  # Wreckage the Raccoon is towing: it never Crashes, but cars still brake for it
 var holding := false  # a Turner stopped at its line, waiting for a gap in oncoming traffic
+var collecting := false  # a garbage truck stood at its pickup point, collecting the trash (#46)
+var collect_time := 0.0  # seconds it has collected at this crossing
+var collected := false  # it has made this crossing's pickup, or passed the point: it doesn't stop for trash again here
 var hold_time := 0.0  # seconds it has spent holding; the opposing Turner that has waited longer goes first
 var turn_gap := 0.0  # a Turner's Turner gap, seconds
 var committed := false  # a Turner that has had its gap and gone: it doesn't stop for oncoming traffic again
@@ -53,10 +58,17 @@ func _init(car_id: int, r: RoadNet.Route, l: Light, k := Kind.CAR) -> void:
 			length = Tuning.SEMI_L
 			width = Tuning.SEMI_W
 			pace = Tuning.SEMI_PACE
+		Kind.GARBAGE:
+			length = Tuning.GARBAGE_L
+			width = Tuning.GARBAGE_W
+			pace = Tuning.GARBAGE_PACE
 
 
 ## Forget everything about the crossing it just drove through: it's a fresh driver at the next one.
 func reset_driver() -> void:
+	collecting = false
+	collect_time = 0.0
+	collected = false
 	boosted = false
 	passed_line = false
 	holding = false

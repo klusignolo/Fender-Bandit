@@ -46,6 +46,14 @@ const _VEHICLES := {
 		"brake": preload("res://art/semi_lamps_brake.svg"),
 		"blink": preload("res://art/semi_lamps_blink.svg"),
 	},
+	Car.Kind.GARBAGE: {  # #46
+		"body": preload("res://art/garbage_body.svg"),  # the compactor box; the cab is in the details
+		"details": preload("res://art/garbage_details.svg"),
+		"wreck": preload("res://art/garbage_wreck.svg"),
+		"shadow": preload("res://art/garbage_shadow.svg"),
+		"brake": preload("res://art/garbage_lamps_brake.svg"),
+		"blink": preload("res://art/garbage_lamps_blink.svg"),
+	},
 }
 
 const RACCOON_FRONT := preload("res://art/raccoon_front.svg")  # the whole front, for the title; the game draws the RaccoonRig

@@ -1,12 +1,12 @@
 class_name Stages
 ## The Stages of a Run (#29): the fixed Opening for stages 1–9, then a generator seeded by the Run.
 
-enum Feature { TURNERS, MOTORCYCLES, SEMIS, BLOWING, ODD_JUNCTIONS }
+enum Feature { TURNERS, MOTORCYCLES, SEMIS, BLOWING, ODD_JUNCTIONS, GARBAGE }
 
 const OPENING := 9  # the last stage of the Opening
-const DEBUTS := {3: Feature.TURNERS, 5: Feature.MOTORCYCLES, 7: Feature.BLOWING, 8: Feature.SEMIS, 9: Feature.ODD_JUNCTIONS}
+const DEBUTS := {3: Feature.TURNERS, 5: Feature.MOTORCYCLES, 6: Feature.GARBAGE, 7: Feature.BLOWING, 8: Feature.SEMIS, 9: Feature.ODD_JUNCTIONS}
 const GROWS := [4, 9]  # Opening stages where a crossing attaches
-const NAMES := {Feature.TURNERS: "Left turns", Feature.MOTORCYCLES: "Motorcycles", Feature.SEMIS: "Semis", Feature.BLOWING: "Blowing the red", Feature.ODD_JUNCTIONS: "T-junctions and 5-ways"}
+const NAMES := {Feature.TURNERS: "Left turns", Feature.MOTORCYCLES: "Motorcycles", Feature.SEMIS: "Semis", Feature.BLOWING: "Blowing the red", Feature.ODD_JUNCTIONS: "T-junctions and 5-ways", Feature.GARBAGE: "Garbage trucks"}
 const GROW_NAME := "Another crossing"
 
 
@@ -42,6 +42,8 @@ static func def(n: int, seed_value: int) -> StageDef:
 		d.motorcycles = Tuning.MOTO_SHARE
 	if d.features.has(Feature.SEMIS):
 		d.semis = Tuning.SEMI_SHARE
+	if d.features.has(Feature.GARBAGE):
+		d.garbage = Tuning.GARBAGE_SHARE
 	d.target_len = Tuning.TARGET_LEN
 	return d
 

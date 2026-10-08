@@ -21,6 +21,7 @@ signal stage_cleared  # the Quota was met: Traffic stops on that tick. Audio's s
 
 const TICK_HZ := 60
 const DT := 1.0 / TICK_HZ
+const PICKUP_SLACK := 4.0  # px either side of its pickup point that a garbage truck counts as there (#46)
 
 var net: RoadNet
 var lights: Array[Light] = []
@@ -48,7 +49,8 @@ var k_patience := 0.0
 var blowing_unlocked := false  # Blowing the red. While it's off, drivers out of Patience only Honk.
 var k_swell := true  # Swells on; a knob so tests can keep every entry at k_gap
 var k_motorcycles := 0.0  # the vehicle mix: share of new vehicles that are motorcycles...
-var k_semis := 0.0  # ...and semis; the rest are cars
+var k_semis := 0.0  # ...and semis...
+var k_garbage := 0.0  # ...and garbage trucks (#46); the rest are cars
 
 var _rng := RandomNumberGenerator.new()
 var _patience_rng := RandomNumberGenerator.new()  # its own stream, so drawing Patience doesn't shift any other draw
@@ -75,6 +77,7 @@ func _init(seed_value: int, dents := 0, stage: StageDef = null) -> void:
 	blowing_unlocked = stage.features.has(Stages.Feature.BLOWING)
 	k_motorcycles = stage.motorcycles
 	k_semis = stage.semis
+	k_garbage = stage.garbage
 	_rng.seed = seed_value
 	_patience_rng.seed = seed_value
 	_swell_rng.seed = seed_value
@@ -209,6 +212,8 @@ func _spawn() -> void:
 		_new_driver(c, i)
 		c.speed = _entry_speed(c)
 		c.tint = Car.TINTS[mini(int(_rng.randf() * Car.TINTS.size()), Car.TINTS.size() - 1)]  # randf, as for the hue it replaced: seeded streams stay put
+		if c.kind == Car.Kind.GARBAGE:
+			c.tint = Car.GARBAGE_TINT  # after the draw, so the seeded streams stay put
 		cars.append(c)
 		car_spawned.emit(c)
 
@@ -319,16 +324,18 @@ func _pick_movement(a: RoadNet.Approach) -> RoadNet.Movement:
 	return heirs[heirs.size() - 1]  # straight, or the last turn when rounding leaves r just short of 1
 
 
-# A vehicle falling due: a motorcycle at the k_motorcycles share, a semi at k_semis, otherwise a car. With no mix it
-# draws nothing.
+# A vehicle falling due: a motorcycle at the k_motorcycles share, a semi at k_semis, a garbage truck at k_garbage,
+# otherwise a car. With no mix it draws nothing.
 func _pick_kind() -> Car.Kind:
-	if k_motorcycles + k_semis <= 0.0:
+	if k_motorcycles + k_semis + k_garbage <= 0.0:
 		return Car.Kind.CAR
 	var r := _kind_rng.randf()
 	if r < k_motorcycles:
 		return Car.Kind.MOTORCYCLE
 	if r < k_motorcycles + k_semis:
 		return Car.Kind.SEMI
+	if r < k_motorcycles + k_semis + k_garbage:
+		return Car.Kind.GARBAGE
 	return Car.Kind.CAR
 
 
@@ -365,6 +372,7 @@ func _drive() -> void:
 		target = minf(target, _stop_line_limit(c))
 		target = minf(target, _turn_limit(c))
 		target = minf(target, _turner_limit(c))
+		target = minf(target, _pickup_limit(c))
 		var obstacle := _obstacle_limit(c)
 		target = minf(target, obstacle)
 		var yielding := c.raccoon_ahead and (c.yielding or obstacle < c.speed)  # braked for the Raccoon, which is still there
@@ -482,6 +490,29 @@ func _turner_limit(c: Car) -> float:
 		c.holding = true
 		c.hold_time += DT
 	return sqrt(2.0 * Tuning.DECEL * maxf(to_hold, 0.0))
+
+
+# A garbage truck (#46) pulls up with its centre PICKUP_BEFORE short of its stop line, once per crossing, and
+# collects there for PICKUP_TIME, holding up everyone behind, whatever its Light shows. A truck already past the
+# point (it entered or was handed on beyond it) skips this crossing's pickup.
+func _pickup_limit(c: Car) -> float:
+	c.collecting = false
+	if c.kind != Car.Kind.GARBAGE or c.collected or c.passed_line:
+		return INF
+	var to_pickup := c.route.stop_s - Tuning.PICKUP_BEFORE - c.s
+	if to_pickup < -PICKUP_SLACK:
+		c.collected = true
+		return INF
+	if to_pickup > Tuning.LOOK:
+		return INF
+	if to_pickup <= PICKUP_SLACK and c.speed < Tuning.WAIT_SPEED:
+		c.collecting = true
+		c.collect_time += DT
+		if c.collect_time >= Tuning.PICKUP_TIME:
+			c.collected = true
+			c.collecting = false
+			return INF
+	return sqrt(2.0 * Tuning.DECEL * maxf(to_pickup, 0.0))
 
 
 # A Turner's gap: no oncoming car in the box, and none due at its line within the Turner gap. Oncoming cars

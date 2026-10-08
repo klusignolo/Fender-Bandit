@@ -6,9 +6,9 @@ const F := Stages.Feature
 
 
 func test_the_opening_debuts_one_thing_at_a_time() -> void:
-	# Story 62: 1–2 plain 4-way, 3 Turners, 4 second crossing, 5 motorcycles, 6 no Debut, 7 Blowing the red,
+	# Story 62: 1–2 plain 4-way, 3 Turners, 4 second crossing, 5 motorcycles, 6 garbage trucks (#46), 7 Blowing the red,
 	# 8 semis, 9 T-junction/5-way plus third crossing.
-	var debuts := {3: F.TURNERS, 5: F.MOTORCYCLES, 7: F.BLOWING, 8: F.SEMIS, 9: F.ODD_JUNCTIONS}
+	var debuts := {3: F.TURNERS, 5: F.MOTORCYCLES, 6: F.GARBAGE, 7: F.BLOWING, 8: F.SEMIS, 9: F.ODD_JUNCTIONS}
 	var crossings := [1, 1, 1, 2, 2, 2, 2, 2, 3]
 	var on: Array[Stages.Feature] = []
 	for n in range(1, 10):
@@ -24,12 +24,12 @@ func test_the_opening_debuts_one_thing_at_a_time() -> void:
 
 
 func test_opening_knobs_step_up_and_debuts_hold_the_previous_stage() -> void:
-	# docs/tuning.md: linear from stage 1 to 9. Debuts (3, 4, 5, 7, 8, 9) take stage n-1's values; the
+	# docs/tuning.md: linear from stage 1 to 9. Debuts (3, 4, 5, 6, 7, 8, 9) take stage n-1's values; the
 	# Turner share starts at its first value on its own Debut (stage 3), as 10% at 3 → 20% at 9.
-	var gap := [3.2, 2.925, 2.925, 2.65, 2.375, 1.825, 1.825, 1.55, 1.275]
-	var speed := [1.0, 1.05, 1.05, 1.1, 1.15, 1.25, 1.25, 1.3, 1.35]
-	var patience := [15.0, 14.625, 14.625, 14.25, 13.875, 13.125, 13.125, 12.75, 12.375]
-	var turners := [0.0, 0.0, 0.1, 0.1, 0.11667, 0.15, 0.15, 0.16667, 0.18333]
+	var gap := [3.2, 2.925, 2.925, 2.65, 2.375, 2.1, 1.825, 1.55, 1.275]
+	var speed := [1.0, 1.05, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35]
+	var patience := [15.0, 14.625, 14.625, 14.25, 13.875, 13.5, 13.125, 12.75, 12.375]
+	var turners := [0.0, 0.0, 0.1, 0.1, 0.11667, 0.13333, 0.15, 0.16667, 0.18333]
 	for n in range(1, 10):
 		var d := Stages.def(n, 1)
 		check_near(d.gap, gap[n - 1], 0.0001, "stage %d's spawn gap" % n)

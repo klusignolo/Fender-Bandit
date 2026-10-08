@@ -11,6 +11,7 @@ func test_every_vehicle_kind_has_layers_at_its_footprint_plus_the_outline() -> v
 		Car.Kind.CAR: Vector2(Tuning.CAR_L, Tuning.CAR_W),
 		Car.Kind.MOTORCYCLE: Vector2(Tuning.MOTO_L, Tuning.MOTO_W),
 		Car.Kind.SEMI: Vector2(Tuning.SEMI_L, Tuning.SEMI_W),
+		Car.Kind.GARBAGE: Vector2(Tuning.GARBAGE_L, Tuning.GARBAGE_W),
 	}
 	for kind: Car.Kind in footprints:
 		var layers := Art.vehicle(kind)
@@ -30,7 +31,7 @@ func test_spawned_vehicles_wear_one_of_the_six_safe_tints() -> void:
 	for i in 60 * 20:
 		t.step()
 	for c in t.cars:
-		check(c.tint in Car.TINTS, "car %d's tint %s is a safe one" % [c.id, c.tint])
+		check(c.tint in Car.TINTS or (c.kind == Car.Kind.GARBAGE and c.tint == Car.GARBAGE_TINT), "car %d's tint %s is a safe one (a garbage truck wears its livery)" % [c.id, c.tint])
 		seen[c.tint] = true
 	check(seen.size() >= 4, "and they vary: %d tints seen" % seen.size())
 

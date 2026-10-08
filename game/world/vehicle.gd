@@ -36,6 +36,14 @@ const HONK_RISE := 10.0  # ...rising this far as it fades
 const HONK_SIZE := 16.0  # on-screen px tall: "HONK!" and "!!", so they read at any zoom
 const WARN_SIZE := 24.0
 const WARN_HZ := 3.0  # "!!" flashes per second
+const CREW := 3  # little raccoons that grab a garbage truck's trash while it collects (#46): charm only
+const CREW_H := 20.0  # world px tall, before the cue floor
+const CREW_KERB := 24.0  # world px past the truck's right side that they run from: the kerb
+const CREW_REACH := 5.0  # ...to this close to its side
+const CREW_STAGGER := 0.12  # share of the pickup between one raccoon setting off and the next
+const CREW_TRIP := 0.6  # share of the pickup each round trip takes: out empty-handed, back with a bag
+const CREW_HOPS := 3.0  # hops each way
+const BAG := Color("#2E3A2F")  # a trash bag: dark, so it reads against the grey road and the fur
 
 var car: Car
 var body := Art.sprite(null)  # the tinted layer
@@ -46,6 +54,8 @@ var blink := Art.sprite(null)  # the right-hand blinkers, mirrored for a left tu
 var smoke := Node2D.new()  # Wreckage's smoke wisp: upright, at its centre
 var coast := false  # the Gridlock beat: drive on along its heading, at its last speed, until it piles up
 var _cues := Node2D.new()  # upright, at the car's centre, on the cue layer
+var _crew := Node2D.new()  # the little raccoons, upright, at the car's centre, over the vehicles (#46)
+var _crewing := false  # collecting when last drawn
 var _traffic: Traffic  # for sim time, so blinks and pulses repeat from the seed
 var _layers: Dictionary  # this kind's Art.vehicle layers
 var _boosted := false
@@ -70,7 +80,7 @@ func _init(t: Traffic) -> void:
 		add_child(s)
 	brake.visible = false
 	blink.visible = false
-	for n: Node2D in [smoke, _cues]:
+	for n: Node2D in [smoke, _cues, _crew]:
 		n.top_level = true
 		n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS  # top-level: it doesn't inherit World's filter
 		n.z_as_relative = false
@@ -80,6 +90,8 @@ func _init(t: Traffic) -> void:
 	smoke.draw.connect(_draw_smoke)
 	_cues.z_index = Art.Z_CUE
 	_cues.draw.connect(_draw_cues)
+	_crew.z_index = Art.Z_UPRIGHT
+	_crew.draw.connect(_draw_crew)
 
 
 func show_car(c: Car) -> void:
@@ -129,6 +141,10 @@ func _sync() -> void:
 	details.texture = _layers.wreck if _wrecked() else _layers.details
 	_cues.position = transform.origin
 	_cues.scale = Vector2.ONE * Art.cue_scale(_zoom())  # past the cue floor they hold their size on screen
+	_crew.position = transform.origin
+	if car.collecting or _crewing:
+		_crew.queue_redraw()  # every frame while it collects, and once more as it stops
+	_crewing = car.collecting
 	brake.visible = car.braking and not _wrecked()
 	var side := _blink_side()
 	blink.visible = side != 0.0 and fmod(_traffic.time * BLINK_HZ, 1.0) < 0.5
@@ -267,3 +283,29 @@ func _honk(at: Vector2, size: int, alpha: float) -> void:
 func _zoom() -> float:
 	var cam := get_viewport().get_camera_2d() if is_inside_tree() else null
 	return cam.zoom.x if cam else 1.0
+
+
+# A garbage truck's trash crew (#46), on _crew while it collects: little raccoons staggered along its back half hop
+# from the kerb on its right to its side and back, a bag in their arms on the way back. Charm only: the sim never
+# sees them. Upright, in world axes, held to the cue floor so they read zoomed out.
+func _draw_crew() -> void:
+	if car == null or not car.collecting or _wrecked():
+		return
+	var tex := Art.RACCOON_FRONT
+	var k := Art.cue_scale(_zoom())
+	var size := tex.get_size() * CREW_H * k / tex.get_size().y
+	var p := car.collect_time / Tuning.PICKUP_TIME
+	var basis := Transform2D(transform.get_rotation(), Vector2.ZERO)  # the truck's axes, about its centre
+	for i in CREW:
+		var q := (p - i * CREW_STAGGER) / CREW_TRIP
+		if q <= 0.0 or q >= 1.0:
+			continue
+		var x := -car.length / 2.0 + car.length * (i + 0.5) / (CREW * 2.0)  # along its back half
+		var kerb := basis * Vector2(x, car.width / 2.0 + CREW_KERB)
+		var side := basis * Vector2(x, car.width / 2.0 + CREW_REACH)
+		var out := q < 0.5
+		var at := kerb.lerp(side, q * 2.0 if out else 2.0 - q * 2.0)
+		at.y -= absf(sin(q * PI * CREW_HOPS * 2.0)) * 3.0 * k  # hop
+		_crew.draw_texture_rect(tex, Rect2(at - Vector2(size.x / 2.0, size.y), size), false)
+		if not out:
+			_crew.draw_circle(at + Vector2(0.0, -size.y * 0.3), size.x * 0.32, BAG)

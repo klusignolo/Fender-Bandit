@@ -117,6 +117,9 @@ Every vehicle is stacked layers: **body** (tint, one of the 6 safe colours), **d
 | `moto_wreck` | Bike on its side, rider sprawled | 52 × 28 | Centre | Kept to the footprint canvas, like every vehicle layer |
 | `semi_*` (same layers) | Semi, cab + trailer, rigid | 176 × 56 | Centre | Trailer is the tinted body; the cab is in the details, `#C9CED8` |
 | `semi_wreck` | Jack-knifed look, drawn rigid | 176 × 56 | Centre | The cab is drawn turned 22° on the rigid footprint |
+| `garbage_*` (same layers) | Garbage truck (#46), compactor box + cab, rigid | 120 × 56 | Centre | The box is the body, always tinted `Car.GARBAGE_TINT` (`#4F8A6B`, a muted city green clear of `signal_green`); the cab is in the details, `#EEF1F6` |
+| `garbage_wreck` | Crumpled box, cab knocked askew | 120 × 56 | Centre | The cab is drawn turned 18° |
+| Trash crew | Little raccoons fetching a truck's bags while it collects (#46) | `raccoon_front` at 20 px tall | Feet | Drawn by `Vehicle._draw_crew`, upright, held to the cue floor; a dark bag (`#2E3A2F`) on the way back. Charm only |
 | `ambulance_*` | *Stretch.* Ambulance | 88 × 48 | Centre | Light bar **blue and white**, not red |
 
 ### Floating cues (upright, never rotate)
