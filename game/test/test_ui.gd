@@ -187,7 +187,8 @@ func test_hints_name_the_key_to_press_not_the_action() -> void:
 		var menu := PauseMenu.new(true)
 		menu.measure(VIEW)
 		var texts := menu.words.map(func(w: Card.Words) -> String: return w.text)
-		check("%s: choose" % key in texts, "pause, pad %s: the hint is \"%s: choose\": %s" % [pad, key, texts])
+		var choose := "A" if pad else "ENTER"  # a keyboard player reaches for Enter on a menu (#45)
+		check("%s: choose" % choose in texts, "pause, pad %s: the hint is \"%s: choose\": %s" % [pad, choose, texts])
 		check(not texts.any(func(t: String) -> bool: return "resume" in t.to_lower() and t != "RESUME"), "pause: no Start hint: %s" % [texts])
 		menu.free()
 	Card.pad = was
@@ -206,3 +207,13 @@ func test_the_title_leaves_the_attract_crossing_and_its_roads_clear() -> void:
 			for road in roads:
 				check(not r.intersects(road), "%s: the sign at %s stays off the road %s" % [view, r, road])
 		title.free()
+
+
+func test_the_controls_card_names_the_switch_for_what_it_does() -> void:
+	for pad: bool in [false, true]:
+		var card := ControlsCard.new(pad)
+		card.measure(VIEW)
+		var texts := " ".join(card.words.map(func(w: Card.Words) -> String: return w.text))
+		check("TOGGLE" in texts and "TRAFFIC LIGHT" in texts, "pad %s: Switch reads as toggling a traffic light (#45): %s" % [pad, texts])
+		check(not "SWITCH" in texts, "pad %s: no SWITCH: %s" % [pad, texts])
+		card.free()

@@ -3,7 +3,7 @@ extends TestCase
 
 
 func test_key_names_follow_the_input_map() -> void:
-	check_eq(ControlsCard.keys(&"switch"), "J / Z", "Switch")
-	check_eq(ControlsCard.keys(&"tow"), "L / C", "Tow")
+	check_eq(ControlsCard.keys(&"switch"), "J", "Switch: one key per job (#45)")
+	check_eq(ControlsCard.keys(&"tow"), "L", "Tow")
 	check_eq(ControlsCard.keys(&"pause"), "Escape / P / Enter", "Pause")
-	check(ControlsCard.keys(&"dash").contains("Space"), "Dash: got %s" % ControlsCard.keys(&"dash"))
+	check_eq(ControlsCard.keys(&"dash"), "Space", "Dash")

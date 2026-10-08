@@ -10,8 +10,9 @@ const BUTTON_R := 22.0
 const BUTTON_GAP := 92.0  # px between button centres, room for a job under each
 ## The cabinet's 8 face buttons, by grid position (column, row), as both stations share them (#4).
 const GRID: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(0, 2), Vector2i(1, 2)]
-## What the game's buttons do, by grid position: A top-left, X top-right, Y middle-left. The rest stay unbound.
-const JOBS := {Vector2i(0, 0): "SWITCH", Vector2i(2, 0): "DASH", Vector2i(0, 1): "TOW"}
+## What the game's buttons do, by grid position: A top-left, X top-right, Y middle-left. The rest stay unbound. The
+## Switch reads as what it does, "TOGGLE TRAFFIC LIGHT", on one line between the rows (#45).
+const JOBS := {Vector2i(0, 0): "TOGGLE TRAFFIC LIGHT", Vector2i(2, 0): "DASH", Vector2i(0, 1): "TOW"}
 ## The letter on each bound button: the pad's names for them (#10, #17).
 const LETTERS := {Vector2i(0, 0): "A", Vector2i(2, 0): "X", Vector2i(0, 1): "Y"}
 const LETTER_SIZE := 22
@@ -25,7 +26,7 @@ func _init(pad: bool) -> void:
 	_pad = pad
 
 
-## The keyboard keys bound to `action`, as "J / Z", in InputMap order.
+## The keyboard keys bound to `action`, as "Escape / P / Enter", in InputMap order.
 static func keys(action: StringName) -> String:
 	var names: PackedStringArray = []
 	for e in InputMap.action_get_events(action):
@@ -73,10 +74,10 @@ func _draw_pad(box: Rect2) -> void:
 
 
 func _draw_keys(box: Rect2) -> void:
-	var rows := [["MOVE", "WASD / Arrows"], ["SWITCH", keys(&"switch")], ["DASH", keys(&"dash")],
+	var rows := [["MOVE", "WASD / Arrows"], ["TOGGLE TRAFFIC LIGHT", keys(&"switch")], ["DASH", keys(&"dash")],
 		["TOW", keys(&"tow")], ["PAUSE", keys(&"pause")]]
 	var y := box.position.y + 192
 	for r: Array in rows:
-		text_at(r[0], Vector2(box.position.x + 110, y), 24)
-		text_at(r[1], Vector2(box.position.x + 300, y), 24)
+		text_at(r[0], Vector2(box.position.x + 80, y), 24)
+		text_at(r[1], Vector2(box.position.x + 480, y), 24)
 		y += 50

@@ -18,9 +18,9 @@ Keyboard or gamepad (arcade-cabinet friendly), no mouse.
 | Action | Keyboard | Gamepad |
 |---|---|---|
 | Move | WASD / arrow keys | D-pad |
-| Switch a light | J or Z | A |
-| Dash | Space, X, K or Shift | X |
-| Tow wreckage | L or C | Y |
+| Toggle a traffic light | J | A |
+| Dash | Space | X |
+| Tow wreckage | L | Y |
 | Pause | Esc, P or Enter | Start |
 
 ## Development

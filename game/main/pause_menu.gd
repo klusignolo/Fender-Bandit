@@ -1,8 +1,8 @@
 class_name PauseMenu
 extends Card
 ## Pause (#35, #42, #19 story 9), over the frozen Run: Resume, Music On/Off (#38, story 78) or Quit to title. Main moves
-## the choice and acts on it; Switch flips the Music row. Its hint names only the choose key: everyone knows how to move a menu. There's no quit-to-desktop: the cabinet launcher owns
-## quitting.
+## the choice and acts on it; Switch flips the Music row. Its hint names only the choose key, Enter on a keyboard:
+## everyone knows how to move a menu (#45). There's no quit-to-desktop: the cabinet launcher owns quitting.
 
 enum Row { RESUME, MUSIC, QUIT }
 
@@ -46,4 +46,4 @@ func _draw() -> void:
 			text(s, Vector2(mid, y), 28, Sign.BLUE, false, 0)
 		else:
 			text(s, Vector2(mid, y), 28, MUTED)
-	text("%s: choose" % confirm_key(), Vector2(mid, box.end.y - 22), HINT_SIZE, MUTED)
+	text("%s: choose" % ("A" if pad else "ENTER"), Vector2(mid, box.end.y - 22), HINT_SIZE, MUTED)

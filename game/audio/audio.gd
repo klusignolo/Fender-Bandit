@@ -167,4 +167,5 @@ static func _autoplay_allowed() -> bool:
 			return ok;
 		})()
 	""", true)
+	print("Web autoplay allowed: %s" % [running])  # in the browser console: why the Theme did or didn't start at boot
 	return running == true
