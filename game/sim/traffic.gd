@@ -51,8 +51,10 @@ var k_swell := true  # Swells on; a knob so tests can keep every entry at k_gap
 var k_motorcycles := 0.0  # the vehicle mix: share of new vehicles that are motorcycles...
 var k_semis := 0.0  # ...and semis...
 var k_garbage := 0.0  # ...and garbage trucks (#46); the rest are cars
+var k_hotheads := Tuning.HOTHEAD_SHARE  # share of drivers who are hotheads (#45)
 
 var _rng := RandomNumberGenerator.new()
+var _hothead_rng := RandomNumberGenerator.new()  # its own stream, so hotheads never shift another seeded draw
 var _patience_rng := RandomNumberGenerator.new()  # its own stream, so drawing Patience doesn't shift any other draw
 var _swell_rng := RandomNumberGenerator.new()  # its own stream, so drawing Swells doesn't shift any other draw
 var _kind_rng := RandomNumberGenerator.new()  # its own stream, so drawing vehicle kinds doesn't shift any other draw
@@ -80,6 +82,7 @@ func _init(seed_value: int, dents := 0, stage: StageDef = null) -> void:
 	k_garbage = stage.garbage
 	_rng.seed = seed_value
 	_patience_rng.seed = seed_value
+	_hothead_rng.seed = seed_value
 	_swell_rng.seed = seed_value
 	_kind_rng.seed = seed_value
 	net = RoadNet.new(stage.crossings)
@@ -226,6 +229,7 @@ func _new_driver(c: Car, i: int) -> void:
 	if c.movement == RoadNet.Movement.LEFT:
 		c.turn_gap = _rng.randf_range(Tuning.TURNER_GAP[0], Tuning.TURNER_GAP[1]) / c.pace  # a slow semi wants a longer gap
 	c.patience = k_patience * _patience_rng.randf_range(Tuning.PATIENCE_JITTER[0], Tuning.PATIENCE_JITTER[1])
+	c.hothead = _hothead_rng.randf() < k_hotheads
 
 
 # A car whose back has cleared the box onto a road linked to the next crossing drives on as that crossing's car:
@@ -399,8 +403,9 @@ func _drive() -> void:
 
 
 # Patience: only the front driver at each red (or Yellow) Light spends it, and a Turner holding for a gap,
-# while stopped. Only the front driver can be out of it: once Blowing the red has debuted, it flashes "!!" for
-# its last BLOW_WARN seconds, then Blows the red. Before then it only Honks. Returns the Jam fill per second from the drivers Honking.
+# while stopped; once it moves, it starts again from zero. Only a front driver who is a hothead (#45) can be out of
+# it: once Blowing the red has debuted, it flashes "!!" for its last BLOW_WARN seconds, then Blows the red. Everyone
+# else, and everyone before then, only Honks. Returns the Jam fill per second from the drivers Honking.
 func _spend_patience() -> float:
 	var honking := 0.0  # Jam fill per second from the drivers Honking
 	var fronts: Dictionary[Light, Car] = {}
@@ -411,9 +416,10 @@ func _spend_patience() -> float:
 			fronts[c.light] = c
 	for c in cars:
 		var front: bool = fronts.get(c.light) == c
-		if not front and not c.holding:
-			c.wait = 0.0
-		elif c.speed < Tuning.WAIT_SPEED:
+		c.front = front or c.holding
+		if not c.front or c.speed >= Tuning.WAIT_SPEED:
+			c.wait = 0.0  # its honk counter resets once it moves (#45), or stops being the one waiting
+		else:
 			c.wait += DT
 		var stage := mini(int(c.wait / (c.patience / Tuning.PATIENCE_RINGS)), Tuning.PATIENCE_RINGS - 1)
 		var honk := stage > c.honks
@@ -421,7 +427,7 @@ func _spend_patience() -> float:
 		if honk:
 			honked.emit(c)
 		honking += Tuning.JAM_HONK[c.honks]
-		c.blow_warning = blowing_unlocked and front and c.patience - c.wait <= Tuning.BLOW_WARN
+		c.blow_warning = blowing_unlocked and front and c.hothead and c.patience - c.wait <= Tuning.BLOW_WARN
 		if c.blow_warning and c.wait >= c.patience and c.line_distance < Tuning.BLOW_REACH and not c.blowing:
 			c.blowing = true
 			blew_red.emit(c)

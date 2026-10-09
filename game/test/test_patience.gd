@@ -134,3 +134,54 @@ func test_a_holding_turner_spends_patience_and_honks() -> void:
 	check(not waited_behind, "no car queued behind the Turner at its Green spent Patience")
 	check_eq(committed_wait, 0.0, "the Turner's wait once it has its gap")
 
+
+
+# --- hotheads (#45) -------------------------------------------------------------------
+
+func test_only_hotheads_blow_the_red() -> void:
+	var t := straight_traffic(1)
+	t.blowing_unlocked = true
+	t.k_hotheads = 0.0
+	var blew := [0]
+	t.blew_red.connect(func(_c: Car) -> void: blew[0] += 1)
+	var warned := false
+	for i in 40 * Traffic.TICK_HZ:
+		t.step()
+		warned = warned or t.cars.any(func(c: Car) -> bool: return c.blow_warning)
+	check_eq(blew[0], 0, "no hotheads, so nobody Blows the red in 40s at four red Lights")
+	check(not warned, "and nobody flashes \"!!\"")
+	for c in t.cars:
+		check(not c.passed_line, "car %d is still behind its red line" % c.id)
+
+
+func test_about_a_hothead_share_of_drivers_are_hotheads() -> void:
+	var t := straight_traffic(2)
+	t.k_hotheads = Tuning.HOTHEAD_SHARE
+	t.switch(t.lights[N])
+	t.switch(t.lights[S])
+	var drivers := [0, 0]  # all, hotheads
+	t.car_spawned.connect(func(c: Car) -> void:
+		drivers[0] += 1
+		drivers[1] += int(c.hothead))
+	_run(t, 300.0)
+	check(drivers[0] > 150, "enough drivers to judge: %d" % drivers[0])
+	check_near(float(drivers[1]) / drivers[0], Tuning.HOTHEAD_SHARE, 0.08, "the hothead share")
+
+
+func test_the_blowing_warning_gives_five_seconds() -> void:
+	check_eq(Tuning.BLOW_WARN, 5.0, "\"!!\" shows for the last 5s of a hothead's Patience (#45; it was 3s)")
+
+
+func test_a_drivers_honk_counter_resets_once_its_car_moves() -> void:
+	var t := straight_traffic(1)
+	_run(t, 12.0)  # at red past the first Honk
+	var front := _queue(t, N)[0]
+	check(front.honks >= 1, "the N front driver has Honked (%d)" % front.honks)
+	t.switch(t.lights[N])
+	for i in 3 * Traffic.TICK_HZ:
+		t.step()
+		if front.speed > Tuning.WAIT_SPEED:
+			break
+	check(front.speed > Tuning.WAIT_SPEED, "it drives off on green")
+	check_eq(front.wait, 0.0, "its wait starts again from zero")
+	check_eq(front.honks, 0, "its honk counter resets")

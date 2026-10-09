@@ -4,7 +4,7 @@ extends Node2D
 ## untinted details (crumpled once it's Wreckage, still turned askew), and a shadow that falls down-right however it turns.
 ## Its brake lamps light while it slows or waits. A turning car flashes the blinker on its turning side until it's
 ## through its turn, and Wreckage trails a smoke wisp until it's Towed. A Turner carries an upright arrow that pulses amber
-## while it holds. A driver spending Patience shows a ring once it has Honked, a "HONK!" at each Honk,
+## while it holds. A driver spending Patience shows its honk counters once it has Honked, a "HONK!" at each Honk,
 ## and "!!" before it Blows the red; Blowing the red, it's outlined red. Cues sit on their own layer, upright and over
 ## everything upright, and past the cue floor zoom (#41) they hold their size on screen.
 ## Pooled by World; hidden while unused.
@@ -29,13 +29,14 @@ const PULSE_SPEED := 9.0  # radians per second of the stuck pulse
 const SIGNAL_RED := Color("#E8322B")  # `signal_red` in docs/sprites.md
 const SIGNAL_YELLOW := Color("#F5C518")  # `signal_yellow`
 const INK := Art.INK
-const RING_R := 17.0  # the Patience ring's radius around the car's centre
+const RING_R := 17.0  # how far out from the car's centre "HONK!" and "!!" sit
 const PIP_DROP := 24.0  # the Patience pips sit this far below the car's centre, world px
 const HONK_TIME := 0.8  # seconds a "HONK!" shows...
 const HONK_RISE := 10.0  # ...rising this far as it fades
 const HONK_SIZE := 16.0  # on-screen px tall: "HONK!" and "!!", so they read at any zoom
 const WARN_SIZE := 24.0
 const WARN_HZ := 3.0  # "!!" flashes per second
+const ANGER_R := 10.0  # the hothead's anger mark (#45): its half-width on the roof, world px, before the cue floor
 const CREW := 3  # little raccoons that grab a garbage truck's trash while it collects (#46): charm only
 const CREW_H := 20.0  # world px tall, before the cue floor
 const CREW_KERB := 24.0  # world px past the truck's right side that they run from: the kerb
@@ -157,7 +158,7 @@ func _sync() -> void:
 		_honk_at = _traffic.time
 		_honk_text = "HONK!" if car.honks == 1 else "HONK HONK!"
 	_honks = car.honks
-	var cued := _arrow_shown() or _ring_shown() or _honk_shown() or car.blow_warning
+	var cued := _arrow_shown() or _counters_shown() or _honk_shown() or car.blow_warning or _anger_shown()
 	var animated := cued or car.blowing
 	if animated or _animated or car.boosted != _boosted or _wrecked() != _drawn_wrecked:
 		queue_redraw()  # every frame while animated, and once more as it stops
@@ -185,8 +186,14 @@ func _arrow_shown() -> bool:
 	return not _wrecked() and car.movement == RoadNet.Movement.LEFT and not car.committed
 
 
-# The Patience ring shows once the driver has Honked: a calm wait at red is normal.
-func _ring_shown() -> bool:
+# A hothead (#45) wears an anger mark while it waits at the front of a red, once Blowing the red has debuted:
+# it's the one that will Blow it, so the player knows which Light to Switch first.
+func _anger_shown() -> bool:
+	return not _wrecked() and car.hothead and car.front and not car.passed_line and _traffic.blowing_unlocked
+
+
+# The honk counters show once the driver has Honked: a calm wait at red is normal.
+func _counters_shown() -> bool:
 	return not _wrecked() and car.honks > 0
 
 
@@ -226,8 +233,10 @@ func _draw_cues() -> void:
 		return
 	if _arrow_shown():
 		_draw_arrow()
-	if _ring_shown() or _honk_shown() or car.blow_warning:
+	if _counters_shown() or _honk_shown() or car.blow_warning:
 		_draw_patience()
+	if _anger_shown():
+		_draw_anger()
 
 
 # The Turner's bubble, with its arrow pointing the way the Turner will go; quiet on the way in, then bigger and
@@ -246,15 +255,11 @@ func _draw_arrow() -> void:
 		_cues.draw_arc(at, r + 4.0, 0.0, TAU, 24, Color(ARROW_STUCK, 1.0 - pulse), 2.0)
 
 
-# The ring fills through the current Patience stage, pips below count the stages gone (yellow, yellow, then red with
-# "!!"), a "HONK!" burst rises off each Honk, and "!!" flashes before Blowing the red.
+# The honk counters, pips below the car, count the Patience stages gone (yellow, yellow, then red with "!!"); a
+# "HONK!" burst rises off each Honk, and "!!" flashes before Blowing the red. No ring around the car: the dev found
+# it distracting (#45).
 func _draw_patience() -> void:
-	if _ring_shown():
-		var per := car.patience / Tuning.PATIENCE_RINGS
-		var fill := clampf((car.wait - car.honks * per) / per, 0.0, 1.0)
-		var colour := SIGNAL_RED if car.honks >= Tuning.PATIENCE_RINGS - 1 else SIGNAL_YELLOW
-		_cues.draw_arc(Vector2.ZERO, RING_R, 0.0, TAU, 24, Color(INK, 0.5), 5.0)
-		_cues.draw_arc(Vector2.ZERO, RING_R, -PI / 2.0, -PI / 2.0 + TAU * fill, 24, colour, 4.0)
+	if _counters_shown():
 		for p in Tuning.PATIENCE_RINGS:
 			var pip := Vector2((p - (Tuning.PATIENCE_RINGS - 1) / 2.0) * 10.0, PIP_DROP)
 			_cues.draw_circle(pip, 3.5, Color(INK, 0.6))
@@ -309,3 +314,13 @@ func _draw_crew() -> void:
 		_crew.draw_texture_rect(tex, Rect2(at - Vector2(size.x / 2.0, size.y), size), false)
 		if not out:
 			_crew.draw_circle(at + Vector2(0.0, -size.y * 0.3), size.x * 0.32, BAG)
+
+
+# The anger mark on a hothead's roof: four red corner strokes around a gap, the comic "vein" sign, outlined in ink.
+func _draw_anger() -> void:
+	var r := ANGER_R
+	for sx: float in [-1.0, 1.0]:
+		for sy: float in [-1.0, 1.0]:
+			var pts := PackedVector2Array([Vector2(sx * r * 0.3, sy * r), Vector2(sx * r * 0.3, sy * r * 0.3), Vector2(sx * r, sy * r * 0.3)])
+			_cues.draw_polyline(pts, INK, 4.5)
+			_cues.draw_polyline(pts, SIGNAL_RED, 2.5)

@@ -120,7 +120,8 @@ const HOLD_SLACK := 1.0  # px: a Turner this close to its hold point (centre on 
 const PATIENCE_JITTER: Array[float] = [0.9, 1.1]  # each driver's Patience is K_PATIENCE times a draw from this range
 const PATIENCE_RINGS := 3  # Patience is spent in this many equal stages: Honk, second Honk, then out
 const BLOW_REACH := 14.0  # px: a driver out of Patience Blows the red once its front bumper is this close to the line
-const BLOW_WARN := 3.0  # seconds of Patience left when a driver who will Blow the red starts flashing "!!"
+const BLOW_WARN := 5.0  # seconds of Patience left when a hothead starts flashing "!!" (#45: was 3s)
+const HOTHEAD_SHARE := 0.25  # share of drivers who are hotheads: only they Blow the red; the rest only Honk (#45)
 const WAIT_SPEED := 8.0  # px/s: a driver with Patience spends it only while slower than this
 
 # The Jam
