@@ -233,7 +233,7 @@ How the Attract autopilot ([#34](https://github.com/klusignolo/Fender-Bandit/iss
 
 | Knob | What it's for | Value | Greybox | Set by | Playtest notes |
 |---|---|---|---|---|---|
-| Exit score | Points per car that leaves the map, times the Combo multiplier. | 10 | `EXIT_SCORE` (inline) | #19, #28 | |
+| Exit score | Points per car that leaves the map, by the most Honks it reached at any Light on its way (`Car.worst_honks`, kept across crossings), times the Combo multiplier. The results card counts the Calm drivers, who never Honked. | 15 / 10 / 5 for 0 / 1 / 2 Honks | `EXIT_SCORES` | #19, #28, #45 | #45: the dev wanted a reason to move cars before their first or second Honk. It was a flat 10. The High-score table was cleared for it (`ScoreTable.FORMAT`), since older scores don't compare. |
 | Combo step | The multiplier goes up by 1 every this much Combo: ×1 at Combo 1–4, ×2 at 5–9, ×3 from 10. | 5 | `COMBO_STEP` (inline) | #19, #28 | |
 | Tow bonus | Points for towing Wreckage off the road. Leaves Combo alone. | 5 | `TOW_BONUS` (inline) | #19, #28 | |
 

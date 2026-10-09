@@ -16,6 +16,7 @@ var crashes := 0  # this stage's Crashes: one per crashed signal, so a car into 
 var best_combo := 0  # this stage's highest Combo
 var cars_through := 0  # cars off the map this Run, every stage
 var top_combo := 0  # the Run's highest Combo
+var calm_drivers := 0  # cars out this Run that never Honked (#45)
 var most_crashes := 0  # the most Crashes in one stage of this Run
 var cheated := false  # the dev's F8 or F9 was used (#45): the Run never makes the High-score table
 
@@ -51,12 +52,14 @@ func multiplier() -> int:
 	return 1 + combo / Tuning.COMBO_STEP
 
 
-func _on_car_exited(_car: Car) -> void:
+func _on_car_exited(car: Car) -> void:
 	cars_through += 1
+	if car.worst_honks == 0:
+		calm_drivers += 1
 	combo += 1
 	best_combo = maxi(best_combo, combo)
 	top_combo = maxi(top_combo, combo)
-	score += Tuning.EXIT_SCORE * multiplier()
+	score += Tuning.EXIT_SCORES[car.worst_honks] * multiplier()  # a calm driver scores more, an angry one less
 	if combo % Tuning.COMBO_STEP == 0:
 		combo_stepped.emit(multiplier())
 

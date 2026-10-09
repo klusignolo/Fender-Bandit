@@ -37,6 +37,7 @@ var committed := false  # a Turner that has had its gap and gone: it doesn't sto
 var wait := 0.0  # seconds this driver has spent waiting with Patience: only the front driver at a red, or a holding Turner
 var patience := 0.0  # seconds it will wait with Patience, drawn per driver
 var honks := 0  # Honks so far: 0, 1 or 2
+var worst_honks := 0  # the most Honks it reached at any Light on its way, kept across crossings: its exit score (#45)
 var blowing := false  # out of Patience: Blowing the red, it drives through its red Light regardless of cross traffic
 var hothead := false  # drawn per driver: only a hothead Blows the red once it's out of Patience (#45)
 var front := false  # the front driver at a red (or Yellow) Light this tick, or a holding Turner: it spends Patience

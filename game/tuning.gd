@@ -168,7 +168,7 @@ const AUTO_WRECK_REACH := 360.0  # on-screen px: it tows Wreckage this close to 
 const AUTO_TOW_GIVE_UP := 8.0  # seconds of towing before it drops the Wreckage wherever it is
 
 # Score and Combo
-const EXIT_SCORE := 10  # points per car out, times the Combo multiplier
+const EXIT_SCORES: Array[int] = [15, 10, 5]  # points per car out by the most Honks it reached on its way, times the Combo multiplier (#45)
 const COMBO_STEP := 5  # the multiplier goes up 1 every this much Combo: ×1, then ×2 from 5, ×3 from 10...
 const TOW_BONUS := 5  # points for Wreckage towed off the road
 

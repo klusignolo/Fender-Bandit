@@ -185,3 +185,4 @@ func test_a_drivers_honk_counter_resets_once_its_car_moves() -> void:
 	check(front.speed > Tuning.WAIT_SPEED, "it drives off on green")
 	check_eq(front.wait, 0.0, "its wait starts again from zero")
 	check_eq(front.honks, 0, "its honk counter resets")
+	check(front.worst_honks >= 1, "but it remembers its worst, for its score (#45): %d" % front.worst_honks)

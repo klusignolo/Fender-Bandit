@@ -76,6 +76,7 @@ func test_no_file_means_an_empty_table_with_music_on() -> void:
 func test_a_mangled_file_keeps_only_valid_entries() -> void:
 	DirAccess.remove_absolute(PATH)
 	var cfg := ConfigFile.new()
+	cfg.set_value("scores", "format", ScoreTable.FORMAT)
 	cfg.set_value("scores", "table", [
 		{"initials": "OK", "score": 10},
 		{"initials": 5, "score": 20},
@@ -91,4 +92,19 @@ func test_a_mangled_file_keeps_only_valid_entries() -> void:
 	cfg.set_value("scores", "table", "not a list")
 	cfg.save(PATH)
 	check_eq(ScoreTable.new(PATH).entries.size(), 0, "a table that isn't a list is empty")
+	DirAccess.remove_absolute(PATH)
+
+
+func test_scores_from_before_honk_scoring_are_dropped_but_the_music_setting_stays() -> void:
+	# #45 changed what an exit scores, so older scores can't be compared: a table saved without FORMAT starts empty.
+	DirAccess.remove_absolute(PATH)
+	var cfg := ConfigFile.new()
+	cfg.set_value("scores", "table", [{"initials": "OLD", "score": 9000}])
+	cfg.set_value("settings", "music", false)
+	cfg.save(PATH)
+	var t := ScoreTable.new(PATH)
+	check_eq(t.entries.size(), 0, "the old scores are gone")
+	check(not t.music, "the Music setting is kept")
+	t.add("NEW", 100)
+	check_eq(ScoreTable.new(PATH).entries.size(), 1, "a new score saves with the format and reloads")
 	DirAccess.remove_absolute(PATH)

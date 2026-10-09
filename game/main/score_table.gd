@@ -5,6 +5,7 @@ extends RefCounted
 ## tenth place; a tie goes below the score already there. The Scores autoload holds the game's one.
 
 const SIZE := 10
+const FORMAT := 2  # the save's format: a table saved without it holds scores from before honk scoring (#45), so it starts empty
 
 var entries: Array[Dictionary] = []  # {initials: String, score: int}, best first
 var music := true
@@ -19,6 +20,8 @@ func _init(p: String) -> void:
 		return
 	var m: Variant = cfg.get_value("settings", "music", true)
 	music = m if m is bool else true
+	if cfg.get_value("scores", "format", 1) != FORMAT:
+		return  # older scores can't be compared with these: keep only the Music setting
 	var table: Variant = cfg.get_value("scores", "table", [])
 	if not table is Array:
 		return
@@ -67,6 +70,7 @@ func set_music(on: bool) -> void:
 func save() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("scores", "table", entries)
+	cfg.set_value("scores", "format", FORMAT)
 	cfg.set_value("settings", "music", music)
 	var err := cfg.save(path)
 	if err != OK:

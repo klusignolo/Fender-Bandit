@@ -22,9 +22,11 @@ func _run_on(t: Traffic) -> Run:
 	return r
 
 
-## A stand-in car: Run only counts cars, it never looks at one.
-func _car() -> Car:
-	return Car.new(0, null, null)
+## A stand-in car that Honked once on its way: its exit scores the 10 points every exit scored before honk scoring.
+func _car(worst_honks := 1) -> Car:
+	var c := Car.new(0, null, null)
+	c.worst_honks = worst_honks
+	return c
 
 
 func _exits(t: Traffic, n: int) -> void:
@@ -162,3 +164,27 @@ func test_the_run_keeps_the_results_card_stats_across_stages() -> void:
 		_crash(t3)
 	check_eq(r.most_crashes, 3, "a later stage can beat it")
 	check_eq(r.dents, 6, "the Dents, every stage")
+
+
+func test_a_calm_driver_scores_more_and_an_angry_one_less() -> void:
+	# #45: a car's base points go by the most Honks it reached at any Light on its way, before the multiplier.
+	for honks in 3:
+		var t := straight_traffic(1)
+		var r := _run_on(t)
+		t.car_exited.emit(_car(honks))
+		check_eq(r.score, Tuning.EXIT_SCORES[honks], "an exit after %d Honks scores %d at ×1" % [honks, Tuning.EXIT_SCORES[honks]])
+	check_eq(Tuning.EXIT_SCORES, [15, 10, 5], "15 for a calm driver, 10 after one Honk, 5 after two")
+	var t := straight_traffic(1)
+	var r := _run_on(t)
+	for i in 5:
+		_exits(t, 1)
+	t.car_exited.emit(_car(0))  # Combo 6: ×2
+	check_eq(r.score, 10 * 4 + 20 + 15 * 2, "a calm driver's 15 takes the multiplier too")
+
+
+func test_the_run_counts_its_calm_drivers() -> void:
+	var t := straight_traffic(1)
+	var r := _run_on(t)
+	for honks: int in [0, 1, 0, 2, 0]:
+		t.car_exited.emit(_car(honks))
+	check_eq(r.calm_drivers, 3, "cars out that never Honked")

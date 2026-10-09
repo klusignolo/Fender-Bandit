@@ -424,6 +424,7 @@ func _spend_patience() -> float:
 		var stage := mini(int(c.wait / (c.patience / Tuning.PATIENCE_RINGS)), Tuning.PATIENCE_RINGS - 1)
 		var honk := stage > c.honks
 		c.honks = stage
+		c.worst_honks = maxi(c.worst_honks, stage)
 		if honk:
 			honked.emit(c)
 		honking += Tuning.JAM_HONK[c.honks]
