@@ -20,6 +20,14 @@ enum Movement { STRAIGHT, RIGHT, LEFT }
 const STRAIGHT_WITHIN := 1.0
 
 
+## Where a map-edge road bridges over another (#44): while a crossing's neighbours are on the map but it isn't, two of
+## their edge roads cross at its spot.
+class Overpass:
+	var centre: Vector2  # where the two roads' centre lines cross
+	var over_dir: Vector2  # the way the bridge road runs, away from its crossing
+	var under: PackedInt32Array  # both lanes of the road beneath
+
+
 ## One stretch of lane.
 class Segment:
 	enum Kind { INCOMING, CONNECTOR, OUTGOING }
@@ -113,6 +121,9 @@ var bounds := Rect2()  # the map; entries start just outside it
 ## For each connector, the other connectors in its box whose paths come close enough for two cars to
 ## touch: these are the only pairs of moving cars that can Crash.
 var conflicts: Dictionary[int, PackedInt32Array] = {}
+## Where two map-edge roads cross with no crossing between them (#44): the more north–south road bridges over the
+## other. Cars under it never meet cars on it.
+var overpasses: Array[Overpass] = []
 
 
 func _init(crossing_count := 1) -> void:
@@ -131,6 +142,7 @@ func _init(crossing_count := 1) -> void:
 			a.opposite = approaches.find(o)
 	_find_conflicts()
 	_find_sharing()
+	_find_overpasses()
 
 
 ## The driver's right and left, for a car travelling `d`.
@@ -365,3 +377,35 @@ func _add_route(a: Approach, m: Movement, heading_out: Vector2, ids: PackedInt32
 			r.next = k
 	routes.append(r)
 	a.routes.append(r)
+
+
+# Overpasses (#44): every pair of map-edge roads from different crossings whose centre lines cross. The road running
+# more north–south goes over; both lanes of the other go under.
+func _find_overpasses() -> void:
+	var roads: Array[Array] = []  # [crossing, arm direction, its edge lanes]
+	for i in approaches.size():
+		var a := approaches[i]
+		var lanes := PackedInt32Array()
+		if a.entry:
+			lanes.append(a.incoming)
+		if segments[a.outgoing].kind == Segment.Kind.OUTGOING:
+			lanes.append(a.outgoing)
+		if not lanes.is_empty():
+			roads.append([a.crossing, -a.direction, lanes])
+	for i in roads.size():
+		for j in range(i + 1, roads.size()):
+			var r1: Array = roads[i]
+			var r2: Array = roads[j]
+			if r1[0] == r2[0]:
+				continue
+			var c1 := crossings[r1[0]]
+			var c2 := crossings[r2[0]]
+			var hit: Variant = Geometry2D.segment_intersects_segment(c1, c1 + r1[1] * _reach(c1, r1[1]), c2, c2 + r2[1] * _reach(c2, r2[1]))
+			if hit == null:
+				continue
+			var o := Overpass.new()
+			o.centre = hit
+			var first_over := absf(r1[1].y) >= absf(r2[1].y)
+			o.over_dir = r1[1] if first_over else r2[1]
+			o.under = r2[2] if first_over else r1[2]
+			overpasses.append(o)

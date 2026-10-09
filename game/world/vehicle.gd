@@ -138,6 +138,7 @@ func _sync() -> void:
 		# Same car, same skew, every run: the view stays repeatable from the seed.
 		_spin = (float(hash(car.id) % 2001) / 1000.0 - 1.0) * WRECKAGE_SPIN
 	transform = car.transform.translated_local(Vector2(_coasted, 0.0)).rotated_local(_spin)
+	z_index = Art.Z_UNDER if car.underpass and not coast else Art.Z_VEHICLE  # beneath an overpass's deck (#44)
 	shadow.position = transform.basis_xform_inv(Art.SHADOW_FALL)
 	details.texture = _layers.wreck if _wrecked() else _layers.details
 	_cues.position = transform.origin

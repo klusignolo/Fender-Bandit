@@ -47,6 +47,7 @@ func _ready() -> void:
 	traffic.towed.connect(_on_towed)
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS  # the sprites hold up as the camera zooms out
 	add_child(Ground.new(traffic.net, _seed))
+	add_child(OverpassDeck.new(traffic.net))  # over the cars beneath, under the rest (#44)
 	add_child(_vehicle_layer)
 	_uprights.y_sort_enabled = true
 	_uprights.z_as_relative = false

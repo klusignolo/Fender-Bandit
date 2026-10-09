@@ -672,9 +672,10 @@ func _check_crashes() -> void:
 			var b := boxed[j]
 			if not (a.wreckage and b.wreckage) and _conflict(under[i], under[j]) and a.overlaps(b, Tuning.CRASH_INSET):
 				_crash(a, b)
-	for w in wreckage:
+	for w in wreckage:  # Wreckage hits a car on its own level only: an overpass keeps the two apart (#44)
 		for c in cars:
-			if not c.wreckage and c.transform.origin.distance_to(w.transform.origin) < c.radius() + w.radius() \
+			if not c.wreckage and c.underpass == w.underpass \
+					and c.transform.origin.distance_to(w.transform.origin) < c.radius() + w.radius() \
 					and w.overlaps(c, Tuning.CRASH_INSET):
 				_crash(w, c)
 
@@ -745,4 +746,8 @@ func _crash(a: Car, b: Car) -> void:
 
 func _place(c: Car) -> void:
 	c.transform = c.route.pose(c.s)
+	c.underpass = false
+	for o in net.overpasses:
+		if o.under.has(c.route.segment_at(c.s)) and c.transform.origin.distance_to(o.centre) < Tuning.LW * 2.0 + c.length:
+			c.underpass = true
 	c.line_distance = c.route.stop_s - (c.s + c.length / 2.0)

@@ -41,6 +41,7 @@ var worst_honks := 0  # the most Honks it reached at any Light on its way, kept 
 var blowing := false  # out of Patience: Blowing the red, it drives through its red Light regardless of cross traffic
 var hothead := false  # drawn per driver: only a hothead Blows the red once it's out of Patience (#45)
 var front := false  # the front driver at a red (or Yellow) Light this tick, or a holding Turner: it spends Patience
+var underpass := false  # under an overpass's bridge (#44): the view draws it beneath the deck, and Wreckage on the other level can't hit it
 var raccoon_ahead := false  # the Raccoon is the nearest thing in its path this tick
 var yielding := false  # braking for the Raccoon: Yielding
 var braking := false  # slowing, or held still, this tick: its brake lamps are lit. Never on Wreckage
