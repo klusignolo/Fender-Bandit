@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Rebuilds the placeholder Theme and groove (#38): tools/make_music.gd writes WAVs to audio_src/ (outside the Godot
+# Rebuilds the Theme and groove (#38): tools/make_music.gd writes WAVs to audio_src/ (outside the Godot
 # project), and ffmpeg encodes each to game/audio/music/<name>.ogg, ending where the WAV ends: the loop end. Their
 # .ogg.import keep loop on and loop_offset at the intro's length (docs/audio.md, the sound list's "Music"). Run from anywhere:
-#   game/tools/make_music.sh [theme] [groove]   # default: both. Leave out a track the dev has swapped for a Lyria cut.
+#   game/tools/make_music.sh [theme] [groove]   # default: both
 # GODOT overrides the editor path, as in export.sh.
 set -euo pipefail
 GAME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

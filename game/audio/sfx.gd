@@ -33,7 +33,7 @@ const SOUNDS: Dictionary[StringName, Array] = {
 	&"jam_heavy": [P.OTHER, -6.0],
 	&"swell": [P.OTHER, -6.0],
 	&"reveal": [P.OTHER, -5.0],
-	&"stinger": [P.OTHER, -4.0],  # its own player, outside the pool; a placeholder until #38's Lyria stinger
+	&"stinger": [P.OTHER, -4.0],  # its own player, outside the pool
 	# UI
 	&"ui_move": [P.OTHER, -12.0],
 	&"ui_confirm": [P.OTHER, -9.0],

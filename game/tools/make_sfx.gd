@@ -315,7 +315,7 @@ func _blip(f0: float, f1: float, length: float) -> PackedFloat32Array:
 	return _lowpass(b, 6000.0)
 
 
-## Stage cleared: a brass "ta-da!", a short pickup then a held chord. A placeholder until #38's Lyria stinger.
+## Stage cleared: a brass "ta-da!", a short pickup then a held chord.
 func _ta_da() -> PackedFloat32Array:
 	var out := _silence(1.9)
 	_mix(out, _brass(0.13, 523.25), 0.0, 0.8)

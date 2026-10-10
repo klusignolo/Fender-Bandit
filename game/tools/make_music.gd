@@ -1,8 +1,7 @@
 extends "res://tools/make_sfx.gd"
-## Writes the placeholder Theme and groove (#38) as WAVs to audio_src/ at the repo root, outside the Godot project,
-## for tools/make_music.sh to encode to res://audio/music/*.ogg. They stand in for the dev's Lyria tracks (docs/audio.md
-## "Lyria loops") and are built the same shape: a one-bar intro, then an 8-bar loop the file ends on, so loop_offset
-## is the intro's length. Procedural and seeded, like the SFX, with make_sfx.gd's building blocks: cartoon-caper
+## Writes the Theme and groove (#38) as WAVs to audio_src/ at the repo root, outside the Godot project, for
+## tools/make_music.sh to encode to res://audio/music/*.ogg. Each is a one-bar intro, then an 8-bar loop the file ends
+## on, so loop_offset is the intro's length (docs/audio.md "The music"). Procedural and seeded, like the SFX, with make_sfx.gd's building blocks: cartoon-caper
 ## jazz-funk in D minor (Dm Dm Gm Gm Dm Dm A7 A7), a walking bass, drums, brass stabs and a sneaky lead.
 ##   godot --headless --path game -s tools/make_music.gd [-- theme groove]
 ## Each tempo gives a whole number of samples per beat, so the loop is exactly 32 beats long.
