@@ -39,9 +39,9 @@ func test_four_drivers_on_their_second_honk_fill_the_jam_at_4_5_a_second() -> vo
 	check_near(t.jam.fill - before, 4.5, 0.001, "Jam fill over that second")
 
 
-func test_each_car_that_leaves_drains_0_4() -> void:
+func test_each_car_that_leaves_drains_2() -> void:
 	# Fill the Jam at four reds, then wave N and S on. W and E keep their two drivers on their second Honk,
-	# 3.0/s less the 1.5/s drain, so the Jam still rises 1.5/s, less 0.4 for each car that leaves.
+	# 3.0/s less the 1.5/s drain, so the Jam still rises 1.5/s, less 2 for each car that leaves.
 	var t := straight_traffic(1)
 	_run(t, 25.0)
 	t.switch(t.lights[N])
@@ -56,8 +56,35 @@ func test_each_car_that_leaves_drains_0_4() -> void:
 		if not check_eq(_honks(t), [2, 2] as Array[int], "Honks at %.2fs, with W and E still red" % t.time):
 			return
 		seen += exits[0]
-		check_near(t.jam.fill - before, 1.5 * Traffic.DT - 0.4 * exits[0], 0.0001, "Jam change in a tick %d car(s) left, at %.2fs" % [exits[0], t.time])
+		check_near(t.jam.fill - before, 1.5 * Traffic.DT - 2.0 * exits[0], 0.0001, "Jam change in a tick %d car(s) left, at %.2fs" % [exits[0], t.time])
 	check(seen >= 4, "cars that left: %d, want 4+" % seen)
+
+
+
+func test_freeing_a_backed_up_crossing_brings_the_jam_back_below_busy() -> void:
+	# Playtest (#45): relief must show. Hold every Light red into Heavy, then run the crossing well, N and S, then W and
+	# E: the cars that pour out drain the Jam back under Busy within about 12s.
+	var t := Traffic.new(1, 0, Stages.def(1, 1))
+	t.quota = NO_QUOTA
+	while t.jam.level() != Jam.Level.HEAVY:
+		t.step()
+	var from := t.time
+	var pairs := [[N, S], [W, E]]
+	t.switch(t.lights[N])  # every Light is red: N and S go green at once
+	t.switch(t.lights[S])
+	var phase := 1
+	while t.jam.level() != Jam.Level.CLEAR and t.time - from < 30.0:
+		var at := t.time - from
+		if at > 3.0 and fmod(at - 3.0, 6.0) < Traffic.DT:  # every 6s, green to Yellow...
+			for l in t.lights:
+				if l.state == Light.State.GREEN:
+					t.switch(l)
+		if at > 3.0 and absf(fmod(at - 3.0, 6.0) - 2.0) < Traffic.DT * 0.5:  # ...then, once Yellow has fallen, the next pair green
+			for k: int in pairs[phase]:
+				t.switch(t.lights[k])
+			phase = 1 - phase
+		t.step()
+	check(t.time - from <= 12.0, "back under Busy %.1fs after Heavy (share %.2f), want 12s or less" % [t.time - from, t.jam.share()])
 
 
 ## Green everywhere, stepped until `crashes` Crashes (or 30s). Returns the Crashes counted.

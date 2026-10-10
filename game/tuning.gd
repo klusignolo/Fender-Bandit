@@ -134,7 +134,7 @@ const JAM_HEAVY := 0.7  # ...and Heavy from this share; full is Gridlock
 const JAM_HONK: Array[float] = [0.0, 0.7, 1.5]  # fill per second for each driver Honking, by its Honks so far
 const JAM_BACKLOG := 0.6  # fill per second for each car waiting in an entry's backlog
 const JAM_DRAIN := 1.5  # drain per second, always, for each crossing on the map
-const JAM_EXIT := 0.4  # drain for each car that leaves the map
+const JAM_EXIT := 2.0  # drain for each car that leaves the map: relief shows on the meter (#45)
 
 # Lights
 const YELLOW_TIME := 1.5  # seconds a Light stays Yellow before falling to Red
