@@ -137,10 +137,33 @@ func _dev_keys(event: InputEvent) -> void:
 		World.speed = 1.0 if World.speed > 1.0 else 2.0
 		run.cheated = true
 		print("Dev: speed ×%d" % World.speed)
+	elif k.keycode == KEY_F7 and k.pressed and not k.echo:  # PROTOTYPE (prototype/raccoon-skins)
+		PrototypeSkins.current = (PrototypeSkins.current + 1) % PrototypeSkins.SKINS.size()
+		_world.raccoon.rig.apply_skin(PrototypeSkins.current)
+		_skin_label().text = "F7 skin: " + PrototypeSkins.name_of(PrototypeSkins.current)
+		print("Prototype skin: ", PrototypeSkins.name_of(PrototypeSkins.current))
 	elif k.keycode == KEY_F9:
 		_world.traffic.meet_quota()
 		run.cheated = true
 		print("Dev: stage %d's Quota met" % run.stage)
+
+
+## PROTOTYPE (prototype/raccoon-skins): the skin's name, top left.
+func _skin_label() -> Label:
+	var l := get_node_or_null(^"SkinLayer/Skin") as Label
+	if l == null:
+		var layer := CanvasLayer.new()
+		layer.name = "SkinLayer"
+		layer.layer = 100
+		add_child(layer)
+		l = Label.new()
+		l.name = "Skin"
+		l.position = Vector2(16, 60)
+		l.add_theme_font_size_override(&"font_size", 28)
+		l.add_theme_color_override(&"font_outline_color", Color.BLACK)
+		l.add_theme_constant_override(&"outline_size", 6)
+		layer.add_child(l)
+	return l
 
 
 ## Any key, or any pad button but Select and the guide: the cabinet launcher keeps those (#19 story 11). LT and RT

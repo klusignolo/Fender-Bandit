@@ -115,7 +115,16 @@ func _init() -> void:
 		_rest[v] = rest
 	stars.draw.connect(_draw_stars)
 	add_child(stars)
+	apply_skin(PrototypeSkins.current)
 	show_pose(view, anim, 0.0)
+
+
+## PROTOTYPE (prototype/raccoon-skins): re-skins every part with PrototypeSkins' look `i`.
+func apply_skin(i: int) -> void:
+	for v: Raccoon.View in _PARTS:
+		for p: Array in _PARTS[v]:
+			(_parts[v][p[0]] as Sprite2D).texture = PrototypeSkins.texture(p[1], i)
+		(_parts[v][&"reach"] as Sprite2D).texture = PrototypeSkins.texture(REACH, i)
 
 
 # A part's sprite, turning about `pivot` (texture px), placed so the canvas's FEET land on the rig's origin.
