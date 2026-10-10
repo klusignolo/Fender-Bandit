@@ -152,6 +152,19 @@ func tow(reach: float) -> void:
 	if towing != null:
 		_drop()
 		return
+	towing = towable(reach)
+	if towing != null:
+		towing.towed = true
+		_tow_hold = (towing.transform.origin - raccoon_position).limit_length(Tuning.TOW_HOLD)
+		tow_grabbed.emit(towing)
+
+
+## The Wreckage a Tow would grab now: the nearest within `reach` world px of the Raccoon, or null while it's towing
+## (a Tow then drops) or stunned. The Raccoon's Tow hint shows over it.
+func towable(reach: float) -> Car:
+	if raccoon_stun > 0.0 or towing != null:
+		return null
+	var best: Car = null
 	var best_d := INF
 	for c in cars:
 		if not c.wreckage or not c.reaches(raccoon_position, reach):
@@ -159,11 +172,8 @@ func tow(reach: float) -> void:
 		var d := raccoon_position.distance_to(c.transform.origin)
 		if d < best_d:
 			best_d = d
-			towing = c
-	if towing != null:
-		towing.towed = true
-		_tow_hold = (towing.transform.origin - raccoon_position).limit_length(Tuning.TOW_HOLD)
-		tow_grabbed.emit(towing)
+			best = c
+	return best
 
 
 func step() -> void:

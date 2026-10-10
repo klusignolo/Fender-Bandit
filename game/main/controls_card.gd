@@ -12,9 +12,10 @@ const BUTTON_GAP := 92.0  # px between button centres, room for a job under each
 const GRID: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(0, 2), Vector2i(1, 2)]
 ## What the game's buttons do, by grid position: A top-left, X top-right, Y middle-left. The rest stay unbound. The
 ## Switch reads as what it does, "TOGGLE TRAFFIC LIGHT", on one line between the rows (#45).
-const JOBS := {Vector2i(0, 0): "TOGGLE TRAFFIC LIGHT", Vector2i(2, 0): "DASH", Vector2i(0, 1): "TOW"}
+const TOW_AT := Vector2i(0, 1)  # the Tow button's place on the grid, for the Raccoon's Tow hint
+const JOBS := {Vector2i(0, 0): "TOGGLE TRAFFIC LIGHT", Vector2i(2, 0): "DASH", TOW_AT: "TOW"}
 ## The letter on each bound button: the pad's names for them (#10, #17).
-const LETTERS := {Vector2i(0, 0): "A", Vector2i(2, 0): "X", Vector2i(0, 1): "Y"}
+const LETTERS := {Vector2i(0, 0): "A", Vector2i(2, 0): "X", TOW_AT: "Y"}
 const LETTER_SIZE := 22
 const BUTTON := Color("#E8ECF2")
 const IDLE_BUTTON := Color(1, 1, 1, 0.18)

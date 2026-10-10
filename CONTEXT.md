@@ -85,7 +85,7 @@ The band the Jam is in: Clear, Busy, Heavy, then Gridlock when full.
 _Avoid_: Danger level, threat, stage (a stage is a leg of a run)
 
 **Dent**:
-A small, permanent loss of Jam capacity left by each Crash.
+A small, permanent loss of Jam capacity left by each Crash. Players see the count as **Wrecks** (the HUD and the results), since every Crash leaves one.
 _Avoid_: Scar, strike, damage
 
 **Combo**:

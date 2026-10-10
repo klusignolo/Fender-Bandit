@@ -27,10 +27,15 @@ const COOLDOWN := Color(0.4, 0.8, 1.0)
 const BONK := Sign.ORANGE  # raccoon_orange: its own moment, clear of the signal yellow
 const BONK_SIZE := 22
 const DUST_PUFFS := 2  # dust_puff: the smoke puff, small, kicked up behind a Dash
+const HINT_SIZE := 20  # the Tow hint's button letter, and its "TOW" a little smaller
+const HINT_ABOVE := 26.0  # world px from the Wreckage's middle up to the hint's, before the cue floor scale
+const HINT_BOB := 2.0  # world px it bobs, up and down...
+const HINT_HZ := 1.6  # ...this many times a second
 
 var traffic: Traffic
 var facing := Vector2.UP
 var target: Light  # the Light a Switch would hit now, or null
+var tow_hint: Car  # the Wreckage a Tow would grab now, or null: the Tow hint shows over it
 var cam_zoom := 1.0  # the camera zoom, which World sets each tick: speeds and ranges scale with 1/zoom
 var pilot: Autopilot  # plays it in Attract (#34); null reads the player's input
 var rig := RaccoonRig.new()
@@ -44,6 +49,8 @@ var _dash_dir := Vector2.UP
 var _switch_left := 0.0  # seconds left in the Switch animation
 var _switch_dir := Vector2.UP  # toward the pole it Switched
 var _idle_t := 0.0  # seconds it has stood idle
+var _hint := Node2D.new()  # the Tow hint, among the floating cues
+var _hint_t := 0.0  # seconds it has shown, for its bob
 
 
 func _init(t: Traffic) -> void:
@@ -51,6 +58,10 @@ func _init(t: Traffic) -> void:
 	process_physics_priority = -1  # move and feed Traffic before World steps it
 	rig.show_behind_parent = true  # under the rope, target and rings it draws
 	add_child(rig)
+	_hint.z_as_relative = false
+	_hint.z_index = Art.Z_CUE  # over the vehicles and poles, like the other cues
+	_hint.draw.connect(_draw_tow_hint)
+	add_child(_hint)
 
 
 ## One tick of `delta` seconds. World steps it with Traffic, so a Crash's freeze holds both on the same ticks (#43).
@@ -85,6 +96,12 @@ func act(intent: Intent, delta: float) -> void:
 	_animate(position != from, dashing, delta)
 	if intent.tow:
 		traffic.tow(Tuning.TOW_RANGE * world_per_px)
+	tow_hint = traffic.towable(Tuning.TOW_RANGE * world_per_px)
+	_hint_t = _hint_t + delta if tow_hint != null else 0.0
+	_hint.visible = tow_hint != null
+	if tow_hint != null:
+		_hint.position = to_local(tow_hint.transform.origin)
+		_hint.queue_redraw()
 	queue_redraw()
 
 
@@ -217,6 +234,30 @@ func _draw() -> void:
 		var at := Vector2(-w / 2.0, (RaccoonRig.STAR_TOP - 10.0) * k)  # over its head and the stars
 		draw_string_outline(font, at, "BONK!", HORIZONTAL_ALIGNMENT_LEFT, -1, size, roundi(5 * k), Art.INK)
 		draw_string(font, at, "BONK!", HORIZONTAL_ALIGNMENT_LEFT, -1, size, BONK)
+
+
+## The Tow hint over the Wreckage a Tow would grab: the Tow button on a white key cap, Y on a pad or the key on a
+## keyboard (the device last pressed, as the cards' hints), with TOW beside it, bobbing gently.
+func _draw_tow_hint() -> void:
+	var cue := Art.cue_scale(cam_zoom)
+	var key := ControlsCard.LETTERS[ControlsCard.TOW_AT] if Card.pad else ControlsCard.keys(&"tow").get_slice(" / ", 0)
+	var font := Sign.FONT
+	var size := roundi(HINT_SIZE * cue)
+	var small := roundi(HINT_SIZE * 0.8 * cue)
+	var key_w := font.get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var tow_w := font.get_string_size("TOW", HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
+	var gap := 5.0 * cue
+	var cap := Vector2(maxf(key_w + 10.0 * cue, 22.0 * cue), 22.0 * cue)
+	var mid := Vector2(0, -(HINT_ABOVE + HINT_BOB * sin(_hint_t * TAU * HINT_HZ)) * cue)
+	var left := mid.x - (cap.x + gap + tow_w) / 2.0
+	var box := Rect2(Vector2(left, mid.y - cap.y / 2.0), cap)
+	_hint.draw_rect(box.grow(2.5 * cue), Art.INK)
+	_hint.draw_rect(box, Color.WHITE)
+	var base := mid.y + size * 0.36  # Bungee's caps sit about this far below the middle
+	_hint.draw_string(font, Vector2(box.get_center().x - key_w / 2.0, base), key, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Art.INK)
+	var at := Vector2(box.end.x + gap, mid.y + small * 0.36)
+	_hint.draw_string_outline(font, at, "TOW", HORIZONTAL_ALIGNMENT_LEFT, -1, small, roundi(4 * cue), Art.INK)
+	_hint.draw_string(font, at, "TOW", HORIZONTAL_ALIGNMENT_LEFT, -1, small, Color.WHITE)
 
 
 # A Dash `done` of the way through: dust kicked up behind its feet, and two speed lines.

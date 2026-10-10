@@ -1,7 +1,7 @@
 class_name ResultsCard
 extends Card
 ## The Run's results (#35, #42, #19 story 13), over the frozen Gridlock board: stage reached, cars through, Calm
-## drivers (#45), best Combo, most Crashes in one stage, Dents and the final score. Flow moves on after RESULTS_TIME,
+## drivers (#45), best Combo, most Crashes in one stage, Dents (shown as Wrecks) and the final score. Flow moves on after RESULTS_TIME,
 ## or on A once RESULTS_LOCK has gone by.
 
 const SIZE := Vector2(520, 482)
@@ -16,7 +16,7 @@ func _init(run: Run) -> void:
 	_lines.append(["Calm drivers", run.calm_drivers])  # never Honked: 15 points each (#45)
 	_lines.append(["Best Combo", run.top_combo])
 	_lines.append(["Most crashes in a stage", run.most_crashes])
-	_lines.append(["Dents", run.dents])
+	_lines.append(["Wrecks", run.dents])  # players see Dents as Wrecks (#45)
 	_score = run.score
 
 

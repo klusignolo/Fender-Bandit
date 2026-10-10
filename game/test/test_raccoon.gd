@@ -151,6 +151,35 @@ func test_a_stunned_raccoon_cant_switch_or_tow_until_it_recovers() -> void:
 	check_eq(t.lights[E].state, Light.State.YELLOW, "Switches again")
 
 
+func test_towable_names_the_wreckage_a_tow_would_grab() -> void:
+	var t := straight_traffic(3)
+	var w := _wreckage(t)
+	if not check(w != null, "a first Crash"):
+		return
+	t.set_raccoon(w.transform.origin + Vector2(0, Tuning.TOW_RANGE * 4.0), false)
+	check(t.towable(Tuning.TOW_RANGE) == null, "nothing to Tow out of reach")
+	t.set_raccoon(w.transform.origin, false)
+	check(t.towable(Tuning.TOW_RANGE) == w, "standing on it, that Wreckage")
+	t.tow(Tuning.TOW_RANGE)
+	check(t.towing == w, "and a Tow grabs that one")
+	check(t.towable(Tuning.TOW_RANGE) == null, "nothing to grab while towing: the press drops it")
+
+
+func test_nothing_is_towable_while_stunned() -> void:
+	var t := straight_traffic(3)
+	var w := _wreckage(t)
+	if not check(w != null, "a first Crash"):
+		return
+	t.switch(t.lights[E])
+	var m := _await_moving_car(t)
+	if not check(m != null, "a car cruising in on E"):
+		return
+	_step_in_front(t, m)
+	t.step()
+	t.set_raccoon(w.transform.origin, false)
+	check(t.raccoon_stun > 0.0 and t.towable(Tuning.TOW_RANGE) == null, "stunned: no hint, as a Tow can't grab")
+
+
 # --- Dash ---------------------------------------------------------------------------
 
 func test_dash_reaches_traffic_and_towing_slows_it() -> void:

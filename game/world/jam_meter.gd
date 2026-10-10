@@ -61,5 +61,5 @@ func _draw() -> void:
 	for f: float in [Tuning.JAM_BUSY, Tuning.JAM_HEAVY]:
 		draw_line(Vector2(x + cap_w * f, TOP - 3.0), Vector2(x + cap_w * f, TOP + HEIGHT + 3.0), Color.WHITE, 2.0)
 	Sign.text(self, "JAM  %s  %d%%" % [Jam.Level.keys()[level], int(100.0 * jam.share())], Vector2(x, CAPTION), TEXT_SIZE, col)
-	var dents := "DENTS %d" % jam.dents
+	var dents := "WRECKS %d" % jam.dents  # players see Dents as Wrecks (#45)
 	Sign.text(self, dents, Vector2(x + WIDTH - Sign.width(dents, TEXT_SIZE), CAPTION), TEXT_SIZE, DENTS)
