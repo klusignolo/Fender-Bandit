@@ -11,6 +11,7 @@ var entries: Array[Dictionary] = []  # {initials: String, score: int}, best firs
 var music := true
 var skin := Skins.GUARD  # the Raccoon's skin, one of those best_stage has unlocked
 var best_stage := 0  # the furthest stage any Run has cleared (a cheated one aside)
+var controls_seen := false  # the controls card has shown once: from then on START goes straight into a Run (#45)
 var path := ""
 
 
@@ -22,6 +23,7 @@ func _init(p: String) -> void:
 		return
 	var m: Variant = cfg.get_value("settings", "music", true)
 	music = m if m is bool else true
+	controls_seen = cfg.get_value("settings", "controls_seen", false) == true
 	var b: Variant = cfg.get_value("settings", "best_stage", 0)
 	best_stage = b if b is int else 0
 	var s: Variant = cfg.get_value("settings", "skin", String(Skins.GUARD))
@@ -72,6 +74,13 @@ func set_music(on: bool) -> void:
 	save()
 
 
+## The controls card has shown: remember it.
+func saw_controls() -> void:
+	if not controls_seen:
+		controls_seen = true
+		save()
+
+
 ## Wear `s` from now on, if it's unlocked.
 func set_skin(s: StringName) -> void:
 	if s in Skins.unlocked(best_stage):
@@ -98,6 +107,7 @@ func save() -> void:
 	cfg.set_value("settings", "music", music)
 	cfg.set_value("settings", "skin", String(skin))
 	cfg.set_value("settings", "best_stage", best_stage)
+	cfg.set_value("settings", "controls_seen", controls_seen)
 	var err := cfg.save(path)
 	if err != OK:
 		push_warning("Couldn't save the High-score table to %s: %s" % [path, error_string(err)])

@@ -45,11 +45,12 @@ func step(dt: float) -> void:
 				_go(State.ATTRACT)
 
 
-## START on the title menu: on to the controls card. `from_pad` says which card it shows.
-func press_start(from_pad: bool) -> void:
+## START on the title menu: on to the controls card, or straight into the Run once `card` is false (the player has
+## seen it, #45). `from_pad` says which card it shows.
+func press_start(from_pad: bool, card := true) -> void:
 	if state == State.ATTRACT:
 		pad = from_pad
-		_go(State.CONTROLS)
+		_go(State.CONTROLS if card else State.PLAY)
 
 
 ## A press on the title menu (#45): Attract starts over only ATTRACT_TIME after the last one, so it never pulls the

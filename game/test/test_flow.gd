@@ -95,6 +95,13 @@ func test_the_table_skips_on_a_press_only_after_its_lock() -> void:
 	check_eq(f.state, A, "A moves on once the lock is over")
 
 
+func test_start_skips_the_card_once_it_has_been_seen() -> void:
+	var f := Flow.new()
+	var log := Log.new(f)
+	f.press_start(true, false)
+	check_eq(log.states, [P] as Array[int], "straight into the Run")
+
+
 func test_a_keyboard_press_shows_the_keyboard_card() -> void:
 	var f := Flow.new()
 	f.press_start(false)

@@ -221,8 +221,9 @@ func _title_choose(title: TitleScreen) -> void:
 		TitleScreen.Choice.START:
 			if OS.has_feature("web"):  # only from an input handler: the browser wants a user gesture
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-			flow.press_start(Card.pad)
+			flow.press_start(Card.pad, not Scores.table.controls_seen)  # the card only until it has been seen (#45)
 		TitleScreen.Choice.CONTROLS:
+			Scores.table.saw_controls()
 			_ui.show_screen(ControlsCard.new(Card.pad, true))
 		TitleScreen.Choice.OPTIONS:
 			title.open_options()
@@ -262,6 +263,7 @@ func _on_flow_changed(state: Flow.State) -> void:
 			Audio.music(MusicMix.Track.THEME, true)
 		Flow.State.CONTROLS:
 			Audio.music(MusicMix.Track.THEME, true)  # over Attract; in the browser, the Theme's first chance to start
+			Scores.table.saw_controls()
 			_ui.show_screen(ControlsCard.new(flow.pad))  # over Attract, which plays on behind it
 		Flow.State.PLAY:
 			_clear_board()

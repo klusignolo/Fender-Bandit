@@ -108,3 +108,12 @@ func test_scores_from_before_honk_scoring_are_dropped_but_the_music_setting_stay
 	t.add("NEW", 100)
 	check_eq(ScoreTable.new(PATH).entries.size(), 1, "a new score saves with the format and reloads")
 	DirAccess.remove_absolute(PATH)
+
+
+func test_the_controls_card_is_remembered_as_seen() -> void:
+	DirAccess.remove_absolute(PATH)
+	var t := ScoreTable.new(PATH)
+	check(not t.controls_seen, "a fresh save hasn't seen the controls card")
+	t.saw_controls()
+	check(ScoreTable.new(PATH).controls_seen, "seen, through a reload")
+	DirAccess.remove_absolute(PATH)
