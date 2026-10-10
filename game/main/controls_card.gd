@@ -2,7 +2,7 @@ class_name ControlsCard
 extends Card
 ## The controls card (#35, #42, #19 stories 4–7), between Attract and the Run: the goal, then the pad by position
 ## (the cabinet's button grid, #4, each bound button wearing its letter) or the keyboard keys. Flow closes it on A,
-## or after CONTROLS_TIME.
+## or after CONTROLS_TIME. Opened from the title menu's CONTROLS instead (#45), it stays until A, which goes back.
 
 const SIZE := Vector2(760, 500)
 const GOAL: Array[String] = ["Keep the traffic flowing.", "Don't let the Jam fill up!"]
@@ -21,10 +21,12 @@ const BUTTON := Color("#E8ECF2")
 const IDLE_BUTTON := Color(1, 1, 1, 0.18)
 
 var _pad := false
+var from_title := false  # opened from the title menu: A goes back to it, not on to a Run
 
 
-func _init(pad: bool) -> void:
+func _init(pad: bool, title := false) -> void:
 	_pad = pad
+	from_title = title
 
 
 ## The keyboard keys bound to `action`, as "Escape / P / Enter", in InputMap order.
@@ -47,7 +49,7 @@ func _draw() -> void:
 		_draw_pad(box)
 	else:
 		_draw_keys(box)
-	hint(box, "%s: start" % confirm_key())
+	hint(box, "%s: %s" % [confirm_key(), "back" if from_title else "start"])
 
 
 func _draw_pad(box: Rect2) -> void:

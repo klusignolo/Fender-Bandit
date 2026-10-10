@@ -87,7 +87,7 @@ func _notification(what: int) -> void:
 		flow.focus_gained()
 
 
-## Presses become Flow's inputs: any button leaves Attract, A closes the cards, Start pauses.
+## Presses become Flow's inputs: the title menu (#45) starts a Run, A closes the cards, Start pauses.
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
@@ -104,11 +104,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	match flow.state:
 		Flow.State.ATTRACT:
 			if _is_button(event):
-				if OS.has_feature("web"):  # only from an input handler: the browser wants a user gesture
-					DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-				Audio.unlock()
-				flow.press_start(not (event is InputEventKey))
-				Audio.play(&"ui_confirm")  # in the browser, the first sound: this press unlocks audio
+				_title_input(event)
 		Flow.State.CONTROLS, Flow.State.RESULTS, Flow.State.SCORES:
 			if _is_confirm(event):
 				var was := flow.state
@@ -171,9 +167,7 @@ func _pause_input(event: InputEvent) -> void:
 		if menu.row == PauseMenu.Row.QUIT:
 			flow.quit_to_title()
 		elif menu.row == PauseMenu.Row.MUSIC:
-			Scores.table.set_music(not Scores.table.music)
-			Audio.set_music_on(Scores.table.music)
-			menu.set_music(Scores.table.music)
+			menu.set_music(_flip_music())
 		else:
 			flow.pause_or_resume()
 	elif event.is_action_pressed(&"pause"):
@@ -182,13 +176,89 @@ func _pause_input(event: InputEvent) -> void:
 		Audio.play(&"ui_move")
 
 
+## Music On/Off, from Pause or the title's Options: saved, and heard at once. Returns it.
+func _flip_music() -> bool:
+	Scores.table.set_music(not Scores.table.music)
+	Audio.set_music_on(Scores.table.music)
+	return Scores.table.music
+
+
+## A press on the title (#45): it moves the menu or Options, or chooses. Only START leaves Attract, so a stray press
+## can't start a Run. Every press holds off a fresh Attract and gives the browser the gesture its audio waits for.
+func _title_input(event: InputEvent) -> void:
+	flow.touch()
+	Audio.unlock()
+	Audio.music(MusicMix.Track.THEME, true)  # in the browser, the Theme's first chance to start
+	if _ui.screen is ControlsCard:  # the controls, opened from the menu
+		if _is_confirm(event) or event.is_action_pressed(&"ui_cancel"):
+			Audio.play(&"ui_confirm")
+			_show_title(TitleScreen.Choice.CONTROLS)
+		return
+	var title := _ui.screen as TitleScreen
+	if title == null:
+		return
+	var was := [title.page, title.row, title.skin, title.music]
+	if event.is_action_pressed(&"move_up"):
+		title.move(-1)
+	elif event.is_action_pressed(&"move_down"):
+		title.move(1)
+	elif event.is_action_pressed(&"move_left"):
+		_title_adjust(title, -1)
+	elif event.is_action_pressed(&"move_right"):
+		_title_adjust(title, 1)
+	elif _is_confirm(event) or (event is InputEventJoypadButton and event.button_index == JOY_BUTTON_START):
+		Audio.play(&"ui_confirm")
+		_title_choose(title)
+		return
+	elif event.is_action_pressed(&"ui_cancel") and title.page == TitleScreen.Page.OPTIONS:
+		title.close_options()
+	if [title.page, title.row, title.skin, title.music] != was:
+		Audio.play(&"ui_move")
+
+
+func _title_choose(title: TitleScreen) -> void:
+	match title.choice():
+		TitleScreen.Choice.START:
+			if OS.has_feature("web"):  # only from an input handler: the browser wants a user gesture
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+			flow.press_start(Card.pad)
+		TitleScreen.Choice.CONTROLS:
+			_ui.show_screen(ControlsCard.new(Card.pad, true))
+		TitleScreen.Choice.OPTIONS:
+			title.open_options()
+		TitleScreen.Choice.SKIN, TitleScreen.Choice.MUSIC:
+			_title_adjust(title, 1)
+		TitleScreen.Choice.BACK:
+			title.close_options()
+
+
+## Left or right on Options: the skin steps through the unlocked ones (Attract's Raccoon wears it at once), Music flips.
+func _title_adjust(title: TitleScreen, by: int) -> void:
+	match title.choice():
+		TitleScreen.Choice.SKIN:
+			var skin := title.next_skin(by)
+			Scores.table.set_skin(skin)
+			if _world != null:
+				_world.raccoon.rig.set_skin(skin)
+		TitleScreen.Choice.MUSIC:
+			title.set_music(_flip_music())
+
+
+## The title, its menu on `choice`.
+func _show_title(choice := TitleScreen.Choice.START) -> void:
+	var title := TitleScreen.new(Scores.table.music, Scores.table.skin, Scores.table.best_stage)
+	title.row = maxi(TitleScreen.PAGES[TitleScreen.Page.MENU].find(choice), 0)
+	_ui.show_screen(title)
+
+
 func _on_flow_changed(state: Flow.State) -> void:
 	match state:
 		Flow.State.ATTRACT:
 			World.speed = 1.0  # Quit to title mid-fast-forward
 			_clear_board()
 			_start_attract()
-			_ui.show_screen(TitleScreen.new())
+			if not (_ui.screen is TitleScreen or _ui.screen is ControlsCard):  # a fresh Attract keeps the menu where it was
+				_show_title()
 			Audio.music(MusicMix.Track.THEME, true)
 		Flow.State.CONTROLS:
 			Audio.music(MusicMix.Track.THEME, true)  # over Attract; in the browser, the Theme's first chance to start
@@ -287,6 +357,7 @@ func _add_world(stage: StageDef) -> void:
 	_world.process_mode = Node.PROCESS_MODE_PAUSABLE  # not Main's ALWAYS
 	_world.traffic.gridlocked.connect(_on_gridlocked.bind(_world), CONNECT_DEFERRED)
 	add_child(_world)
+	_world.raccoon.rig.set_skin(Scores.table.skin)  # the Raccoon is built on entering the tree
 	Audio.watch(_world, flow.state == Flow.State.ATTRACT)  # Attract is muted (#19 story 80), the controls card over it too
 
 
@@ -302,7 +373,12 @@ func _on_stage_cleared(world: World) -> void:
 	if world != _world:
 		return
 	_world.process_mode = Node.PROCESS_MODE_DISABLED
-	var card := TallyCard.new(run.stage, _world.traffic.cars_through, run.stage_score(), Stages.news(Stages.def(run.stage + 1, _run_seed)))
+	var news := Stages.news(Stages.def(run.stage + 1, _run_seed))
+	var skin := Scores.table.cleared(run.stage) if not run.cheated else &""  # a skin per SKIN_EVERY stages (#45)
+	if skin != &"":
+		news.append(TallyCard.skin_news(skin))
+		print("Skin unlocked: %s" % skin)
+	var card := TallyCard.new(run.stage, _world.traffic.cars_through, run.stage_score(), news)
 	card.done.connect(_on_tally_done.bind(card))
 	_tally = CanvasLayer.new()
 	_tally.layer = 2  # over the HUD strip

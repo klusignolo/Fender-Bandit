@@ -105,6 +105,22 @@ Cutout rig: head, body with vest, tail, 2 arms, 2 legs, drawn for **3 facings: f
 | Tow | Leans forward away from the wreck, rope over the shoulder, heavy walk | Walk at 0.6× | yes | The walk on the same clock, so towing's 0.55× speed makes it 0.55×; a 1.6× bob. Side: leans 0.2 rad away from the Wreckage, the arm back over the shoulder. Towing in place it stands with both feet down, at the nearest point of the stride where they are. Front and back: hunched (1.04 × 0.94), the right arm up |
 | Bonk | Knocked along the knockback, one spin, squash flat, stars until the stun ends, pop up | the stun | no | One eased spin over the first 35% about the body's middle; squashed to 1.3 × 0.55 on its feet, eyes shut, three stars circling at 1.5/s; the last 15% pops to 0.9 × 1.15 and settles. A Dash keeps the view it started with, even if the stick turns. BONK! in `raccoon_orange` over the stars |
 
+### Skins
+
+The Raccoon's skins (#45): costumes over the same rig, chosen on the title's Options. The crossing guard in the orange
+vest is the base art above; the others are baked from it by `game/tools/make_skins.gd` into `game/art/skins/<skin>/`,
+one file for each Raccoon SVG under the same name, by recipe: colour swaps, then costume shapes injected on each part's
+64 × 84 canvas. So every skin has the same parts, pivots and animations. Rerun the tool after changing a base Raccoon
+SVG or a recipe. `Skins` (`game/raccoon/skins.gd`) names them and finds a skin's texture; `RaccoonRig.set_skin`
+swaps every part. The prototype that chose them is on branch `prototype/raccoon-skins`.
+
+| Skin | Unlocked by | Look |
+|---|---|---|
+| `guard` (Crossing guard) | from the start | The base art: orange safety vest with a reflective stripe |
+| `burglar` (Cat burglar) | clearing stage 3 | Cream shirt with ink stripes, black beanie with a band; a loot sack on its back |
+| `cop` (Traffic cop) | clearing stage 6 | Navy uniform with a gold badge and belt; peaked navy cap with a gold badge and a visor |
+| `panda` (Trash panda) | clearing stage 9 | Rusty-brown fur, cream muzzle; a torn green garbage bag; a dented trash-can lid for a hat, with a banana peel |
+
 ### Vehicles
 
 Every vehicle is stacked layers: **body** (tint, one of the 6 safe colours), **details** (windows, roof lines, outline; never tinted), **lamps** (brake and blinker overlays, shown/hidden; blinkers flash in code), and **shadow**. Top-down, one view, rotated freely in Godot, so turns are smooth at any angle.
@@ -172,7 +188,8 @@ Roads are drawn **in code** from the crossing data (centres plus approach direct
 
 | ID | Shows | Notes |
 |---|---|---|
-| `logo` | Title logo over Attract: **FENDER BANDIT**, with the tagline **"Stop. Go. Oops."** in small Bungee underneath | Drawn in code (#42, `TitleScreen`): FENDER over BANDIT in 92 px white Bungee on a navy plate framed in construction stripes, the tagline on a small blue sign hung underneath. The flourish: the Raccoon (`raccoon_front`) peeking over the board's top edge, its paws gripping it. Name and tagline from #11 |
+| `logo` | Title logo over Attract: **FENDER BANDIT**, with the tagline **"Stop. Go. Oops."** in small Bungee underneath | Drawn in code (#42, `TitleScreen`): FENDER over BANDIT in 92 px white Bungee on a navy plate framed in construction stripes, the tagline on a small blue sign hung underneath. The flourish: the Raccoon (`raccoon_front`, in the chosen skin) peeking over the board's top edge, its paws gripping it. Name and tagline from #11 |
+| Title menu | START, CONTROLS, OPTIONS; Options: SKIN, MUSIC, BACK | Drawn in code (#45, `TitleScreen`): a sign in the bottom-right city block, the chosen row a white plate with sign-blue words, as on Pause. Options adds a line on what unlocks the next skin |
 | `app_icon` | Window, web favicon, exe and itch thumbnail | `game/icon.svg` (#42): an orange construction diamond with a navy border and a navy raccoon walking right, with a hunched back, a fat tail ringed in orange, round ears, and a white brow, eye and muzzle round its mask. At 16 px it reads as an orange diamond with a navy body. `config/icon` makes it the window icon and the web favicon; the Windows preset's `modify_resources` builds the exe's icon from it. The itch cover is `docs/art/itch-thumbnail.png` (630 × 500), rendered by `game/tools/make_thumbnail.sh` |
 | `ui_sign_panel` | Blue road sign | Drawn in code: `Sign.panel` (see "Type and UI") |
 | `ui_button_*` | Cabinet button glyphs for the controls card | Drawn in code (#42): pale buttons with an ink rim and the letter in ink: A Switch, X Dash, Y Tow (#10, #17); unbound buttons are faint discs |

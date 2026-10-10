@@ -73,6 +73,7 @@ class Pose:
 
 
 var view := Raccoon.View.FRONT
+var skin := Skins.GUARD  # change it with set_skin()
 var anim := Anim.IDLE
 var zoom := 1.0  # the camera's: past Tuning.RACCOON_MIN_ZOOM the rig grows to hold its size on screen
 var stars := Node2D.new()  # the Bonk stars, circling the head
@@ -124,6 +125,15 @@ func _part(tex: Texture2D, pivot: Vector2) -> Sprite2D:
 	s.offset = tex.get_size() / 2.0 - pivot
 	s.position = (pivot - FEET) * Art.SCALE
 	return s
+
+
+## Wear `s` (#45): every part of every view, and the paw-open arm, swap to its textures.
+func set_skin(s: StringName) -> void:
+	skin = s
+	for v: Raccoon.View in _PARTS:
+		for p: Array in _PARTS[v]:
+			(_parts[v][p[0]] as Sprite2D).texture = Skins.texture(p[1], s)
+		(_parts[v][&"reach"] as Sprite2D).texture = Skins.texture(REACH, s)
 
 
 ## The part names of a view, in draw order.

@@ -45,11 +45,18 @@ func step(dt: float) -> void:
 				_go(State.ATTRACT)
 
 
-## Any button in Attract: on to the controls card. `from_pad` says which card it shows.
+## START on the title menu: on to the controls card. `from_pad` says which card it shows.
 func press_start(from_pad: bool) -> void:
 	if state == State.ATTRACT:
 		pad = from_pad
 		_go(State.CONTROLS)
+
+
+## A press on the title menu (#45): Attract starts over only ATTRACT_TIME after the last one, so it never pulls the
+## menu out from under the player.
+func touch() -> void:
+	if state == State.ATTRACT:
+		_in_state = 0.0
 
 
 ## A: closes the controls card, the results or the table, once their lock is over.

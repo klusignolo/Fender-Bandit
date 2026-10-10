@@ -115,6 +115,17 @@ func test_attract_restarts_after_its_time_or_at_gridlock_and_never_shows_results
 	check_eq(log.states, [A, A] as Array[int], "the clock started over")
 
 
+func test_using_the_title_menu_holds_off_a_fresh_attract() -> void:
+	var f := Flow.new()
+	var log := Log.new(f)
+	_wait(f, Tuning.ATTRACT_TIME - 1.0)
+	f.touch()
+	_wait(f, Tuning.ATTRACT_TIME - 1.0)
+	check_eq(log.states, [] as Array[int], "the clock starts over at each menu press")
+	_wait(f, 1.5)
+	check_eq(log.states, [A] as Array[int], "and runs out ATTRACT_TIME after the last")
+
+
 func test_the_controls_card_closes_on_a_press_only_after_its_lock() -> void:
 	var f := Flow.new()
 	f.press_start(true)

@@ -10,6 +10,10 @@
 The player-controlled character who roams the intersections flipping their traffic lights and clearing up after crashes.
 _Avoid_: Player character, crossing guard, guard, cursor
 
+**Skin**:
+A costume the raccoon wears, chosen on the title's Options; one more unlocks for every few stages a run clears.
+_Avoid_: Outfit, costume (as a term), character
+
 **Light**:
 The traffic signal for one approach into a crossing, always Red, Green or Yellow; drivers obey it, not the raccoon.
 _Avoid_: Signal, lamp, Stop/Go

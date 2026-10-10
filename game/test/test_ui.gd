@@ -24,6 +24,10 @@ func _screens() -> Dictionary:
 		table.append({"initials": "WWW", "score": LONG_SCORE})
 	var out := {
 		"title": TitleScreen.new(),
+		"title, options": _options(Skins.GUARD, 0),
+		"title, options, every skin": _options(&"burglar", 99),
+		"controls from the title, pad": ControlsCard.new(true, true),
+		"controls from the title, keys": ControlsCard.new(false, true),
 		"controls, pad": ControlsCard.new(true),
 		"controls, keys": ControlsCard.new(false),
 		"pause, music on": PauseMenu.new(true),
@@ -34,6 +38,8 @@ func _screens() -> Dictionary:
 	}
 	for n in news:  # each news line alone, then two: a stage debuts one feature at most, and may grow a crossing too
 		out["tally, %s" % n] = TallyCard.new(99, 9999, LONG_SCORE, PackedStringArray([n]))
+	for skin: StringName in Skins.ALL:
+		out["tally, %s" % skin] = TallyCard.new(99, 9999, LONG_SCORE, PackedStringArray([Stages.GROW_NAME, TallyCard.skin_news(skin)]))
 	out["tally, two news"] = TallyCard.new(99, 9999, LONG_SCORE, PackedStringArray([Stages.NAMES[Stages.Feature.ODD_JUNCTIONS], Stages.GROW_NAME]))
 	return out
 
@@ -217,3 +223,78 @@ func test_the_controls_card_names_the_switch_for_what_it_does() -> void:
 		check("TOGGLE" in texts and "TRAFFIC LIGHT" in texts, "pad %s: Switch reads as toggling a traffic light (#45): %s" % [pad, texts])
 		check(not "SWITCH" in texts, "pad %s: no SWITCH: %s" % [pad, texts])
 		card.free()
+
+
+func _options(skin: StringName, best_stage: int) -> TitleScreen:
+	var t := TitleScreen.new(true, skin, best_stage)
+	t.open_options()
+	return t
+
+
+func test_the_title_is_a_menu_of_start_controls_and_options() -> void:
+	var title := TitleScreen.new()
+	title.measure(VIEW)
+	var texts := title.words.map(func(w: Card.Words) -> String: return w.text)
+	for row in ["START", "CONTROLS", "OPTIONS"]:
+		check(row in texts, "the menu has %s: %s" % [row, texts])
+	check(not "PRESS ANY BUTTON" in texts, "no press-any-button: a stray press mustn't start a Run (#45)")
+	check_eq(title.choice(), TitleScreen.Choice.START, "START is chosen first")
+	title.move(1)
+	check_eq(title.choice(), TitleScreen.Choice.CONTROLS, "then CONTROLS")
+	title.move(1)
+	title.move(1)
+	check_eq(title.choice(), TitleScreen.Choice.OPTIONS, "then OPTIONS, where it stops")
+	title.free()
+
+
+func test_options_cycle_the_unlocked_skins_and_flip_the_music() -> void:
+	var title := TitleScreen.new(true, Skins.GUARD, Tuning.SKIN_EVERY * 2)  # three skins unlocked
+	title.open_options()
+	check_eq(title.choice(), TitleScreen.Choice.SKIN, "Options opens on the skin")
+	check_eq(title.row_text(0), "SKIN: < CROSSING GUARD >", "the skin row")
+	check_eq(title.next_skin(1), Skins.ALL[1], "right: the next skin")
+	check_eq(title.next_skin(1), Skins.ALL[2], "and the next")
+	check_eq(title.next_skin(1), Skins.GUARD, "the fourth is locked: round to the first")
+	check_eq(title.next_skin(-1), Skins.ALL[2], "left goes back round")
+	title.move(1)
+	check_eq(title.choice(), TitleScreen.Choice.MUSIC, "down: Music")
+	check_eq(title.row_text(1), "MUSIC: ON", "on")
+	title.set_music(false)
+	check_eq(title.row_text(1), "MUSIC: OFF", "off")
+	title.move(1)
+	check_eq(title.choice(), TitleScreen.Choice.BACK, "then Back")
+	title.close_options()
+	check_eq(title.choice(), TitleScreen.Choice.OPTIONS, "Back returns to OPTIONS on the menu")
+	title.free()
+
+
+func test_options_say_what_unlocks_the_next_skin() -> void:
+	for x: Array in [[0, "CLEAR STAGE %d FOR A NEW SKIN" % Tuning.SKIN_EVERY], [99, "EVERY SKIN UNLOCKED"]]:
+		var title := _options(Skins.GUARD, x[0])
+		title.measure(VIEW)
+		var texts := title.words.map(func(w: Card.Words) -> String: return w.text)
+		check(x[1] in texts, "best stage %d: \"%s\" in %s" % [x[0], x[1], texts])
+		title.free()
+
+
+func test_the_title_options_leave_the_attract_crossing_clear_too() -> void:
+	for view: Vector2 in [VIEW, Vector2(1600, 720), Vector2(1280, 800)]:
+		var title := _options(&"panda", 99)
+		title.measure(view)
+		var c := view / 2.0
+		for r: Rect2 in title.signs + title.stripes:
+			check(not r.intersects(Rect2(c.x - TitleScreen.ROAD_CLEAR, 0, 2.0 * TitleScreen.ROAD_CLEAR, view.y)), "%s: %s off the N–S road" % [view, r])
+			check(not r.intersects(Rect2(0, c.y - TitleScreen.ROAD_CLEAR, view.x, 2.0 * TitleScreen.ROAD_CLEAR)), "%s: %s off the E–W road" % [view, r])
+		title.free()
+
+
+func test_the_controls_card_from_the_title_goes_back_not_on() -> void:
+	for pad: bool in [false, true]:
+		var was := Card.pad
+		Card.pad = pad
+		var card := ControlsCard.new(pad, true)
+		card.measure(VIEW)
+		var texts := card.words.map(func(w: Card.Words) -> String: return w.text)
+		check("%s: back" % Card.confirm_key() in texts, "pad %s: the hint says back: %s" % [pad, texts])
+		card.free()
+		Card.pad = was

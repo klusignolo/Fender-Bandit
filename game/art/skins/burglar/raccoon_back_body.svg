@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="84" viewBox="0 0 64 84">
+  <g stroke="#1B2340" stroke-width="3" stroke-linejoin="round">
+    <ellipse cx="32" cy="55" rx="15" ry="14" fill="#8C93A3" stroke-width="4"/>
+    <path d="M18,48 C18,44 23,42 32,42 C41,42 46,44 46,48 L46,64 C40,68 24,68 18,64 Z" fill="#F4F1E8"/>
+    <path d="M21,45 L43,63 M43,45 L21,63" fill="none" stroke="#22252E" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+<clipPath id="vest"><path d="M18,48 C18,44 23,42 32,42 C41,42 46,44 46,48 L46,64 C40,68 24,68 18,64 Z"/></clipPath><g clip-path="url(#vest)" fill="#22252E"><rect x="10" y="45" width="44" height="3"/><rect x="10" y="51" width="44" height="3"/><rect x="10" y="63" width="44" height="3"/></g><path d="M38,50 C46,46 54,52 52,62 C50,70 38,70 36,62 C34,56 34,52 38,50 Z" fill="#C9B28A" stroke="#1B2340" stroke-width="2.5"/><path d="M37,51 L40,47 L43,50" fill="none" stroke="#1B2340" stroke-width="2"/><path d="M42,57 L42,66 M44.5,58.5 C41,57 39,59.5 42,61 C45,62.5 43.5,65 40,64" fill="none" stroke="#1B2340" stroke-width="1.6" stroke-linecap="round"/></svg>

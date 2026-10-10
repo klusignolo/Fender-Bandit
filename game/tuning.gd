@@ -15,6 +15,7 @@ const TALLY_TIME := 3.0  # seconds the Tally card shows before the next stage...
 const TALLY_LOCK := 0.5  # ...and A skips it only after this long, so a Switch mashed as the stage clears doesn't
 
 # The arcade loop (#35)
+const SKIN_EVERY := 3  # stages cleared per new Raccoon skin (#45): clearing 3 unlocks the second, 6 the third, 9 the fourth
 const ATTRACT_TIME := 60.0  # seconds an Attract plays before a fresh one starts (Gridlock starts one sooner)
 const CONTROLS_TIME := 6.0  # seconds the controls card shows before the Run starts...
 const CONTROLS_LOCK := 0.5  # ...and A closes it only after this long, so the press that left Attract doesn't

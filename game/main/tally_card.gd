@@ -24,6 +24,11 @@ func _init(stage: int, cars_through: int, score_gained: int, news: PackedStringA
 		_lines.append(["NEW: %s!" % n, 24, true])
 
 
+## The news line for a skin a Run has just unlocked (#45), as "NEW: CAT BURGLAR SKIN!".
+static func skin_news(skin: StringName) -> String:
+	return "%s skin" % Skins.NAMES[skin]
+
+
 func _physics_process(delta: float) -> void:  # in ticks, like the simulation, so a seeded run repeats exactly
 	_shown += delta
 	if _shown >= Tuning.TALLY_TIME or (_shown >= Tuning.TALLY_LOCK and _skip):
